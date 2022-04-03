@@ -557,17 +557,17 @@ void Renderer::DrawDebugText()
                      ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoFocusOnAppearing))
     {
       const Core::PerformanceStatistics& pstats = Core::GetPerformanceStatistics();
-      if (pstats.Speed < 95)
+      if (pstats.Speed < 85)
       {
         ImGui::TextColored(ImVec4(0.992f, 0.050f, 0.058f, 1.0f),
-                           "|MMJR| FPS: %.0f | VPS:%.0f | Speed:%.0f%% |",
-                           pstats.FPS, pstats.VPS, pstats.Speed); // red
+                           "|MMJR| FPS: %.0f | Speed: %.0f%%",
+                           pstats.FPS, pstats.Speed); // red
       }
       else
       {
         ImGui::TextColored(ImVec4(1.0f, 0.0f, 1.0f, 1.0f),
-                           "|MMJR| FPS: %.0f | VPS:%.0f | Speed:%.0f%% |",
-                           pstats.FPS, pstats.VPS, pstats.Speed); // purple
+                           "|MMJR| FPS: %.0f | Speed: %.0f%%",
+                           pstats.FPS, pstats.Speed); // purple
       }
     }
     ImGui::End();
