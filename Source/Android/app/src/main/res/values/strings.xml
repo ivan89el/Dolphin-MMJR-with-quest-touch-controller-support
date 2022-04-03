@@ -246,7 +246,7 @@
     <string name="show_fps_description">Show the number of frames rendered per second as a measure of emulation speed.</string>
     <string name="show_active_title">Show Active Title</string>
     <string name="show_active_title_description">Show the game title with FPS counter.</string>
-    <string name="font_scale">Font Scale</string>
+    <string name="font_scale">FPS Font Size</string>
     <string name="font_scale_description">Customize the FPS counter size.</string>
 
     <string name="enhancements_submenu">Enhancements</string>

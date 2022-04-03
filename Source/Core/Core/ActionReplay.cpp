@@ -222,8 +222,8 @@ std::vector<ARCode> LoadCodes(const IniFile& global_ini, const IniFile& local_in
           current_code.ops.push_back(std::get<AREntry>(parse_result));
         else if (std::holds_alternative<EncryptedLine>(parse_result))
           encrypted_lines.emplace_back(std::get<EncryptedLine>(parse_result));
-        else
-          PanicAlertFmtT("Action Replay Error: invalid AR code line: {0}", line);
+        //else
+          //PanicAlertFmtT("Action Replay Error: invalid AR code line: {0}", line);
       }
     }
 
