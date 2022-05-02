@@ -1,5 +1,6 @@
 // Copyright 2016 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include <QDialogButtonBox>
 #include <QPushButton>
@@ -38,8 +39,15 @@ SettingsWindow::SettingsWindow(QWidget* parent) : QDialog(parent)
   m_tab_widget->addTab(GetWrappedWidget(new AudioPane, this, 125, 100), tr("Audio"));
   m_tab_widget->addTab(GetWrappedWidget(new PathPane, this, 125, 100), tr("Paths"));
   m_tab_widget->addTab(GetWrappedWidget(new GameCubePane, this, 125, 100), tr("GameCube"));
-  m_tab_widget->addTab(GetWrappedWidget(new WiiPane, this, 125, 100), tr("Wii"));
-  m_tab_widget->addTab(GetWrappedWidget(new AdvancedPane, this, 125, 200), tr("Advanced"));
+
+  auto* wii_pane = new WiiPane;
+  m_tab_widget->addTab(GetWrappedWidget(wii_pane, this, 125, 100), tr("Wii"));
+
+  connect(&Settings::Instance(), &Settings::EmulationStateChanged, [wii_pane](Core::State state) {
+    wii_pane->OnEmulationStateChanged(state != Core::State::Uninitialized);
+  });
+
+  m_tab_widget->addTab(new AdvancedPane(), tr("Advanced"));
 
   // Dialog box buttons
   QDialogButtonBox* close_box = new QDialogButtonBox(QDialogButtonBox::Close);

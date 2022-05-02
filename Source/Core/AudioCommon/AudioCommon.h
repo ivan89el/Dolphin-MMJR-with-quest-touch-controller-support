@@ -1,5 +1,6 @@
 // Copyright 2009 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
@@ -8,7 +9,6 @@
 #include <string_view>
 #include <vector>
 
-#include "AudioCommon/Enums.h"
 #include "AudioCommon/SoundStream.h"
 
 class Mixer;
@@ -18,11 +18,9 @@ extern std::unique_ptr<SoundStream> g_sound_stream;
 namespace AudioCommon
 {
 void InitSoundStream();
-void PostInitSoundStream();
 void ShutdownSoundStream();
 std::string GetDefaultSoundBackend();
 std::vector<std::string> GetSoundBackends();
-DPL2Quality GetDefaultDPL2Quality();
 bool SupportsDPL2Decoder(std::string_view backend);
 bool SupportsLatencyControl(std::string_view backend);
 bool SupportsVolumeChanges(std::string_view backend);

@@ -1,5 +1,6 @@
 // Copyright 2018 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "UICommon/ResourcePack/Manager.h"
 
@@ -75,7 +76,7 @@ std::vector<ResourcePack>& GetPacks()
 std::vector<ResourcePack*> GetLowerPriorityPacks(ResourcePack& pack)
 {
   std::vector<ResourcePack*> list;
-  for (auto it = std::find(packs.begin(), packs.end(), pack) + 1; it != packs.end(); ++it)
+  for (auto it = std::find(packs.begin(), packs.end(), pack) + 1; it != packs.end(); it++)
   {
     auto& entry = *it;
     if (!IsInstalled(pack))
@@ -92,7 +93,7 @@ std::vector<ResourcePack*> GetHigherPriorityPacks(ResourcePack& pack)
   std::vector<ResourcePack*> list;
   auto end = std::find(packs.begin(), packs.end(), pack);
 
-  for (auto it = packs.begin(); it != end; ++it)
+  for (auto it = packs.begin(); it != end; it++)
   {
     auto& entry = *it;
     if (!IsInstalled(entry))

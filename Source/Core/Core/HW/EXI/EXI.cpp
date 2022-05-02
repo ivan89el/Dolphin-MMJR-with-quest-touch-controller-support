@@ -1,5 +1,6 @@
 // Copyright 2008 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "Core/HW/EXI/EXI.h"
 
@@ -8,20 +9,16 @@
 
 #include "Common/ChunkFile.h"
 #include "Common/CommonTypes.h"
-#include "Common/IniFile.h"
 
 #include "Core/ConfigManager.h"
 #include "Core/CoreTiming.h"
 #include "Core/HW/EXI/EXI_Channel.h"
 #include "Core/HW/EXI/EXI_DeviceMemoryCard.h"
-#include "Core/HW/GCMemcard/GCMemcard.h"
 #include "Core/HW/MMIO.h"
 #include "Core/HW/ProcessorInterface.h"
 #include "Core/HW/Sram.h"
 #include "Core/HW/SystemTimers.h"
 #include "Core/Movie.h"
-
-#include "DiscIO/Enums.h"
 
 Sram g_SRAM;
 bool g_SRAM_netplay_initialized = false;
@@ -72,30 +69,8 @@ void Init()
   }
 
   CEXIMemoryCard::Init();
-
-  {
-    u16 size_mbits = Memcard::MBIT_SIZE_MEMORY_CARD_2043;
-    int size_override;
-    IniFile gameIni = SConfig::GetInstance().LoadGameIni();
-    gameIni.GetOrCreateSection("Core")->Get("MemoryCardSize", &size_override, -1);
-    if (size_override >= 0 && size_override <= 4)
-      size_mbits = Memcard::MBIT_SIZE_MEMORY_CARD_59 << size_override;
-    const bool shift_jis =
-        SConfig::ToGameCubeRegion(SConfig::GetInstance().m_region) == DiscIO::Region::NTSC_J;
-    const CardFlashId& flash_id = g_SRAM.settings_ex.flash_id[Memcard::SLOT_A];
-    const u32 rtc_bias = g_SRAM.settings.rtc_bias;
-    const u32 sram_language = static_cast<u32>(g_SRAM.settings.language);
-    const u64 format_time =
-        Common::Timer::GetLocalTimeSinceJan1970() - ExpansionInterface::CEXIIPL::GC_EPOCH;
-
-    for (u32 i = 0; i < MAX_EXI_CHANNELS; i++)
-    {
-      Memcard::HeaderData header_data;
-      Memcard::InitializeHeaderData(&header_data, flash_id, size_mbits, shift_jis, rtc_bias,
-                                    sram_language, format_time + i);
-      g_Channels[i] = std::make_unique<CEXIChannel>(i, header_data);
-    }
-  }
+  for (u32 i = 0; i < MAX_EXI_CHANNELS; i++)
+    g_Channels[i] = std::make_unique<CEXIChannel>(i);
 
   for (int i = 0; i < MAX_MEMORYCARD_SLOTS; i++)
     AddMemoryCards(i);
@@ -151,16 +126,16 @@ static void ChangeDeviceCallback(u64 userdata, s64 cyclesLate)
   g_Channels.at(channel)->AddDevice((TEXIDevices)type, num);
 }
 
-void ChangeDevice(const u8 channel, const TEXIDevices device_type, const u8 device_num,
-                  CoreTiming::FromThread from_thread)
+void ChangeDevice(const u8 channel, const TEXIDevices device_type, const u8 device_num)
 {
+  // Called from GUI, so we need to use FromThread::NON_CPU.
   // Let the hardware see no device for 1 second
   CoreTiming::ScheduleEvent(0, changeDevice,
                             ((u64)channel << 32) | ((u64)EXIDEVICE_NONE << 16) | device_num,
-                            from_thread);
+                            CoreTiming::FromThread::NON_CPU);
   CoreTiming::ScheduleEvent(SystemTimers::GetTicksPerSecond(), changeDevice,
                             ((u64)channel << 32) | ((u64)device_type << 16) | device_num,
-                            from_thread);
+                            CoreTiming::FromThread::NON_CPU);
 }
 
 CEXIChannel* GetChannel(u32 index)
@@ -204,4 +179,4 @@ void ScheduleUpdateInterrupts(CoreTiming::FromThread from, int cycles_late)
   CoreTiming::ScheduleEvent(cycles_late, updateInterrupts, 0, from);
 }
 
-}  // namespace ExpansionInterface
+}  // end of namespace ExpansionInterface

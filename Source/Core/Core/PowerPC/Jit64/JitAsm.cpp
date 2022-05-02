@@ -1,9 +1,8 @@
 // Copyright 2008 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "Core/PowerPC/Jit64/JitAsm.h"
-
-#include <climits>
 
 #include "Common/CommonTypes.h"
 #include "Common/JitRegister.h"
@@ -25,6 +24,7 @@ Jit64AsmRoutineManager::Jit64AsmRoutineManager(Jit64& jit) : CommonAsmRoutines(j
 
 void Jit64AsmRoutineManager::Init(u8* stack_top)
 {
+  m_const_pool.Init(AllocChildCodeSpace(4096), 4096);
   m_stack_top = stack_top;
   Generate();
   WriteProtect();
@@ -136,8 +136,7 @@ void Jit64AsmRoutineManager::Generate()
     SHL(64, R(RSCRATCH2), Imm8(32));
     // RSCRATCH_EXTRA still has the PC.
     OR(64, R(RSCRATCH2), R(RSCRATCH_EXTRA));
-    CMP(64, R(RSCRATCH2),
-        MDisp(RSCRATCH, static_cast<s32>(offsetof(JitBlockData, effectiveAddress))));
+    CMP(64, R(RSCRATCH2), MDisp(RSCRATCH, static_cast<s32>(offsetof(JitBlock, effectiveAddress))));
     FixupBranch state_mismatch = J_CC(CC_NE);
 
     // Success; branch to the block we found.
@@ -145,10 +144,10 @@ void Jit64AsmRoutineManager::Generate()
     TEST(32, PPCSTATE(msr), Imm32(1 << (31 - 27)));
     FixupBranch physmem = J_CC(CC_Z);
     MOV(64, R(RMEM), ImmPtr(Memory::logical_base));
-    JMPptr(MDisp(RSCRATCH, static_cast<s32>(offsetof(JitBlockData, normalEntry))));
+    JMPptr(MDisp(RSCRATCH, static_cast<s32>(offsetof(JitBlock, normalEntry))));
     SetJumpTarget(physmem);
     MOV(64, R(RMEM), ImmPtr(Memory::physical_base));
-    JMPptr(MDisp(RSCRATCH, static_cast<s32>(offsetof(JitBlockData, normalEntry))));
+    JMPptr(MDisp(RSCRATCH, static_cast<s32>(offsetof(JitBlock, normalEntry))));
 
     SetJumpTarget(not_found);
     SetJumpTarget(state_mismatch);
@@ -237,8 +236,6 @@ void Jit64AsmRoutineManager::GenerateCommon()
   GenFres();
   mfcr = AlignCode4();
   GenMfcr();
-  cdts = AlignCode4();
-  GenConvertDoubleToSingle();
 
   GenQuantizedLoads();
   GenQuantizedSingleLoads();

@@ -1,5 +1,6 @@
 // Copyright 2018 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
@@ -9,10 +10,11 @@
 #include <vector>
 
 #include "Common/CommonTypes.h"
+#include "Core/ActionReplay.h"
 
-namespace ActionReplay
+namespace UICommon
 {
-struct ARCode;
+class GameFile;
 }
 
 class CheatWarningWidget;
@@ -25,8 +27,7 @@ class ARCodeWidget : public QWidget
 {
   Q_OBJECT
 public:
-  explicit ARCodeWidget(std::string game_id, u16 game_revision, bool restart_required = true);
-  ~ARCodeWidget() override;
+  explicit ARCodeWidget(const UICommon::GameFile& game, bool restart_required = true);
 
   void AddCode(ActionReplay::ARCode code);
 
@@ -44,12 +45,13 @@ private:
   void SaveCodes();
   void SortAlphabetically();
 
-  void OnCodeAddClicked();
-  void OnCodeEditClicked();
-  void OnCodeRemoveClicked();
+  void OnCodeAddPressed();
+  void OnCodeEditPressed();
+  void OnCodeRemovePressed();
 
   void OnListReordered();
 
+  const UICommon::GameFile& m_game;
   std::string m_game_id;
   u16 m_game_revision;
 

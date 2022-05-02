@@ -1,27 +1,17 @@
-// SPDX-License-Identifier: GPL-2.0-or-later
-
 package org.dolphinemu.dolphinemu.features.settings.model.view;
 
-import android.content.Context;
-
-import org.dolphinemu.dolphinemu.features.settings.model.AbstractSetting;
+import org.dolphinemu.dolphinemu.features.settings.model.Setting;
 
 public final class HeaderSetting extends SettingsItem
 {
-  public HeaderSetting(Context context, int titleId, int descriptionId)
+  public HeaderSetting(String key, Setting setting, int titleId, int descriptionId)
   {
-    super(context, titleId, descriptionId);
+    super(key, null, setting, titleId, descriptionId);
   }
 
   @Override
   public int getType()
   {
     return SettingsItem.TYPE_HEADER;
-  }
-
-  @Override
-  public AbstractSetting getSetting()
-  {
-    return null;
   }
 }

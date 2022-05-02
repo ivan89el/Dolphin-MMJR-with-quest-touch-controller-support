@@ -1,13 +1,12 @@
 // Copyright 2018 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
 #include <vector>
 
 #include <QWidget>
-
-#include "Common/CommonTypes.h"
 
 class QGroupBox;
 class QLabel;
@@ -58,13 +57,9 @@ private:
 
   struct SearchResult
   {
-    constexpr SearchResult(u32 frame, u32 object, u32 cmd)
-        : m_frame(frame), m_object(object), m_cmd(cmd)
-    {
-    }
-    const u32 m_frame;
-    const u32 m_object;
-    const u32 m_cmd;
+    int frame;
+    int object;
+    int cmd;
   };
 
   std::vector<int> m_object_data_offsets;

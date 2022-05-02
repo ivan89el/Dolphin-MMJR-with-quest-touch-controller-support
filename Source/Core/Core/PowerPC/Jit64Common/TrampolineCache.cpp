@@ -1,5 +1,6 @@
 // Copyright 2014 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "Core/PowerPC/Jit64Common/TrampolineCache.h"
 
@@ -40,7 +41,7 @@ const u8* TrampolineCache::GenerateTrampoline(const TrampolineInfo& info)
 const u8* TrampolineCache::GenerateReadTrampoline(const TrampolineInfo& info)
 {
   if (GetSpaceLeft() < 1024)
-    PanicAlertFmt("Trampoline cache full");
+    PanicAlert("Trampoline cache full");
 
   const u8* trampoline = GetCodePtr();
 
@@ -56,7 +57,7 @@ const u8* TrampolineCache::GenerateReadTrampoline(const TrampolineInfo& info)
 const u8* TrampolineCache::GenerateWriteTrampoline(const TrampolineInfo& info)
 {
   if (GetSpaceLeft() < 1024)
-    PanicAlertFmt("Trampoline cache full");
+    PanicAlert("Trampoline cache full");
 
   const u8* trampoline = GetCodePtr();
 

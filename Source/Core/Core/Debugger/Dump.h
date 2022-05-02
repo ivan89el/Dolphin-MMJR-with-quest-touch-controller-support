@@ -1,5 +1,6 @@
 // Copyright 2008 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 // Purpose: uncompress the dumps from costis GC-Debugger tool
 //
@@ -27,9 +28,9 @@ private:
     STRUCTUR_SIZE = 0x2BC
   };
 
-  u8* m_pData = nullptr;
+  u8* m_pData;
 
-  size_t m_size = 0;
+  size_t m_size;
 
   u32 Read32(u32 _pos);
 };

@@ -1,18 +1,17 @@
 // Copyright 2008 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "AudioCommon/WaveFile.h"
 
 #include <string>
 
 #include "Common/CommonTypes.h"
+#include "Common/File.h"
 #include "Common/FileUtil.h"
-#include "Common/IOFile.h"
-#include "Common/Logging/Log.h"
 #include "Common/MsgHandler.h"
 #include "Common/StringUtil.h"
 #include "Common/Swap.h"
-#include "Core/Config/MainSettings.h"
 #include "Core/ConfigManager.h"
 
 constexpr size_t WaveFileWriter::BUFFER_SIZE;
@@ -31,8 +30,8 @@ bool WaveFileWriter::Start(const std::string& filename, unsigned int HLESampleRa
   // Ask to delete file
   if (File::Exists(filename))
   {
-    if (Config::Get(Config::MAIN_DUMP_AUDIO_SILENT) ||
-        AskYesNoFmtT("Delete the existing file '{0}'?", filename))
+    if (SConfig::GetInstance().m_DumpAudioSilent ||
+        AskYesNoT("Delete the existing file '%s'?", filename.c_str()))
     {
       File::Delete(filename);
     }
@@ -46,17 +45,17 @@ bool WaveFileWriter::Start(const std::string& filename, unsigned int HLESampleRa
   // Check if the file is already open
   if (file)
   {
-    PanicAlertFmtT("The file {0} was already open, the file header will not be written.", filename);
+    PanicAlertT("The file %s was already open, the file header will not be written.",
+                filename.c_str());
     return false;
   }
 
   file.Open(filename, "wb");
   if (!file)
   {
-    PanicAlertFmtT(
-        "The file {0} could not be opened for writing. Please check if it's already opened "
-        "by another program.",
-        filename);
+    PanicAlertT("The file %s could not be opened for writing. Please check if it's already opened "
+                "by another program.",
+                filename.c_str());
     return false;
   }
 
@@ -88,7 +87,7 @@ bool WaveFileWriter::Start(const std::string& filename, unsigned int HLESampleRa
 
   // We are now at offset 44
   if (file.Tell() != 44)
-    PanicAlertFmt("Wrong offset: {}", file.Tell());
+    PanicAlert("Wrong offset: %lld", (long long)file.Tell());
 
   return true;
 }
@@ -118,10 +117,10 @@ void WaveFileWriter::Write4(const char* ptr)
 void WaveFileWriter::AddStereoSamplesBE(const short* sample_data, u32 count, int sample_rate)
 {
   if (!file)
-    ERROR_LOG_FMT(AUDIO, "WaveFileWriter - file not open.");
+    PanicAlertT("WaveFileWriter - file not open.");
 
   if (count > BUFFER_SIZE * 2)
-    ERROR_LOG_FMT(AUDIO, "WaveFileWriter - buffer too small (count = {}).", count);
+    PanicAlert("WaveFileWriter - buffer too small (count = %u).", count);
 
   if (skip_silence)
   {
@@ -148,7 +147,7 @@ void WaveFileWriter::AddStereoSamplesBE(const short* sample_data, u32 count, int
   {
     Stop();
     file_index++;
-    std::ostringstream filename;
+    std::stringstream filename;
     filename << File::GetUserPath(D_DUMPAUDIO_IDX) << basename << file_index << ".wav";
     Start(filename.str(), sample_rate);
     current_sample_rate = sample_rate;

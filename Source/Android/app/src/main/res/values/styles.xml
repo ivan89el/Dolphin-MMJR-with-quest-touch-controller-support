@@ -1,8 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
+    <style name="NNF_BaseTheme" parent="Theme.AppCompat.DialogWhenLarge">
+        <!-- You can override this in your sub theme -->
+        <item name="nnf_toolbarTheme">@style/ThemeOverlay.AppCompat.ActionBar</item>
+        <item name="nnf_separator_color">@color/nnf_dark_separator_color</item>
+        <item name="nnf_save_icon_color">?attr/colorAccent</item>
+        <item name="nnf_dir_icon_color">?attr/colorAccent</item>
+
+        <!-- These are important. Handled by toolbar. -->
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+    </style>
+
+    <style name="NNF_BaseTheme.Light" parent="Theme.AppCompat.Light.DialogWhenLarge">
+        <!-- You can override this in your sub theme -->
+        <item name="nnf_toolbarTheme">@style/ThemeOverlay.AppCompat.ActionBar</item>
+        <item name="nnf_separator_color">@color/nnf_light_separator_color</item>
+        <item name="nnf_save_icon_color">?attr/colorAccent</item>
+        <item name="nnf_dir_icon_color">?attr/colorAccent</item>
+
+        <!-- These are important. Handled by toolbar. -->
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+    </style>
+
     <!-- Inherit from the material theme -->
-    <style name="DolphinBase" parent="Theme.AppCompat.DayNight.NoActionBar">
+    <style name="DolphinBase" parent="Theme.AppCompat.Light.NoActionBar">
         <!-- Main theme colors -->
         <!-- Branding color for the app bar -->
         <item name="colorPrimary">@color/dolphin_blue</item>
@@ -14,12 +38,10 @@
         <item name="android:windowContentTransitions">true</item>
         <item name="android:windowAllowEnterTransitionOverlap">true</item>
         <item name="android:windowAllowReturnTransitionOverlap">true</item>
-
-        <item name="android:colorControlHighlight">?attr/colorAccent</item>
     </style>
 
     <!-- Same as above, but use default action bar, and mandate margins. -->
-    <style name="DolphinSettingsBase" parent="Theme.AppCompat.DayNight.DarkActionBar">
+    <style name="DolphinSettingsBase" parent="Theme.AppCompat.Light.DarkActionBar">
         <item name="colorPrimary">@color/dolphin_blue</item>
         <item name="colorPrimaryDark">@color/dolphin_blue_dark</item>
         <item name="colorAccent">@color/dolphin_purple</item>
@@ -27,9 +49,9 @@
 
     <!-- Themes for Dialogs -->
 
-    <style name="DolphinDialogBase" parent="Theme.AppCompat.DayNight.Dialog.Alert" />
+    <!-- Inherit from the Base Dolphin Dialog Theme -->
 
-    <style name="DolphinEmulationBase" parent="Theme.AppCompat.DayNight.NoActionBar">
+    <style name="DolphinEmulationBase" parent="Theme.AppCompat.Light.DarkActionBar">
         <item name="colorPrimary">@color/dolphin_blue</item>
         <item name="colorPrimaryDark">@color/dolphin_blue_dark</item>
         <item name="colorAccent">@color/dolphin_purple</item>
@@ -63,19 +85,16 @@
 
     <style name="OverlayInGameMenuOption" parent="InGameMenuOption">
         <item name="android:textColor">@color/button_text_color</item>
-        <item name="android:padding">8dp</item>
-        <item name="android:gravity">center</item>
-        <item name="android:layout_gravity">center</item>
     </style>
 
-    <!-- Inherit from a base file picker theme that handles day/night -->
-    <style name="FilePickerTheme" parent="FilePickerBaseTheme">
+    <!-- You can also inherit from NNF_BaseTheme.Light -->
+    <style name="FilePickerTheme" parent="NNF_BaseTheme.Light">
         <item name="colorPrimary">@color/dolphin_blue</item>
         <item name="colorPrimaryDark">@color/dolphin_blue_dark</item>
-        <item name="colorAccent">@color/dolphin_accent_gamecube</item>
+        <item name="colorAccent">@color/dolphin_purple</item>
 
         <!--&lt;!&ndash; Setting a divider is entirely optional &ndash;&gt;-->
-        <item name="nnf_list_item_divider">?android:attr/listDivider</item>
+        <item name="nnf_list_item_divider">@drawable/line_divider</item>
 
         <!-- Need to set this also to style create folder dialog -->
         <item name="alertDialogTheme">@style/FilePickerAlertDialogTheme</item>
@@ -85,26 +104,10 @@
         <item name="nnf_toolbarTheme">@style/ThemeOverlay.AppCompat.Dark.ActionBar</item>
     </style>
 
-    <style name="FilePickerAlertDialogTheme" parent="Theme.AppCompat.DayNight.Dialog.Alert">
+    <style name="FilePickerAlertDialogTheme" parent="Theme.AppCompat.Dialog.Alert">
         <item name="colorPrimary">@color/dolphin_blue</item>
         <item name="colorPrimaryDark">@color/dolphin_blue_dark</item>
-        <item name="colorAccent">@color/dolphin_accent_gamecube</item>
+        <item name="colorAccent">@color/dolphin_purple</item>
     </style>
-
-
-    <!-- User by CheatActivity and QuickSettings -->
-    <attr name="textColor" format="color" />
-    <attr name="colorDivider" format="color" />
-
-    <!-- Gradient color attributes -->
-    <attr name="colorGradientPrimaryStart" format="color" />
-    <attr name="colorGradientPrimaryCenter" format="color" />
-    <attr name="colorGradientPrimaryEnd" format="color" />
-    <attr name="colorGradientSecondaryStart" format="color" />
-    <attr name="colorGradientSecondaryCenter" format="color" />
-    <attr name="colorGradientSecondaryEnd" format="color" />
-    <attr name="colorOnGradientPrimary" format="color" />
-    <attr name="textColorOnPrimary" format="color" />
-    <attr name="textColorAccent" format="color" />
 
 </resources>

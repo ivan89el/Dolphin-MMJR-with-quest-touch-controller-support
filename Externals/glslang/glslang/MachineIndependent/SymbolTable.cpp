@@ -61,66 +61,63 @@ void TType::buildMangledName(TString& mangledName) const
 
     switch (basicType) {
     case EbtFloat:              mangledName += 'f';      break;
-    case EbtInt:                mangledName += 'i';      break;
-    case EbtUint:               mangledName += 'u';      break;
-    case EbtBool:               mangledName += 'b';      break;
-#ifndef GLSLANG_WEB
     case EbtDouble:             mangledName += 'd';      break;
     case EbtFloat16:            mangledName += "f16";    break;
+    case EbtInt:                mangledName += 'i';      break;
+    case EbtUint:               mangledName += 'u';      break;
     case EbtInt8:               mangledName += "i8";     break;
     case EbtUint8:              mangledName += "u8";     break;
     case EbtInt16:              mangledName += "i16";    break;
     case EbtUint16:             mangledName += "u16";    break;
     case EbtInt64:              mangledName += "i64";    break;
     case EbtUint64:             mangledName += "u64";    break;
+    case EbtBool:               mangledName += 'b';      break;
     case EbtAtomicUint:         mangledName += "au";     break;
+#ifdef NV_EXTENSIONS
     case EbtAccStructNV:        mangledName += "asnv";   break;
 #endif
     case EbtSampler:
         switch (sampler.type) {
-#ifndef GLSLANG_WEB
+#ifdef AMD_EXTENSIONS
         case EbtFloat16: mangledName += "f16"; break;
 #endif
         case EbtInt:   mangledName += "i"; break;
         case EbtUint:  mangledName += "u"; break;
         default: break; // some compilers want this
         }
-        if (sampler.isImageClass())
-            mangledName += "I";  // a normal image or subpass
-        else if (sampler.isPureSampler())
+        if (sampler.image)
+            mangledName += "I";  // a normal image
+        else if (sampler.sampler)
             mangledName += "p";  // a "pure" sampler
-        else if (!sampler.isCombined())
+        else if (!sampler.combined)
             mangledName += "t";  // a "pure" texture
         else
             mangledName += "s";  // traditional combined sampler
-        if (sampler.isArrayed())
+        if (sampler.arrayed)
             mangledName += "A";
-        if (sampler.isShadow())
+        if (sampler.shadow)
             mangledName += "S";
-        if (sampler.isExternal())
+        if (sampler.external)
             mangledName += "E";
-        if (sampler.isYuv())
+        if (sampler.yuv)
             mangledName += "Y";
         switch (sampler.dim) {
+        case Esd1D:       mangledName += "1";  break;
         case Esd2D:       mangledName += "2";  break;
         case Esd3D:       mangledName += "3";  break;
         case EsdCube:     mangledName += "C";  break;
-#ifndef GLSLANG_WEB
-        case Esd1D:       mangledName += "1";  break;
         case EsdRect:     mangledName += "R2"; break;
         case EsdBuffer:   mangledName += "B";  break;
         case EsdSubpass:  mangledName += "P";  break;
-#endif
         default: break; // some compilers want this
         }
 
-#ifdef ENABLE_HLSL
         if (sampler.hasReturnStruct()) {
             // Name mangle for sampler return struct uses struct table index.
             mangledName += "-tx-struct";
 
             char text[16]; // plenty enough space for the small integers.
-            snprintf(text, sizeof(text), "%d-", sampler.getStructReturnIndex());
+            snprintf(text, sizeof(text), "%d-", sampler.structReturnIndex);
             mangledName += text;
         } else {
             switch (sampler.getVectorSize()) {
@@ -130,9 +127,8 @@ void TType::buildMangledName(TString& mangledName) const
             case 4: break; // default to prior name mangle behavior
             }
         }
-#endif
 
-        if (sampler.isMultiSample())
+        if (sampler.ms)
             mangledName += "M";
         break;
     case EbtStruct:
@@ -175,8 +171,6 @@ void TType::buildMangledName(TString& mangledName) const
         }
     }
 }
-
-#ifndef GLSLANG_WEB
 
 //
 // Dump functions.
@@ -255,8 +249,6 @@ void TSymbolTable::dump(TInfoSink& infoSink, bool complete) const
         table[level]->dump(infoSink, complete);
     }
 }
-
-#endif
 
 //
 // Functions have buried pointers to delete.

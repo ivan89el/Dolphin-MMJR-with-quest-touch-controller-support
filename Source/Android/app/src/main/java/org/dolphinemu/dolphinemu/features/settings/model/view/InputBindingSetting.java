@@ -1,43 +1,27 @@
-// SPDX-License-Identifier: GPL-2.0-or-later
-
 package org.dolphinemu.dolphinemu.features.settings.model.view;
 
-import android.content.Context;
-import android.content.SharedPreferences;
-import android.preference.PreferenceManager;
 import android.view.InputDevice;
 import android.view.KeyEvent;
 
-import org.dolphinemu.dolphinemu.DolphinApplication;
-import org.dolphinemu.dolphinemu.features.settings.model.AbstractSetting;
-import org.dolphinemu.dolphinemu.features.settings.model.Settings;
+import org.dolphinemu.dolphinemu.features.settings.model.Setting;
+import org.dolphinemu.dolphinemu.features.settings.model.StringSetting;
 
 public class InputBindingSetting extends SettingsItem
 {
-  private String mFile;
-  private String mSection;
-  private String mKey;
-
-  private String mGameId;
-
-  public InputBindingSetting(Context context, String file, String section, String key, int titleId,
-          String gameId)
+  public InputBindingSetting(String key, String section, int titleId, Setting setting)
   {
-    super(context, titleId, 0);
-    mFile = file;
-    mSection = section;
-    mKey = key;
-    mGameId = gameId;
+    super(key, section, setting, titleId, 0);
   }
 
-  public String getKey()
+  public String getValue()
   {
-    return mKey;
-  }
+    if (getSetting() == null)
+    {
+      return "";
+    }
 
-  public String getValue(Settings settings)
-  {
-    return settings.getSection(mFile, mSection).getString(mKey, "");
+    StringSetting setting = (StringSetting) getSetting();
+    return setting.getValue();
   }
 
   /**
@@ -46,12 +30,11 @@ public class InputBindingSetting extends SettingsItem
    *
    * @param keyEvent KeyEvent of this key press.
    */
-  public void onKeyInput(Settings settings, KeyEvent keyEvent)
+  public void onKeyInput(KeyEvent keyEvent)
   {
     InputDevice device = keyEvent.getDevice();
     String bindStr = "Device '" + device.getDescriptor() + "'-Button " + keyEvent.getKeyCode();
-    String uiString = device.getName() + ": Button " + keyEvent.getKeyCode();
-    setValue(settings, bindStr, uiString);
+    setValue(bindStr);
   }
 
   /**
@@ -62,30 +45,36 @@ public class InputBindingSetting extends SettingsItem
    * @param motionRange MotionRange of the movement
    * @param axisDir     Either '-' or '+'
    */
-  public void onMotionInput(Settings settings, InputDevice device,
-          InputDevice.MotionRange motionRange, char axisDir)
+  public void onMotionInput(InputDevice device, InputDevice.MotionRange motionRange, char axisDir)
   {
     String bindStr =
             "Device '" + device.getDescriptor() + "'-Axis " + motionRange.getAxis() + axisDir;
-    String uiString = device.getName() + ": Axis " + motionRange.getAxis() + axisDir;
-    setValue(settings, bindStr, uiString);
+    setValue(bindStr);
   }
 
-  public void setValue(Settings settings, String bind, String ui)
+  /**
+   * Write a value to the backing string. If that string was previously null,
+   * initializes a new one and returns it, so it can be added to the Hashmap.
+   *
+   * @param bind The input that will be bound
+   */
+  public void setValue(String bind)
   {
-    SharedPreferences
-            preferences =
-            PreferenceManager.getDefaultSharedPreferences(DolphinApplication.getAppContext());
-    SharedPreferences.Editor editor = preferences.edit();
-    editor.putString(mKey + mGameId, ui);
-    editor.apply();
-
-    settings.getSection(mFile, mSection).setString(mKey, bind);
+    if (getSetting() == null)
+    {
+      StringSetting setting = new StringSetting(getKey(), getSection(), bind);
+      setSetting(setting);
+    }
+    else
+    {
+      StringSetting setting = (StringSetting) getSetting();
+      setting.setValue(bind);
+    }
   }
 
-  public void clearValue(Settings settings)
+  public void clearValue()
   {
-    setValue(settings, "", "");
+    setValue("");
   }
 
   @Override
@@ -94,14 +83,22 @@ public class InputBindingSetting extends SettingsItem
     return TYPE_INPUT_BINDING;
   }
 
-  public String getGameId()
+  public String getSettingText()
   {
-    return mGameId;
-  }
-
-  @Override
-  public AbstractSetting getSetting()
-  {
-    return null;
+    String uiText = null;
+    if(getSetting() != null)
+    {
+      String bindStr = getSetting().getValueAsString();
+      int index = bindStr.indexOf('-');
+      if(index > 0)
+      {
+        uiText = bindStr.substring(index + 1);
+      }
+      else
+      {
+        uiText = bindStr;
+      }
+    }
+    return uiText;
   }
 }

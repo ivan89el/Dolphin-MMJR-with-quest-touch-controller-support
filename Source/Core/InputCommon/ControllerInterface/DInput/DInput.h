@@ -1,5 +1,6 @@
 // Copyright 2010 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
@@ -19,6 +20,4 @@ BOOL CALLBACK DIEnumDevicesCallback(LPCDIDEVICEINSTANCE lpddi, LPVOID pvRef);
 std::string GetDeviceName(const LPDIRECTINPUTDEVICE8 device);
 
 void PopulateDevices(HWND hwnd);
-void ChangeWindow(HWND hwnd);
-void DeInit();
 }  // namespace ciface::DInput

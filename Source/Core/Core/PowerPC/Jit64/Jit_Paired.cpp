@@ -1,5 +1,6 @@
 // Copyright 2008 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "Common/CPUDetect.h"
 #include "Common/CommonTypes.h"
@@ -33,7 +34,6 @@ void Jit64::ps_sum(UGeckoInstruction inst)
   INSTRUCTION_START
   JITDISABLE(bJITPairedOff);
   FALLBACK_IF(inst.Rc);
-  FALLBACK_IF(jo.fp_exceptions);
 
   int d = inst.FD;
   int a = inst.FA;
@@ -74,10 +74,11 @@ void Jit64::ps_sum(UGeckoInstruction inst)
     }
     break;
   default:
-    PanicAlertFmt("ps_sum WTF!!!");
+    PanicAlert("ps_sum WTF!!!");
   }
   HandleNaNs(inst, Rd, tmp, tmp == XMM1 ? XMM0 : XMM1);
-  FinalizeSingleResult(Rd, Rd);
+  ForceSinglePrecision(Rd, Rd);
+  SetFPRFIfNeeded(Rd);
 }
 
 void Jit64::ps_muls(UGeckoInstruction inst)
@@ -85,7 +86,6 @@ void Jit64::ps_muls(UGeckoInstruction inst)
   INSTRUCTION_START
   JITDISABLE(bJITPairedOff);
   FALLBACK_IF(inst.Rc);
-  FALLBACK_IF(jo.fp_exceptions);
 
   int d = inst.FD;
   int a = inst.FA;
@@ -106,13 +106,14 @@ void Jit64::ps_muls(UGeckoInstruction inst)
     avx_op(&XEmitter::VSHUFPD, &XEmitter::SHUFPD, XMM1, Rc, Rc, 3);
     break;
   default:
-    PanicAlertFmt("ps_muls WTF!!!");
+    PanicAlert("ps_muls WTF!!!");
   }
   if (round_input)
     Force25BitPrecision(XMM1, R(XMM1), XMM0);
   MULPD(XMM1, Ra);
-  HandleNaNs(inst, Rd, XMM1, XMM0);
-  FinalizeSingleResult(Rd, Rd);
+  HandleNaNs(inst, Rd, XMM1);
+  ForceSinglePrecision(Rd, Rd);
+  SetFPRFIfNeeded(Rd);
 }
 
 void Jit64::ps_mergeXX(UGeckoInstruction inst)
@@ -154,7 +155,6 @@ void Jit64::ps_rsqrte(UGeckoInstruction inst)
   INSTRUCTION_START
   JITDISABLE(bJITFloatingPointOff);
   FALLBACK_IF(inst.Rc);
-  FALLBACK_IF(jo.fp_exceptions || jo.div_by_zero_exceptions);
   int b = inst.FB;
   int d = inst.FD;
 
@@ -171,7 +171,8 @@ void Jit64::ps_rsqrte(UGeckoInstruction inst)
   CALL(asm_routines.frsqrte);
   MOVLHPS(Rd, XMM0);
 
-  FinalizeSingleResult(Rd, Rd);
+  ForceSinglePrecision(Rd, Rd);
+  SetFPRFIfNeeded(Rd);
 }
 
 void Jit64::ps_res(UGeckoInstruction inst)
@@ -179,7 +180,6 @@ void Jit64::ps_res(UGeckoInstruction inst)
   INSTRUCTION_START
   JITDISABLE(bJITFloatingPointOff);
   FALLBACK_IF(inst.Rc);
-  FALLBACK_IF(jo.fp_exceptions || jo.div_by_zero_exceptions);
   int b = inst.FB;
   int d = inst.FD;
 
@@ -196,14 +196,14 @@ void Jit64::ps_res(UGeckoInstruction inst)
   CALL(asm_routines.fres);
   MOVLHPS(Rd, XMM0);
 
-  FinalizeSingleResult(Rd, Rd);
+  ForceSinglePrecision(Rd, Rd);
+  SetFPRFIfNeeded(Rd);
 }
 
 void Jit64::ps_cmpXX(UGeckoInstruction inst)
 {
   INSTRUCTION_START
   JITDISABLE(bJITFloatingPointOff);
-  FALLBACK_IF(jo.fp_exceptions);
 
   FloatCompare(inst, !!(inst.SUBOP10 & 64));
 }

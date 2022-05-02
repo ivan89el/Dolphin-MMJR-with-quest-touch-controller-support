@@ -1,9 +1,9 @@
 // Copyright 2015 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
-#include <atomic>
 #include <memory>
 #include <string>
 
@@ -72,10 +72,7 @@ private:
     UpdateDirectory,
     UpdateFile,
     UpdateMetadata,
-    ResumeProcessing,
-    PurgeCache,
-    BeginRefresh,
-    EndRefresh,
+    PurgeCache
   };
 
   struct Command
@@ -93,8 +90,6 @@ private:
   Common::Event m_initial_games_emitted_event;
   bool m_initial_games_emitted = false;
   bool m_started = false;
-  bool m_needs_purge = false;
-  std::atomic_bool m_processing_halted = false;
 };
 
 Q_DECLARE_METATYPE(std::shared_ptr<const UICommon::GameFile>)

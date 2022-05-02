@@ -1,5 +1,6 @@
 // Copyright 2010 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
@@ -8,7 +9,6 @@
 
 #include "Common/CommonTypes.h"
 #include "Common/MathUtil.h"
-#include "VideoCommon/IndexGenerator.h"
 #include "VideoCommon/RenderState.h"
 #include "VideoCommon/ShaderCache.h"
 
@@ -45,34 +45,6 @@ private:
 
   static constexpr u32 MAX_PRIMITIVES_PER_COMMAND = 65535;
 
-  // Used for 16:9 anamorphic widescreen heuristic.
-  struct FlushStatistics
-  {
-    struct ProjectionCounts
-    {
-      size_t normal_flush_count;
-      size_t anamorphic_flush_count;
-      size_t other_flush_count;
-
-      size_t normal_vertex_count;
-      size_t anamorphic_vertex_count;
-      size_t other_vertex_count;
-
-      size_t GetTotalFlushCount() const
-      {
-        return normal_flush_count + anamorphic_flush_count + other_flush_count;
-      }
-
-      size_t GetTotalVertexCount() const
-      {
-        return normal_vertex_count + anamorphic_vertex_count + other_vertex_count;
-      }
-    };
-
-    ProjectionCounts perspective;
-    ProjectionCounts orthographic;
-  };
-
 public:
   static constexpr u32 MAXVBUFFERSIZE =
       MathUtil::NextPowerOf2(MAX_PRIMITIVES_PER_COMMAND * LARGEST_POSSIBLE_VERTEX);
@@ -93,7 +65,6 @@ public:
   virtual bool Initialize();
 
   PrimitiveType GetCurrentPrimitiveType() const { return m_current_primitive_type; }
-  void AddIndices(int primitive, u32 num_vertices);
   DataReader PrepareForAdditionalData(int primitive, u32 count, u32 stride, bool cullall);
   void FlushData(u32 count, u32 stride);
 
@@ -101,7 +72,7 @@ public:
 
   void DoState(PointerWrap& p);
 
-  FlushStatistics ResetFlushAspectRatioCount();
+  std::pair<size_t, size_t> ResetFlushAspectRatioCount();
 
   // State setters, called from register update functions.
   void SetRasterizationStateChanged() { m_rasterization_state_changed = true; }
@@ -163,7 +134,7 @@ protected:
   virtual void DrawCurrentBatch(u32 base_index, u32 num_indices, u32 base_vertex);
 
   u32 GetRemainingSize() const;
-  u32 GetRemainingIndices(int primitive) const;
+  static u32 GetRemainingIndices(int primitive);
 
   void CalculateZSlope(NativeVertexFormat* format);
   void LoadTextures();
@@ -178,8 +149,10 @@ protected:
 
   Slope m_zslope = {};
 
+  // dual source blend
+  const AbstractPipeline* GetPipelineForAlphaPass();
+
   VideoCommon::GXPipelineUid m_current_pipeline_config;
-  VideoCommon::GXUberPipelineUid m_current_uber_pipeline_config;
   const AbstractPipeline* m_current_pipeline_object = nullptr;
   PrimitiveType m_current_primitive_type = PrimitiveType::Points;
   bool m_pipeline_config_changed = true;
@@ -187,8 +160,6 @@ protected:
   bool m_depth_state_changed = true;
   bool m_blending_state_changed = true;
   bool m_cull_all = false;
-
-  IndexGenerator m_index_generator;
 
 private:
   // Minimum number of draws per command buffer when attempting to preempt a readback operation.
@@ -198,7 +169,8 @@ private:
   void UpdatePipelineObject();
 
   bool m_is_flushed = true;
-  FlushStatistics m_flush_statistics = {};
+  size_t m_flush_count_4_3 = 0;
+  size_t m_flush_count_anamorphic = 0;
 
   // CPU access tracking
   u32 m_draw_counter = 0;

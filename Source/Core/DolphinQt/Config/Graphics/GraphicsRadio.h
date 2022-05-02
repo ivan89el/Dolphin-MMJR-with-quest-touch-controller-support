@@ -1,21 +1,22 @@
 // Copyright 2018 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
-#include "DolphinQt/Config/ToolTipControls/ToolTipRadioButton.h"
+#include <QRadioButton>
 
 #include "Common/Config/Config.h"
 
-class GraphicsRadioInt : public ToolTipRadioButton
+class GraphicsRadioInt : public QRadioButton
 {
   Q_OBJECT
 public:
-  GraphicsRadioInt(const QString& label, const Config::Info<int>& setting, int value);
+  GraphicsRadioInt(const QString& label, const Config::ConfigInfo<int>& setting, int value);
 
 private:
   void Update();
 
-  Config::Info<int> m_setting;
+  Config::ConfigInfo<int> m_setting;
   int m_value;
 };

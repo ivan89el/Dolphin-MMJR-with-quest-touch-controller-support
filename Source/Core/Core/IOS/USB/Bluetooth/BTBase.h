@@ -1,5 +1,6 @@
 // Copyright 2016 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
@@ -18,7 +19,9 @@ namespace IOS::HLE
 void BackUpBTInfoSection(const SysConf* sysconf);
 void RestoreBTInfoSection(SysConf* sysconf);
 
-class BluetoothBaseDevice : public Device
+namespace Device
+{
+class BluetoothBase : public Device
 {
 public:
   using Device::Device;
@@ -40,4 +43,5 @@ protected:
     ACL_DATA_OUT = 0x02
   };
 };
+}  // namespace Device
 }  // namespace IOS::HLE

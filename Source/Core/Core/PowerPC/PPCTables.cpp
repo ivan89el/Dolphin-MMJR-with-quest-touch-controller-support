@@ -1,5 +1,6 @@
 // Copyright 2008 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "Core/PowerPC/PPCTables.h"
 
@@ -10,12 +11,10 @@
 #include <cstdio>
 #include <vector>
 
-#include <fmt/format.h>
-
 #include "Common/Assert.h"
 #include "Common/CommonTypes.h"
+#include "Common/File.h"
 #include "Common/FileUtil.h"
-#include "Common/IOFile.h"
 #include "Common/Logging/Log.h"
 #include "Common/StringUtil.h"
 
@@ -156,7 +155,7 @@ void PrintInstructionRunCounts()
     if (inst.second == 0)
       break;
 
-    DEBUG_LOG_FMT(POWERPC, "{} : {}", inst.first, inst.second);
+    DEBUG_LOG(POWERPC, "%s : %" PRIu64, inst.first, inst.second);
   }
 }
 
@@ -164,33 +163,35 @@ void LogCompiledInstructions()
 {
   static unsigned int time = 0;
 
-  File::IOFile f(fmt::format("{}inst_log{}.txt", File::GetUserPath(D_LOGS_IDX), time), "w");
+  File::IOFile f(StringFromFormat("%sinst_log%i.txt", File::GetUserPath(D_LOGS_IDX).c_str(), time),
+                 "w");
   for (size_t i = 0; i < m_numInstructions; i++)
   {
     GekkoOPInfo* pInst = m_allInstructions[i];
     if (pInst->compileCount > 0)
     {
-      f.WriteString(fmt::format("{0}\t{1}\t{2}\t{3:08x}\n", pInst->opname, pInst->compileCount,
-                                pInst->runCount, pInst->lastUse));
+      fprintf(f.GetHandle(), "%s\t%i\t%" PRId64 "\t%08x\n", pInst->opname, pInst->compileCount,
+              pInst->runCount, pInst->lastUse);
     }
   }
 
-  f.Open(fmt::format("{}inst_not{}.txt", File::GetUserPath(D_LOGS_IDX), time), "w");
+  f.Open(StringFromFormat("%sinst_not%i.txt", File::GetUserPath(D_LOGS_IDX).c_str(), time), "w");
   for (size_t i = 0; i < m_numInstructions; i++)
   {
     GekkoOPInfo* pInst = m_allInstructions[i];
     if (pInst->compileCount == 0)
     {
-      f.WriteString(
-          fmt::format("{0}\t{1}\t{2}\n", pInst->opname, pInst->compileCount, pInst->runCount));
+      fprintf(f.GetHandle(), "%s\t%i\t%" PRId64 "\n", pInst->opname, pInst->compileCount,
+              pInst->runCount);
     }
   }
 
 #ifdef OPLOG
-  f.Open(fmt::format("{}" OP_TO_LOG "_at{}.txt", File::GetUserPath(D_LOGS_IDX), time), "w");
+  f.Open(StringFromFormat("%s" OP_TO_LOG "_at%i.txt", File::GetUserPath(D_LOGS_IDX).c_str(), time),
+         "w");
   for (auto& rsplocation : rsplocations)
   {
-    f.WriteString(fmt::format(OP_TO_LOG ": {0:08x}\n", rsplocation));
+    fprintf(f.GetHandle(), OP_TO_LOG ": %08x\n", rsplocation);
   }
 #endif
 

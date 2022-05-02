@@ -1,8 +1,8 @@
 // Copyright 2008 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include <memory>
-#include <VideoCommon/RenderState.h>
 
 #include "Common/Assert.h"
 #include "Common/GL/GLContext.h"
@@ -31,15 +31,15 @@ GLuint CompileProgram(const std::string& vertexShader, const std::string& fragme
 
   if (Result && stringBufferUsage)
   {
-    ERROR_LOG_FMT(VIDEO, "GLSL vertex shader warnings:\n{}{}", stringBuffer, vertexShader);
+    ERROR_LOG(VIDEO, "GLSL vertex shader warnings:\n%s%s", stringBuffer, vertexShader.c_str());
   }
   else if (!Result)
   {
-    ERROR_LOG_FMT(VIDEO, "GLSL vertex shader error:\n{}{}", stringBuffer, vertexShader);
+    ERROR_LOG(VIDEO, "GLSL vertex shader error:\n%s%s", stringBuffer, vertexShader.c_str());
   }
   else
   {
-    INFO_LOG_FMT(VIDEO, "GLSL vertex shader compiled:\n{}", vertexShader);
+    INFO_LOG(VIDEO, "GLSL vertex shader compiled:\n%s", vertexShader.c_str());
   }
 
   bool shader_errors = !Result;
@@ -55,15 +55,15 @@ GLuint CompileProgram(const std::string& vertexShader, const std::string& fragme
 
   if (Result && stringBufferUsage)
   {
-    ERROR_LOG_FMT(VIDEO, "GLSL fragment shader warnings:\n{}{}", stringBuffer, fragmentShader);
+    ERROR_LOG(VIDEO, "GLSL fragment shader warnings:\n%s%s", stringBuffer, fragmentShader.c_str());
   }
   else if (!Result)
   {
-    ERROR_LOG_FMT(VIDEO, "GLSL fragment shader error:\n{}{}", stringBuffer, fragmentShader);
+    ERROR_LOG(VIDEO, "GLSL fragment shader error:\n%s%s", stringBuffer, fragmentShader.c_str());
   }
   else
   {
-    INFO_LOG_FMT(VIDEO, "GLSL fragment shader compiled:\n{}", fragmentShader);
+    INFO_LOG(VIDEO, "GLSL fragment shader compiled:\n%s", fragmentShader.c_str());
   }
 
   shader_errors |= !Result;
@@ -79,12 +79,13 @@ GLuint CompileProgram(const std::string& vertexShader, const std::string& fragme
 
   if (Result && stringBufferUsage)
   {
-    ERROR_LOG_FMT(VIDEO, "GLSL linker warnings:\n{}{}{}", stringBuffer, vertexShader,
-                  fragmentShader);
+    ERROR_LOG(VIDEO, "GLSL linker warnings:\n%s%s%s", stringBuffer, vertexShader.c_str(),
+              fragmentShader.c_str());
   }
   else if (!Result && !shader_errors)
   {
-    ERROR_LOG_FMT(VIDEO, "GLSL linker error:\n{}{}{}", stringBuffer, vertexShader, fragmentShader);
+    ERROR_LOG(VIDEO, "GLSL linker error:\n%s%s%s", stringBuffer, vertexShader.c_str(),
+              fragmentShader.c_str());
   }
 #endif
 
@@ -95,42 +96,19 @@ GLuint CompileProgram(const std::string& vertexShader, const std::string& fragme
   return programID;
 }
 
-void EnablePrimitiveRestart(const GLContext* context)
-{
-  constexpr GLuint PRIMITIVE_RESTART_INDEX = 65535;
-
-  if (context->IsGLES())
-  {
-    glEnable(GL_PRIMITIVE_RESTART_FIXED_INDEX);
-  }
-  else
-  {
-    if (GLExtensions::Version() >= 310)
-    {
-      glEnable(GL_PRIMITIVE_RESTART);
-      glPrimitiveRestartIndex(PRIMITIVE_RESTART_INDEX);
-    }
-    else
-    {
-      glEnableClientState(GL_PRIMITIVE_RESTART_NV);
-      glPrimitiveRestartIndexNV(PRIMITIVE_RESTART_INDEX);
-    }
-  }
-}
-
 GLenum MapToGLPrimitive(PrimitiveType primitive_type)
 {
   switch (primitive_type)
   {
-    case PrimitiveType::Points:
-      return GL_POINTS;
-    case PrimitiveType::Lines:
-      return GL_LINES;
-    case PrimitiveType::Triangles:
-      return GL_TRIANGLES;
-    default:
-      return 0;
-    }
+  case PrimitiveType::Points:
+    return GL_POINTS;
+  case PrimitiveType::Lines:
+    return GL_LINES;
+  case PrimitiveType::Triangles:
+    return GL_TRIANGLES;
+  default:
+    return 0;
   }
+}
 
 }  // namespace GLUtil

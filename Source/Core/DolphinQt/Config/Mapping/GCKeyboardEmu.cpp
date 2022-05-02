@@ -1,5 +1,6 @@
 // Copyright 2017 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include <QFormLayout>
 #include <QGroupBox>
@@ -23,19 +24,19 @@ void GCKeyboardEmu::CreateMainLayout()
   m_main_layout = new QHBoxLayout();
 
   m_main_layout->addWidget(
-      CreateGroupBox(QString{}, Keyboard::GetGroup(GetPort(), KeyboardGroup::Kb0x)));
+      CreateGroupBox(QStringLiteral(""), Keyboard::GetGroup(GetPort(), KeyboardGroup::Kb0x)));
   m_main_layout->addWidget(
-      CreateGroupBox(QString{}, Keyboard::GetGroup(GetPort(), KeyboardGroup::Kb1x)));
+      CreateGroupBox(QStringLiteral(""), Keyboard::GetGroup(GetPort(), KeyboardGroup::Kb1x)));
   m_main_layout->addWidget(
-      CreateGroupBox(QString{}, Keyboard::GetGroup(GetPort(), KeyboardGroup::Kb2x)));
+      CreateGroupBox(QStringLiteral(""), Keyboard::GetGroup(GetPort(), KeyboardGroup::Kb2x)));
   m_main_layout->addWidget(
-      CreateGroupBox(QString{}, Keyboard::GetGroup(GetPort(), KeyboardGroup::Kb3x)));
+      CreateGroupBox(QStringLiteral(""), Keyboard::GetGroup(GetPort(), KeyboardGroup::Kb3x)));
   m_main_layout->addWidget(
-      CreateGroupBox(QString{}, Keyboard::GetGroup(GetPort(), KeyboardGroup::Kb4x)));
+      CreateGroupBox(QStringLiteral(""), Keyboard::GetGroup(GetPort(), KeyboardGroup::Kb4x)));
 
   auto* vbox_layout = new QVBoxLayout();
   vbox_layout->addWidget(
-      CreateGroupBox(QString{}, Keyboard::GetGroup(GetPort(), KeyboardGroup::Kb5x)));
+      CreateGroupBox(QStringLiteral(""), Keyboard::GetGroup(GetPort(), KeyboardGroup::Kb5x)));
 
   m_main_layout->addLayout(vbox_layout);
 

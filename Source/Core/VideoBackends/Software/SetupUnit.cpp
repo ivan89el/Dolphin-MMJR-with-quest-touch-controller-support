@@ -1,5 +1,6 @@
 // Copyright 2009 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include <cstring>
 
@@ -24,7 +25,7 @@ void SetupUnit::Init(u8 primitiveType)
 
 OutputVertexData* SetupUnit::GetVertex()
 {
-  memset(reinterpret_cast<u8*>(m_VertWritePointer), 0, sizeof(*m_VertWritePointer));
+  memset(m_VertWritePointer, 0, sizeof(*m_VertWritePointer));
   return m_VertWritePointer;
 }
 
@@ -36,7 +37,7 @@ void SetupUnit::SetupVertex()
     SetupQuad();
     break;
   case OpcodeDecoder::GX_DRAW_QUADS_2:
-    WARN_LOG_FMT(VIDEO, "Non-standard primitive drawing command GL_DRAW_QUADS_2");
+    WARN_LOG(VIDEO, "Non-standard primitive drawing command GL_DRAW_QUADS_2");
     SetupQuad();
     break;
   case OpcodeDecoder::GX_DRAW_TRIANGLES:
@@ -166,5 +167,4 @@ void SetupUnit::SetupLineStrip()
 
 void SetupUnit::SetupPoint()
 {
-  Clipper::ProcessPoint(m_VertPointer[0]);
 }

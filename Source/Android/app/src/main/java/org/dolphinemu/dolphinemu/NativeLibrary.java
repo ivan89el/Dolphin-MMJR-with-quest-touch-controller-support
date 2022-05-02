@@ -1,30 +1,20 @@
 /*
  * Copyright 2013 Dolphin Emulator Project
- * SPDX-License-Identifier: GPL-2.0-or-later
+ * Licensed under GPLv2+
+ * Refer to the license.txt file included.
  */
 
 package org.dolphinemu.dolphinemu;
 
+import android.app.AlertDialog;
 import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
-import android.os.Handler;
-import android.os.Looper;
-import android.util.DisplayMetrics;
 import android.view.Surface;
-import android.widget.Toast;
-
-import androidx.annotation.Keep;
-import androidx.fragment.app.FragmentManager;
 
 import org.dolphinemu.dolphinemu.activities.EmulationActivity;
-import org.dolphinemu.dolphinemu.dialogs.AlertMessage;
-import org.dolphinemu.dolphinemu.utils.CompressCallback;
 import org.dolphinemu.dolphinemu.utils.Log;
 import org.dolphinemu.dolphinemu.utils.Rumble;
-
-import java.lang.ref.WeakReference;
-import java.util.LinkedHashMap;
 
 /**
  * Class which contains methods that interact
@@ -32,20 +22,6 @@ import java.util.LinkedHashMap;
  */
 public final class NativeLibrary
 {
-  private static final Object sAlertMessageLock = new Object();
-  private static boolean sIsShowingAlertMessage = false;
-
-  private static WeakReference<EmulationActivity> sEmulationActivity = new WeakReference<>(null);
-
-  /**
-   * Returns the current instance of EmulationActivity.
-   * There should only ever be one EmulationActivity instantiated.
-   */
-  public static EmulationActivity getEmulationActivity()
-  {
-    return sEmulationActivity.get();
-  }
-
   /**
    * Button type for use in onTouchEvent
    */
@@ -91,8 +67,6 @@ public final class NativeLibrary
     public static final int WIIMOTE_IR_DOWN = 113;
     public static final int WIIMOTE_IR_LEFT = 114;
     public static final int WIIMOTE_IR_RIGHT = 115;
-    public static final int WIIMOTE_IR_FORWARD = 116;
-    public static final int WIIMOTE_IR_BACKWARD = 117;
     public static final int WIIMOTE_IR_HIDE = 118;
     public static final int WIIMOTE_SWING = 119;
     public static final int WIIMOTE_SWING_UP = 120;
@@ -114,6 +88,8 @@ public final class NativeLibrary
     public static final int HOTKEYS_UPRIGHT_TOGGLE = 136;
     public static final int HOTKEYS_SIDEWAYS_HOLD = 137;
     public static final int HOTKEYS_UPRIGHT_HOLD = 138;
+    public static final int WIIMOTE_IR_RECENTER = 139;
+    public static final int WIIMOTE_TILT_TOGGLE = 140;
     // Nunchuk
     public static final int NUNCHUK_BUTTON_C = 200;
     public static final int NUNCHUK_BUTTON_Z = 201;
@@ -126,7 +102,7 @@ public final class NativeLibrary
     public static final int NUNCHUK_SWING_UP = 208;
     public static final int NUNCHUK_SWING_DOWN = 209;
     public static final int NUNCHUK_SWING_LEFT = 210;
-    public static final int NUNCHUK_SWING_RIGHT = 211;
+    public static final int NUNCHUK_SWING_RIGHT = 221;
     public static final int NUNCHUK_SWING_FORWARD = 212;
     public static final int NUNCHUK_SWING_BACKWARD = 213;
     public static final int NUNCHUK_TILT = 214;
@@ -159,7 +135,7 @@ public final class NativeLibrary
     public static final int CLASSIC_STICK_LEFT_RIGHT = 317;
     public static final int CLASSIC_STICK_RIGHT = 318;
     public static final int CLASSIC_STICK_RIGHT_UP = 319;
-    public static final int CLASSIC_STICK_RIGHT_DOWN = 320;
+    public static final int CLASSIC_STICK_RIGHT_DOWN = 100;
     public static final int CLASSIC_STICK_RIGHT_LEFT = 321;
     public static final int CLASSIC_STICK_RIGHT_RIGHT = 322;
     public static final int CLASSIC_TRIGGER_L = 323;
@@ -217,32 +193,6 @@ public final class NativeLibrary
     public static final int TURNTABLE_CROSSFADE = 622;
     public static final int TURNTABLE_CROSSFADE_LEFT = 623;
     public static final int TURNTABLE_CROSSFADE_RIGHT = 624;
-    public static final int WIIMOTE_ACCEL_LEFT = 625;
-    public static final int WIIMOTE_ACCEL_RIGHT = 626;
-    public static final int WIIMOTE_ACCEL_FORWARD = 627;
-    public static final int WIIMOTE_ACCEL_BACKWARD = 628;
-    public static final int WIIMOTE_ACCEL_UP = 629;
-    public static final int WIIMOTE_ACCEL_DOWN = 630;
-    public static final int WIIMOTE_GYRO_PITCH_UP = 631;
-    public static final int WIIMOTE_GYRO_PITCH_DOWN = 632;
-    public static final int WIIMOTE_GYRO_ROLL_LEFT = 633;
-    public static final int WIIMOTE_GYRO_ROLL_RIGHT = 634;
-    public static final int WIIMOTE_GYRO_YAW_LEFT = 635;
-    public static final int WIIMOTE_GYRO_YAW_RIGHT = 636;
-    public static final int STICK_EMULATION = 800;
-  }
-
-  /**
-   * HotkeyIDs, in case we want to have more settings toggleable in the future.
-   * Every entry needs to be synced with their cpp counterpart.
-   * Every hotkey needs its own code to be handled.
-   */
-  public static final class Hotkey
-  {
-    public static final int HOTKEY = 900;
-    public static final int HK_TOGGLE_EFB_ACCESS = 901;
-    public static final int HK_TOGGLE_EFBCOPIES = 902;
-    public static final int HK_TOGGLE_FAST_FORWARD = 903;
   }
 
   /**
@@ -252,11 +202,6 @@ public final class NativeLibrary
   {
     public static final int RELEASED = 0;
     public static final int PRESSED = 1;
-  }
-
-  private NativeLibrary()
-  {
-    // Disallows instantiation.
   }
 
   /**
@@ -284,55 +229,34 @@ public final class NativeLibrary
   public static native void onGamePadMoveEvent(String Device, int Axis, float Value);
 
   /**
-   * Handles hotkeys events
-   *
-   * @param HotkeyId    ID of the hotkey to toggle.
-   * @param showMessage Display an OSD message on hotkey toggle.
-   * @return The state of the toggled hotkey.
-   */
-  public static native boolean onHotkeyEvent(int HotkeyId, boolean showMessage);
-
-  /**
-   * Retrieves hotkey's state
-   *
-   * @param HotkeyId ID of the hotkey to get the state of.
-   * @return The state of the hotkey.
-   */
-  public static native boolean getHotkeyState(int HotkeyId);
-
-  /**
    * Rumble sent from native. Currently only supports phone rumble.
    *
    * @param padID Ignored for now. Future use would be to pass rumble to a connected controller
    * @param state Ignored for now since phone rumble can't just be 'turned' on/off
    */
-  @Keep
   public static void rumble(int padID, double state)
   {
-    final EmulationActivity emulationActivity = sEmulationActivity.get();
-    if (emulationActivity == null)
-    {
-      Log.warning("[NativeLibrary] EmulationActivity is null");
-      return;
-    }
-
     Rumble.checkRumble(padID, state);
   }
 
-  public static native void SetMotionSensorsEnabled(boolean accelerometerEnabled,
-          boolean gyroscopeEnabled);
+  public static native void LoadGameIniFile(String gameId);
 
-  // Angle is in radians and should be non-negative
-  public static native double GetInputRadiusAtAngle(int emu_pad_id, int stick, double angle);
+  public static native void SaveGameIniFile(String gameId);
+
+  public static native void SetUserSetting(String gameID, String Section, String Key, String Value);
+
+  public static native void SetProfileSetting(String profile, String Section, String Key,
+          String Value);
 
   /**
-   * Gets the Dolphin version string.
+   * Sets a value to a key in the given ini config file.
    *
-   * @return the Dolphin version string.
+   * @param configFile The ini-based config file to add the value to.
+   * @param Section    The section key for the ini key
+   * @param Key        The actual ini key to set.
+   * @param Value      The string to set the ini key to.
    */
-  public static native String GetVersionString();
-
-  public static native String GetGitRevision();
+  public static native void SetConfig(String configFile, String Section, String Key, String Value);
 
   /**
    * Saves a screen capture of the game
@@ -372,11 +296,6 @@ public final class NativeLibrary
   public static native void LoadStateAs(String path);
 
   /**
-   * Returns when the savestate in the given slot was created, or 0 if the slot is empty.
-   */
-  public static native long GetUnixTimeOfStateSlot(int slot);
-
-  /**
    * Sets the current working user directory
    * If not set, it auto-detects a location
    */
@@ -387,52 +306,37 @@ public final class NativeLibrary
    */
   public static native String GetUserDirectory();
 
-  public static native void SetCacheDirectory(String directory);
-
   public static native int DefaultCPUCore();
 
-  public static native String GetDefaultGraphicsBackendName();
-
-  public static native int GetMaxLogLevel();
-
-  public static native void ReloadConfig();
-
-  public static native void UpdateGCAdapterScanThread();
+  /**
+   * Returns the current available audio backend list
+   */
+  public static native String[] GetAudioBackendList();
 
   /**
-   * Initializes the native parts of the app.
-   *
-   * Should be called at app start before running any other native code
-   * (other than the native methods in DirectoryInitialization).
+   * Returns the current working audio backend
    */
-  public static native void Initialize();
+  public static native String DefaultAudioBackend();
 
   /**
-   * Tells analytics that Dolphin has been started.
-   *
-   * Since users typically don't explicitly close Android apps, it's appropriate to
-   * call this not only when the app starts but also when the user returns to the app
-   * after not using it for a significant amount of time.
+   * Get sysconf settings
    */
-  public static native void ReportStartToAnalytics();
+  public static native int[] getRunningSettings();
 
-  public static native void GenerateNewStatisticsId();
+  /**
+   * Set sysconf settings
+   */
+  public static native void setRunningSettings(int[] settings);
 
   /**
    * Begins emulation.
    */
-  public static native void Run(String[] path, boolean riivolution);
+  public static native void setSystemLanguage(String language);
 
   /**
    * Begins emulation from the specified savestate.
    */
-  public static native void Run(String[] path, boolean riivolution, String savestatePath,
-          boolean deleteSavestate);
-
-  /**
-   * Begins emulation of the System Menu.
-   */
-  public static native void RunSystemMenu();
+  public static native void Run(String[] path, String savestatePath);
 
   public static native void ChangeDisc(String path);
 
@@ -441,7 +345,7 @@ public final class NativeLibrary
 
   public static native void SurfaceDestroyed();
 
-  public static native boolean HasSurface();
+  public static native void SetScaledDensity(float scaledDensity);
 
   /**
    * Unpauses emulation from a paused state.
@@ -459,20 +363,9 @@ public final class NativeLibrary
   public static native void StopEmulation();
 
   /**
-   * Ensures that IsRunning will return true from now on until emulation exits.
-   * (If this is not called, IsRunning will start returning true at some point
-   * after calling Run.)
-   */
-  public static native void SetIsBooting();
-
-  /**
    * Returns true if emulation is running (or is paused).
    */
   public static native boolean IsRunning();
-
-  public static native boolean IsRunningAndStarted();
-
-  public static native boolean IsRunningAndUnpaused();
 
   /**
    * Enables or disables CPU block profiling
@@ -487,163 +380,91 @@ public final class NativeLibrary
   public static native void WriteProfileResults();
 
   /**
-   * Native EGL functions not exposed by Java bindings
-   **/
-  public static native void eglBindAPI(int api);
-
-  /**
    * Provides a way to refresh the connections on Wiimotes
    */
   public static native void RefreshWiimotes();
 
   public static native void ReloadWiimoteConfig();
 
-  public static native LinkedHashMap<String, String> GetLogTypeNames();
+  private static boolean alertResult = false;
 
-  public static native void ReloadLoggerConfig();
-
-  public static native boolean ConvertDiscImage(String inPath, String outPath, int platform,
-          int format, int blockSize, int compression, int compressionLevel, boolean scrub,
-          CompressCallback callback);
-
-  public static native String FormatSize(long bytes, int decimals);
-
-  public static native void SetObscuredPixelsLeft(int width);
-
-  public static native void SetObscuredPixelsTop(int height);
-
-  public static native boolean IsGameMetadataValid();
-
-  public static boolean IsEmulatingWii()
-  {
-    CheckGameMetadataValid();
-    return IsEmulatingWiiUnchecked();
-  }
-
-  public static String GetCurrentGameID()
-  {
-    CheckGameMetadataValid();
-    return GetCurrentGameIDUnchecked();
-  }
-
-  public static String GetCurrentTitleDescription()
-  {
-    CheckGameMetadataValid();
-    return GetCurrentTitleDescriptionUnchecked();
-  }
-
-  private static void CheckGameMetadataValid()
-  {
-    if (!IsGameMetadataValid())
-    {
-      throw new IllegalStateException("No game is running");
-    }
-  }
-
-  private static native boolean IsEmulatingWiiUnchecked();
-
-  private static native String GetCurrentGameIDUnchecked();
-
-  private static native String GetCurrentTitleDescriptionUnchecked();
-
-  /**
-   * Get sysconf settings
-   */
-  public static native int[] getRunningSettings();
-
-  /**
-   * Set sysconf settings
-   */
-  public static native void setRunningSettings(int[] settings);
-
-  @Keep
   public static boolean displayAlertMsg(final String caption, final String text,
-          final boolean yesNo, final boolean isWarning, final boolean nonBlocking)
+    final boolean yesNo)
   {
     Log.error("[NativeLibrary] Alert: " + text);
-    final EmulationActivity emulationActivity = sEmulationActivity.get();
+    final EmulationActivity emulationActivity = EmulationActivity.get();
     boolean result = false;
-    if (isWarning && emulationActivity != null && emulationActivity.isIgnoringWarnings())
+    if (emulationActivity == null)
     {
-      return true;
+      Log.warning("[NativeLibrary] EmulationActivity is null, can't do panic alert.");
     }
     else
     {
-      // We can't use AlertMessages unless we have a non-null activity reference
-      // and are allowed to block. As a fallback, we can use toasts.
-      if (emulationActivity == null || nonBlocking)
+      // Create object used for waiting.
+      final Object lock = new Object();
+      AlertDialog.Builder builder = new AlertDialog.Builder(emulationActivity)
+        .setTitle(caption)
+        .setMessage(text);
+
+      // If not yes/no dialog just have one button that dismisses modal,
+      // otherwise have a yes and no button that sets alertResult accordingly.
+      if (!yesNo)
       {
-        new Handler(Looper.getMainLooper()).post(
-                () -> Toast.makeText(DolphinApplication.getAppContext(), text, Toast.LENGTH_LONG)
-                        .show());
+        builder
+          .setCancelable(false)
+          .setPositiveButton("OK", (dialog, whichButton) ->
+          {
+            dialog.dismiss();
+            synchronized (lock)
+            {
+              lock.notify();
+            }
+          });
       }
       else
       {
-        sIsShowingAlertMessage = true;
+        alertResult = false;
 
-        emulationActivity.runOnUiThread(() ->
-        {
-          FragmentManager fragmentManager = emulationActivity.getSupportFragmentManager();
-          if (fragmentManager.isStateSaved())
+        builder
+          .setPositiveButton("Yes", (dialog, whichButton) ->
           {
-            // The activity is being destroyed, so we can't use it to display an AlertMessage.
-            // Fall back to a toast.
-            Toast.makeText(emulationActivity, text, Toast.LENGTH_LONG).show();
-            NotifyAlertMessageLock();
-          }
-          else
+            alertResult = true;
+            dialog.dismiss();
+            synchronized (lock)
+            {
+              lock.notify();
+            }
+          })
+          .setNegativeButton("No", (dialog, whichButton) ->
           {
-            AlertMessage.newInstance(caption, text, yesNo, isWarning)
-                    .show(fragmentManager, "AlertMessage");
-          }
-        });
+            alertResult = false;
+            dialog.dismiss();
+            synchronized (lock)
+            {
+              lock.notify();
+            }
+          });
+      }
 
-        // Wait for the lock to notify that it is complete.
-        synchronized (sAlertMessageLock)
+      // Show the AlertDialog on the main thread.
+      emulationActivity.runOnUiThread(() -> builder.show());
+
+      // Wait for the lock to notify that it is complete.
+      synchronized (lock)
+      {
+        try
         {
-          try
-          {
-            sAlertMessageLock.wait();
-          }
-          catch (Exception ignored)
-          {
-          }
+          lock.wait();
         }
-
-        if (yesNo)
+        catch (Exception e)
         {
-          result = AlertMessage.getAlertResult();
         }
       }
+
+      if (yesNo)
+        result = alertResult;
     }
-    sIsShowingAlertMessage = false;
     return result;
-  }
-
-  public static boolean IsShowingAlertMessage()
-  {
-    return sIsShowingAlertMessage;
-  }
-
-  public static void NotifyAlertMessageLock()
-  {
-    synchronized (sAlertMessageLock)
-    {
-      sAlertMessageLock.notify();
-    }
-  }
-
-  public static void setEmulationActivity(EmulationActivity emulationActivity)
-  {
-    Log.verbose("[NativeLibrary] Registering EmulationActivity.");
-    sEmulationActivity = new WeakReference<>(emulationActivity);
-  }
-
-  public static void clearEmulationActivity()
-  {
-    Log.verbose("[NativeLibrary] Unregistering EmulationActivity.");
-
-    sEmulationActivity.clear();
   }
 
   public static boolean isNetworkConnected(Context context)
@@ -653,56 +474,32 @@ public final class NativeLibrary
     return activeNetwork != null && activeNetwork.isConnected();
   }
 
-  @Keep
-  public static void finishEmulationActivity()
+  public static void updateWindowSize(int width, int height)
   {
-    final EmulationActivity emulationActivity = sEmulationActivity.get();
-    if (emulationActivity == null)
+    final EmulationActivity emulationActivity = EmulationActivity.get();
+    if (emulationActivity != null)
     {
-      Log.warning("[NativeLibrary] EmulationActivity is null.");
-    }
-    else
-    {
-      Log.verbose("[NativeLibrary] Finishing EmulationActivity.");
-      emulationActivity.runOnUiThread(emulationActivity::finish);
+      emulationActivity.runOnUiThread(emulationActivity::updateTouchPointer);
     }
   }
 
-  @Keep
-  public static void updateTouchPointer()
+  public static void bindSystemBack(String binding)
   {
-    final EmulationActivity emulationActivity = sEmulationActivity.get();
-    if (emulationActivity == null)
-    {
-      Log.warning("[NativeLibrary] EmulationActivity is null.");
-    }
-    else
-    {
-      emulationActivity.runOnUiThread(emulationActivity::initInputPointer);
-    }
+    EmulationActivity.get().bindSystemBack(binding);
   }
 
-  @Keep
-  public static void onTitleChanged()
+  public static Context getEmulationContext()
   {
-    final EmulationActivity emulationActivity = sEmulationActivity.get();
-    if (emulationActivity == null)
-    {
-      Log.warning("[NativeLibrary] EmulationActivity is null.");
-    }
-    else
-    {
-      emulationActivity.runOnUiThread(emulationActivity::onTitleChanged);
-    }
+    return EmulationActivity.get();
   }
 
-  @Keep
-  public static float getRenderSurfaceScale()
-  {
-    DisplayMetrics metrics = new DisplayMetrics();
-    sEmulationActivity.get().getWindowManager().getDefaultDisplay().getMetrics(metrics);
-    return metrics.scaledDensity;
-  }
+  public static native String DecryptARCode(String codes);
 
   public static native float GetGameAspectRatio();
+
+  public static native float GetGameDisplayScale();
+
+  public static native void CreateUserDirectories();
+
+  public static native void SetSysDirectory(String path);
 }

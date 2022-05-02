@@ -1,5 +1,6 @@
 // Copyright 2018 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #ifdef USE_DISCORD_PRESENCE
 
@@ -10,7 +11,7 @@
 #include <QPixmap>
 #include <QPushButton>
 
-#include <discord_rpc.h>
+#include <discord-rpc/include/discord_rpc.h>
 
 #include "Common/HttpRequest.h"
 #include "Common/StringUtil.h"
@@ -75,10 +76,10 @@ void DiscordJoinRequestDialog::CreateLayout(const std::string& discord_tag, cons
 
 void DiscordJoinRequestDialog::ConnectWidgets()
 {
-  connect(m_invite_button, &QPushButton::clicked, [this] { Reply(DISCORD_REPLY_YES); });
-  connect(m_decline_button, &QPushButton::clicked, [this] { Reply(DISCORD_REPLY_NO); });
-  connect(m_ignore_button, &QPushButton::clicked, [this] { Reply(DISCORD_REPLY_IGNORE); });
-  connect(this, &QDialog::rejected, [this] { Reply(DISCORD_REPLY_IGNORE); });
+  connect(m_invite_button, &QPushButton::pressed, [this] { Reply(DISCORD_REPLY_YES); });
+  connect(m_decline_button, &QPushButton::pressed, [this] { Reply(DISCORD_REPLY_NO); });
+  connect(m_ignore_button, &QPushButton::pressed, [this] { Reply(DISCORD_REPLY_IGNORE); });
+  connect(this, &QDialog::rejected, this, [this] { Reply(DISCORD_REPLY_IGNORE); });
 }
 
 void DiscordJoinRequestDialog::Reply(int reply)

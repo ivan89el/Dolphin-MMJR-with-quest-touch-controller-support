@@ -1,5 +1,6 @@
 // Copyright 2008 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
@@ -32,7 +33,7 @@ public:
   void* GetFuncAddress(const std::string& name) override;
 
 protected:
-  bool Initialize(const WindowSystemInfo& wsi, bool stereo, bool core) override;
+  bool Initialize(void* display_handle, void* window_handle, bool core) override;
 
   Display* m_display = nullptr;
   std::unique_ptr<GLX11Window> m_render_window;

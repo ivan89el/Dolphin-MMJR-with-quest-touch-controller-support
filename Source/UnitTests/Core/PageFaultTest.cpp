@@ -1,5 +1,6 @@
 // Copyright 2014 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include <chrono>
 
@@ -43,21 +44,10 @@ public:
     return true;
   }
 
-  void* m_data = nullptr;
+  void* m_data;
   std::chrono::time_point<std::chrono::high_resolution_clock> m_pre_unprotect_time,
       m_post_unprotect_time;
 };
-
-#ifdef _MSC_VER
-#define ASAN_DISABLE __declspec(no_sanitize_address)
-#else
-#define ASAN_DISABLE
-#endif
-
-static void ASAN_DISABLE perform_invalid_access(void* data)
-{
-  *(volatile int*)data = 5;
-}
 
 TEST(PageFault, PageFault)
 {
@@ -71,7 +61,7 @@ TEST(PageFault, PageFault)
   pfjit.m_data = data;
 
   auto start = std::chrono::high_resolution_clock::now();
-  perform_invalid_access(data);
+  *(volatile int*)data = 5;
   auto end = std::chrono::high_resolution_clock::now();
 
 #define AS_NS(diff)                                                                                \

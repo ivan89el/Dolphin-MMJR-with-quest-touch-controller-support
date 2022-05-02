@@ -1,5 +1,6 @@
 // Copyright 2018 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "Core/DSP/Jit/DSPEmitterBase.h"
 
@@ -11,10 +12,10 @@ namespace DSP::JIT
 {
 DSPEmitter::~DSPEmitter() = default;
 
-std::unique_ptr<DSPEmitter> CreateDSPEmitter([[maybe_unused]] DSPCore& dsp)
+std::unique_ptr<DSPEmitter> CreateDSPEmitter()
 {
 #if defined(_M_X86) || defined(_M_X86_64)
-  return std::make_unique<x64::DSPEmitter>(dsp);
+  return std::make_unique<x64::DSPEmitter>();
 #else
   return std::make_unique<DSPEmitterNull>();
 #endif

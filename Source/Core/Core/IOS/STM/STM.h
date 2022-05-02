@@ -1,5 +1,6 @@
 // Copyright 2008 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
@@ -11,7 +12,7 @@
 
 class PointerWrap;
 
-namespace IOS::HLE
+namespace IOS::HLE::Device
 {
 enum
 {
@@ -38,20 +39,20 @@ enum
 };
 
 // The /dev/stm/immediate
-class STMImmediateDevice final : public Device
+class STMImmediate final : public Device
 {
 public:
   using Device::Device;
-  std::optional<IPCReply> IOCtl(const IOCtlRequest& request) override;
+  IPCCommandResult IOCtl(const IOCtlRequest& request) override;
 };
 
 // The /dev/stm/eventhook
-class STMEventHookDevice final : public Device
+class STMEventHook final : public Device
 {
 public:
   using Device::Device;
-  ~STMEventHookDevice() override;
-  std::optional<IPCReply> IOCtl(const IOCtlRequest& request) override;
+  ~STMEventHook() override;
+  IPCCommandResult IOCtl(const IOCtlRequest& request) override;
   void DoState(PointerWrap& p) override;
 
   bool HasHookInstalled() const;
@@ -61,4 +62,4 @@ public:
 private:
   void TriggerEvent(u32 event) const;
 };
-}  // namespace IOS::HLE
+}  // namespace IOS::HLE::Device

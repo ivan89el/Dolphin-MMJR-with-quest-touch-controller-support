@@ -1,6 +1,7 @@
 // Copyright 2009 Dolphin Emulator Project
 // Copyright 2005 Duddie, wntrmute, Hermes
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "Core/DSP/DSPAssembler.h"
 
@@ -15,8 +16,6 @@
 #include <string>
 #include <utility>
 #include <vector>
-
-#include <fmt/format.h>
 
 #include "Common/CommonTypes.h"
 #include "Common/FileUtil.h"
@@ -92,7 +91,7 @@ void DSPAssembler::ShowError(AssemblerError err_code, const char* extra_info)
   if (!m_settings.force)
     m_failed = true;
 
-  std::string error = fmt::format("{} : {} ", m_code_line, m_cur_line);
+  std::string error = StringFromFormat("%u : %s ", m_code_line, m_cur_line.c_str());
   if (!extra_info)
     extra_info = "-";
 
@@ -100,12 +99,12 @@ void DSPAssembler::ShowError(AssemblerError err_code, const char* extra_info)
 
   if (m_current_param == 0)
   {
-    error += fmt::format("ERROR: {} Line: {} : {}\n", error_string, m_code_line, extra_info);
+    error += StringFromFormat("ERROR: %s Line: %u : %s\n", error_string, m_code_line, extra_info);
   }
   else
   {
-    error += fmt::format("ERROR: {} Line: {} Param: {} : {}\n", error_string, m_code_line,
-                         m_current_param, extra_info);
+    error += StringFromFormat("ERROR: %s Line: %u Param: %d : %s\n", error_string, m_code_line,
+                              m_current_param, extra_info);
   }
 
   m_last_error_str = std::move(error);
@@ -959,8 +958,8 @@ bool DSPAssembler::AssemblePass(const std::string& text, int pass)
       {
         if (m_cur_addr > params[0].val)
         {
-          const std::string msg = fmt::format("WARNPC at 0x{:04x}, expected 0x{:04x} or less",
-                                              m_cur_addr, params[0].val);
+          std::string msg = StringFromFormat("WARNPC at 0x%04x, expected 0x%04x or less",
+                                             m_cur_addr, params[0].val);
           ShowError(AssemblerError::PCOutOfRange, msg.c_str());
         }
       }

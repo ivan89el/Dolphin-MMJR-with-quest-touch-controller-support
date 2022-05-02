@@ -1,5 +1,6 @@
 // Copyright 2015 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "Core/HW/EXI/EXI_DeviceAGP.h"
 
@@ -10,7 +11,7 @@
 
 #include "Common/ChunkFile.h"
 #include "Common/CommonTypes.h"
-#include "Common/IOFile.h"
+#include "Common/File.h"
 #include "Common/Logging/Log.h"
 #include "Common/StringUtil.h"
 #include "Core/ConfigManager.h"
@@ -75,14 +76,15 @@ void CEXIAgp::LoadRom()
   std::string path;
   std::string filename;
   std::string ext;
+  std::string gbapath;
   SplitPath(m_slot == 0 ? SConfig::GetInstance().m_strGbaCartA :
                           SConfig::GetInstance().m_strGbaCartB,
             &path, &filename, &ext);
-  const std::string gbapath = path + filename;
+  gbapath = path + filename;
   LoadFileToROM(gbapath + ext);
-  INFO_LOG_FMT(EXPANSIONINTERFACE, "Loaded GBA rom: {} card: {}", gbapath, m_slot);
+  INFO_LOG(EXPANSIONINTERFACE, "Loaded GBA rom: %s card: %d", gbapath.c_str(), m_slot);
   LoadFileToEEPROM(gbapath + ".sav");
-  INFO_LOG_FMT(EXPANSIONINTERFACE, "Loaded GBA sav: {} card: {}", gbapath, m_slot);
+  INFO_LOG(EXPANSIONINTERFACE, "Loaded GBA sav: %s card: %d", gbapath.c_str(), m_slot);
 }
 
 void CEXIAgp::LoadFileToROM(const std::string& filename)
@@ -258,7 +260,7 @@ u32 CEXIAgp::ImmRead(u32 _uSize)
     m_current_cmd = 0;
     break;
   }
-  DEBUG_LOG_FMT(EXPANSIONINTERFACE, "AGP read {:x}", uData);
+  DEBUG_LOG(EXPANSIONINTERFACE, "AGP read %x", uData);
   return uData;
 }
 
@@ -270,7 +272,7 @@ void CEXIAgp::ImmWrite(u32 _uData, u32 _uSize)
 
   u8 HashCmd;
   u64 Mask;
-  DEBUG_LOG_FMT(EXPANSIONINTERFACE, "AGP command {:x}", _uData);
+  DEBUG_LOG(EXPANSIONINTERFACE, "AGP command %x", _uData);
   switch (m_current_cmd)
   {
   case 0xAE020000:  // set up 24 bit address for read 2 bytes

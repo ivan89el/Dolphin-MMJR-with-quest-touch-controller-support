@@ -1,5 +1,6 @@
 // Copyright 2017 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "DolphinQt/Translation.h"
 
@@ -9,10 +10,9 @@
 #include <algorithm>
 #include <cstring>
 #include <iterator>
-#include <string>
 
+#include "Common/File.h"
 #include "Common/FileUtil.h"
-#include "Common/IOFile.h"
 #include "Common/Logging/Log.h"
 #include "Common/MsgHandler.h"
 #include "Common/StringUtil.h"
@@ -149,24 +149,24 @@ public:
 
     if (!file)
     {
-      WARN_LOG_FMT(COMMON, "Error reading MO file '{}'", filename);
+      WARN_LOG(COMMON, "Error reading MO file '%s'", filename.c_str());
       m_data = {};
       return;
     }
 
-    const u32 magic = ReadU32(&m_data[0]);
+    u32 magic = ReadU32(&m_data[0]);
     if (magic != MO_MAGIC_NUMBER)
     {
-      ERROR_LOG_FMT(COMMON, "MO file '{}' has bad magic number {:x}\n", filename, magic);
+      ERROR_LOG(COMMON, "MO file '%s' has bad magic number %x\n", filename.c_str(), magic);
       m_data = {};
       return;
     }
 
-    const u16 version_major = ReadU16(&m_data[4]);
+    u16 version_major = ReadU16(&m_data[4]);
     if (version_major > 1)
     {
-      ERROR_LOG_FMT(COMMON, "MO file '{}' has unsupported version number {}", filename,
-                    version_major);
+      ERROR_LOG(COMMON, "MO file '%s' has unsupported version number %i", filename.c_str(),
+                version_major);
       m_data = {};
       return;
     }
@@ -185,7 +185,7 @@ public:
                                  [](const char* a, const char* b) { return strcmp(a, b) < 0; });
 
     if (iter == end || strcmp(*iter, original_string) != 0)
-      return nullptr;
+      return original_string;
 
     u32 offset = ReadU32(&m_data[m_offset_translation_table + std::distance(begin, iter) * 8 + 4]);
     return &m_data[offset];
@@ -213,21 +213,7 @@ public:
   QString translate(const char* context, const char* source_text,
                     const char* disambiguation = nullptr, int n = -1) const override
   {
-    const char* translated_text;
-
-    if (disambiguation)
-    {
-      std::string combined_string = disambiguation;
-      combined_string += '\4';
-      combined_string += source_text;
-      translated_text = m_mo_file.Translate(combined_string.c_str());
-    }
-    else
-    {
-      translated_text = m_mo_file.Translate(source_text);
-    }
-
-    return QString::fromUtf8(translated_text ? translated_text : source_text);
+    return QString::fromUtf8(m_mo_file.Translate(source_text));
   }
 
 private:
@@ -299,7 +285,7 @@ static bool TryInstallTranslator(const QString& exact_language_code)
     }
     translator->deleteLater();
   }
-  ERROR_LOG_FMT(COMMON, "No suitable translation file found");
+  ERROR_LOG(COMMON, "No suitable translation file found");
   return false;
 }
 

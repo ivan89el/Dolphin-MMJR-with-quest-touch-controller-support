@@ -1,5 +1,6 @@
 // Copyright 2018 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "DolphinQt/QtUtils/WrapInScrollArea.h"
 
@@ -47,7 +48,7 @@ void WrapInScrollArea(QWidget* parent, QLayout* wrapped_layout, QWidget* to_resi
 
   auto* scroll_layout = new QVBoxLayout;
   scroll_layout->addWidget(scroll_area);
-  scroll_layout->setContentsMargins(0, 0, 0, 0);
+  scroll_layout->setMargin(0);
 
   parent->setLayout(scroll_layout);
 }

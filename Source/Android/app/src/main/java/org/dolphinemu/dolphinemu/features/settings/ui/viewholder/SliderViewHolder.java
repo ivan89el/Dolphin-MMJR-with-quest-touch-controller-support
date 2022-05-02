@@ -1,13 +1,7 @@
-// SPDX-License-Identifier: GPL-2.0-or-later
-
 package org.dolphinemu.dolphinemu.features.settings.ui.viewholder;
 
-import android.content.Context;
-import android.text.TextUtils;
 import android.view.View;
 import android.widget.TextView;
-
-import androidx.annotation.Nullable;
 
 import org.dolphinemu.dolphinemu.R;
 import org.dolphinemu.dolphinemu.features.settings.model.view.SettingsItem;
@@ -16,18 +10,14 @@ import org.dolphinemu.dolphinemu.features.settings.ui.SettingsAdapter;
 
 public final class SliderViewHolder extends SettingViewHolder
 {
-  private Context mContext;
-
   private SliderSetting mItem;
 
   private TextView mTextSettingName;
   private TextView mTextSettingDescription;
 
-  public SliderViewHolder(View itemView, SettingsAdapter adapter, Context context)
+  public SliderViewHolder(View itemView, SettingsAdapter adapter)
   {
     super(itemView, adapter);
-
-    mContext = context;
   }
 
   @Override
@@ -41,41 +31,21 @@ public final class SliderViewHolder extends SettingViewHolder
   public void bind(SettingsItem item)
   {
     mItem = (SliderSetting) item;
-
-    mTextSettingName.setText(item.getName());
-
-    if (!TextUtils.isEmpty(item.getDescription()))
+    mTextSettingName.setText(item.getNameId());
+    if (item.getDescriptionId() > 0)
     {
-      mTextSettingDescription.setText(item.getDescription());
+      mTextSettingDescription.setText(item.getDescriptionId());
     }
     else
     {
-      mTextSettingDescription.setText(mContext
-              .getString(R.string.slider_setting_value,
-                      mItem.getSelectedValue(getAdapter().getSettings()), mItem.getUnits()));
+      mTextSettingDescription.setText(mItem.getSelectedValue() + mItem.getUnits());
     }
-
-    setStyle(mTextSettingName, mItem);
   }
 
   @Override
   public void onClick(View clicked)
   {
-    if (!mItem.isEditable())
-    {
-      showNotRuntimeEditableError();
-      return;
-    }
-
     getAdapter().onSliderClick(mItem, getAdapterPosition());
-
-    setStyle(mTextSettingName, mItem);
-  }
-
-  @Nullable @Override
-  protected SettingsItem getItem()
-  {
-    return mItem;
   }
 }
 

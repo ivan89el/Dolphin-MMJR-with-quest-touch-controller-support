@@ -1,23 +1,24 @@
 // Copyright 2017 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
-#include "DolphinQt/Config/ToolTipControls/ToolTipSlider.h"
+#include <QSlider>
 
 namespace Config
 {
 template <typename T>
-class Info;
+struct ConfigInfo;
 }
 
-class GraphicsSlider : public ToolTipSlider
+class GraphicsSlider : public QSlider
 {
   Q_OBJECT
 public:
-  GraphicsSlider(int minimum, int maximum, const Config::Info<int>& setting, int tick = 0);
+  GraphicsSlider(int minimum, int maximum, const Config::ConfigInfo<int>& setting, int tick = 0);
   void Update(int value);
 
 private:
-  const Config::Info<int>& m_setting;
+  const Config::ConfigInfo<int>& m_setting;
 };

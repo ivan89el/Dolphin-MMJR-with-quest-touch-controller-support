@@ -1,5 +1,6 @@
 // Copyright 2010 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "Core/HW/GCPad.h"
 
@@ -38,12 +39,12 @@ void Initialize()
   s_config.RegisterHotplugCallback();
 
   // Load the saved controller config
-  s_config.LoadConfig(InputConfig::InputClass::GC);
+  s_config.LoadConfig(true);
 }
 
 void LoadConfig()
 {
-  s_config.LoadConfig(InputConfig::InputClass::GC);
+  s_config.LoadConfig(true);
 }
 
 bool IsInitialized()

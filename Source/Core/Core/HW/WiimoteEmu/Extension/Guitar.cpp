@@ -1,13 +1,14 @@
 // Copyright 2010 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "Core/HW/WiimoteEmu/Extension/Guitar.h"
 
 #include <array>
+#include <cassert>
 #include <cstring>
 #include <map>
 
-#include "Common/Assert.h"
 #include "Common/BitUtils.h"
 #include "Common/Common.h"
 #include "Common/CommonTypes.h"
@@ -67,18 +68,20 @@ Guitar::Guitar() : Extension1stParty(_trans("Guitar"))
   groups.emplace_back(m_frets = new ControllerEmu::Buttons(_trans("Frets")));
   for (auto& guitar_fret_name : guitar_fret_names)
   {
-    m_frets->AddInput(ControllerEmu::Translate, guitar_fret_name);
+    m_frets->controls.emplace_back(
+        new ControllerEmu::Input(ControllerEmu::Translate, guitar_fret_name));
   }
 
   // strum
   groups.emplace_back(m_strum = new ControllerEmu::Buttons(_trans("Strum")));
-  m_strum->AddInput(ControllerEmu::Translate, _trans("Up"));
-  m_strum->AddInput(ControllerEmu::Translate, _trans("Down"));
+  m_strum->controls.emplace_back(new ControllerEmu::Input(ControllerEmu::Translate, _trans("Up")));
+  m_strum->controls.emplace_back(
+      new ControllerEmu::Input(ControllerEmu::Translate, _trans("Down")));
 
   // buttons
   groups.emplace_back(m_buttons = new ControllerEmu::Buttons(_trans("Buttons")));
-  m_buttons->AddInput(ControllerEmu::DoNotTranslate, "-");
-  m_buttons->AddInput(ControllerEmu::DoNotTranslate, "+");
+  m_buttons->controls.emplace_back(new ControllerEmu::Input(ControllerEmu::DoNotTranslate, "-"));
+  m_buttons->controls.emplace_back(new ControllerEmu::Input(ControllerEmu::DoNotTranslate, "+"));
 
   // stick
   constexpr auto gate_radius = ControlState(STICK_GATE_RADIUS) / STICK_RADIUS;
@@ -87,7 +90,8 @@ Guitar::Guitar() : Extension1stParty(_trans("Guitar"))
 
   // whammy
   groups.emplace_back(m_whammy = new ControllerEmu::Triggers(_trans("Whammy")));
-  m_whammy->AddInput(ControllerEmu::Translate, _trans("Bar"));
+  m_whammy->controls.emplace_back(
+      new ControllerEmu::Input(ControllerEmu::Translate, _trans("Bar")));
 
   // slider bar
   groups.emplace_back(m_slider_bar = new ControllerEmu::Slider(_trans("Slider Bar")));
@@ -106,8 +110,7 @@ void Guitar::Update()
   }
 
   // slider bar
-  if (m_slider_bar->controls[0]->control_ref->BoundCount() &&
-      m_slider_bar->controls[1]->control_ref->BoundCount())
+  if (m_slider_bar->controls[0]->control_ref->BoundCount())
   {
     const ControllerEmu::Slider::StateData slider_data = m_slider_bar->GetState();
 
@@ -138,6 +141,15 @@ void Guitar::Update()
   Common::BitCastPtr<DataFormat>(&m_reg.controller_data) = guitar_data;
 }
 
+bool Guitar::IsButtonPressed() const
+{
+  u16 buttons = 0;
+  m_buttons->GetState(&buttons, guitar_button_bitmasks.data());
+  m_frets->GetState(&buttons, guitar_fret_bitmasks.data());
+  m_strum->GetState(&buttons, guitar_strum_bitmasks.data());
+  return buttons != 0;
+}
+
 void Guitar::Reset()
 {
   EncryptedExtension::Reset();
@@ -164,7 +176,7 @@ ControllerEmu::ControlGroup* Guitar::GetGroup(GuitarGroup group)
   case GuitarGroup::SliderBar:
     return m_slider_bar;
   default:
-    ASSERT(false);
+    assert(false);
     return nullptr;
   }
 }

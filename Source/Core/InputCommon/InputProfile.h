@@ -1,5 +1,6 @@
 // Copyright 2018 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
@@ -44,8 +45,7 @@ private:
                                                           const std::vector<std::string>& profiles,
                                                           InputConfig* device_configuration);
   void UpdateToProfile(const std::string& profile_filename,
-                       ControllerEmu::EmulatedController* controller,
-                       InputConfig* device_configuration);
+                       ControllerEmu::EmulatedController* controller);
   std::string GetWiimoteInputProfilesForGame(int controller_index);
 
   int m_wiimote_profile_index = 0;

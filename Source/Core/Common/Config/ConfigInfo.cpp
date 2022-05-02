@@ -1,5 +1,6 @@
 // Copyright 2016 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include <cstring>
 
@@ -8,18 +9,18 @@
 
 namespace Config
 {
-bool Location::operator==(const Location& other) const
+bool ConfigLocation::operator==(const ConfigLocation& other) const
 {
   return system == other.system && strcasecmp(section.c_str(), other.section.c_str()) == 0 &&
          strcasecmp(key.c_str(), other.key.c_str()) == 0;
 }
 
-bool Location::operator!=(const Location& other) const
+bool ConfigLocation::operator!=(const ConfigLocation& other) const
 {
   return !(*this == other);
 }
 
-bool Location::operator<(const Location& other) const
+bool ConfigLocation::operator<(const ConfigLocation& other) const
 {
   if (system != other.system)
     return system < other.system;

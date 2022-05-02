@@ -1,16 +1,21 @@
 // Copyright 2017 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
 #include <string>
 #include <vector>
 
-#include "InputCommon/ControllerInterface/CoreDevice.h"
-
 class QString;
 class OutputReference;
 class QPushButton;
+
+namespace ciface::Core
+{
+class DeviceContainer;
+class DeviceQualifier;
+}  // namespace ciface::Core
 
 namespace MappingCommon
 {
@@ -31,10 +36,5 @@ QString DetectExpression(QPushButton* button, ciface::Core::DeviceContainer& dev
                          Quote quote = Quote::On);
 
 void TestOutput(QPushButton* button, OutputReference* reference);
-
-void RemoveSpuriousTriggerCombinations(std::vector<ciface::Core::DeviceContainer::InputDetection>*);
-
-QString BuildExpression(const std::vector<ciface::Core::DeviceContainer::InputDetection>&,
-                        const ciface::Core::DeviceQualifier& default_device, Quote quote);
 
 }  // namespace MappingCommon

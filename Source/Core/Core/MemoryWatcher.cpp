@@ -1,16 +1,16 @@
 // Copyright 2015 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
-#include <cstring>
 #include <fstream>
 #include <iostream>
 #include <sstream>
 #include <unistd.h>
 
 #include "Common/FileUtil.h"
+#include "Core/HW/Memmap.h"
 #include "Core/HW/SystemTimers.h"
 #include "Core/MemoryWatcher.h"
-#include "Core/PowerPC/MMU.h"
 
 MemoryWatcher::MemoryWatcher()
 {
@@ -50,7 +50,7 @@ void MemoryWatcher::ParseLine(const std::string& line)
   m_values[line] = 0;
   m_addresses[line] = std::vector<u32>();
 
-  std::istringstream offsets(line);
+  std::stringstream offsets(line);
   offsets >> std::hex;
   u32 offset;
   while (offsets >> offset)
@@ -70,17 +70,13 @@ u32 MemoryWatcher::ChasePointer(const std::string& line)
 {
   u32 value = 0;
   for (u32 offset : m_addresses[line])
-  {
-    value = PowerPC::HostRead_U32(value + offset);
-    if (!PowerPC::HostIsRAMAddress(value))
-      break;
-  }
+    value = Memory::Read_U32(value + offset);
   return value;
 }
 
 std::string MemoryWatcher::ComposeMessages()
 {
-  std::ostringstream message_stream;
+  std::stringstream message_stream;
   message_stream << std::hex;
 
   for (auto& entry : m_values)

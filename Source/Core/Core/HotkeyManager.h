@@ -1,5 +1,6 @@
 // Copyright 2015 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
@@ -28,7 +29,6 @@ enum Hotkey
   HK_FULLSCREEN,
   HK_SCREENSHOT,
   HK_EXIT,
-  HK_UNLOCK_CURSOR,
   HK_ACTIVATE_CHAT,
   HK_REQUEST_GOLF_CONTROL,
 
@@ -90,7 +90,6 @@ enum Hotkey
 
   HK_TOGGLE_CROP,
   HK_TOGGLE_AR,
-  HK_TOGGLE_SKIP_EFB_ACCESS,
   HK_TOGGLE_EFBCOPIES,
   HK_TOGGLE_XFBCOPIES,
   HK_TOGGLE_IMMEDIATE_XFB,
@@ -101,11 +100,21 @@ enum Hotkey
   HK_INCREASE_IR,
   HK_DECREASE_IR,
 
-  HK_FREELOOK_TOGGLE,
+  HK_FREELOOK_DECREASE_SPEED,
+  HK_FREELOOK_INCREASE_SPEED,
+  HK_FREELOOK_RESET_SPEED,
+  HK_FREELOOK_UP,
+  HK_FREELOOK_DOWN,
+  HK_FREELOOK_LEFT,
+  HK_FREELOOK_RIGHT,
+  HK_FREELOOK_ZOOM_IN,
+  HK_FREELOOK_ZOOM_OUT,
+  HK_FREELOOK_RESET,
 
   HK_TOGGLE_STEREO_SBS,
   HK_TOGGLE_STEREO_TAB,
   HK_TOGGLE_STEREO_ANAGLYPH,
+  HK_TOGGLE_STEREO_3DVISION,
 
   HK_DECREASE_DEPTH,
   HK_INCREASE_DEPTH,
@@ -164,19 +173,6 @@ enum Hotkey
   HK_SAVE_STATE_FILE,
   HK_LOAD_STATE_FILE,
 
-  HK_GBA_LOAD,
-  HK_GBA_UNLOAD,
-  HK_GBA_RESET,
-
-  HK_GBA_VOLUME_DOWN,
-  HK_GBA_VOLUME_UP,
-  HK_GBA_TOGGLE_MUTE,
-
-  HK_GBA_1X,
-  HK_GBA_2X,
-  HK_GBA_3X,
-  HK_GBA_4X,
-
   NUM_HOTKEYS,
 };
 
@@ -191,10 +187,7 @@ enum HotkeyGroup : int
   HKGP_PC,
   HKGP_BREAKPOINT,
   HKGP_WII,
-  HKGP_CONTROLLER_PROFILE_1,
-  HKGP_CONTROLLER_PROFILE_2,
-  HKGP_CONTROLLER_PROFILE_3,
-  HKGP_CONTROLLER_PROFILE_4,
+  HKGP_CONTROLLER_PROFILE,
   HKGP_GRAPHICS_TOGGLES,
   HKGP_IR,
   HKGP_FREELOOK,
@@ -205,9 +198,6 @@ enum HotkeyGroup : int
   HKGP_SELECT_STATE,
   HKGP_LOAD_LAST_STATE,
   HKGP_STATE_MISC,
-  HKGP_GBA_CORE,
-  HKGP_GBA_VOLUME,
-  HKGP_GBA_SIZE,
 
   NUM_HOTKEY_GROUPS,
 };
@@ -224,7 +214,7 @@ public:
   HotkeyManager();
   ~HotkeyManager();
 
-  void GetInput(HotkeyStatus* hk, bool ignore_focus);
+  void GetInput(HotkeyStatus* const hk);
   std::string GetName() const override;
   ControllerEmu::ControlGroup* GetHotkeyGroup(HotkeyGroup group) const;
   int FindGroupByID(int id) const;
@@ -232,8 +222,8 @@ public:
   void LoadDefaults(const ControllerInterface& ciface) override;
 
 private:
-  std::array<ControllerEmu::Buttons*, NUM_HOTKEY_GROUPS> m_keys{};
-  std::array<ControllerEmu::ControlGroup*, NUM_HOTKEY_GROUPS> m_hotkey_groups{};
+  std::array<ControllerEmu::Buttons*, NUM_HOTKEY_GROUPS> m_keys;
+  std::array<ControllerEmu::ControlGroup*, NUM_HOTKEY_GROUPS> m_hotkey_groups;
 };
 
 namespace HotkeyManagerEmu
@@ -244,7 +234,7 @@ void LoadConfig();
 
 InputConfig* GetConfig();
 ControllerEmu::ControlGroup* GetHotkeyGroup(HotkeyGroup group);
-void GetStatus(bool ignore_focus);
+void GetStatus();
 bool IsEnabled();
 void Enable(bool enable_toggle);
 bool IsPressed(int Id, bool held);

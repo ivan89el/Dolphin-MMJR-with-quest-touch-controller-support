@@ -1,12 +1,13 @@
 // Copyright 2008 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
 #include <cstring>
 
 #include "Common/CommonTypes.h"
-#include "Common/Inline.h"
+#include "Common/Compiler.h"
 #include "Common/Swap.h"
 
 class DataReader
@@ -29,7 +30,7 @@ public:
     T data;
     std::memcpy(&data, &buffer[offset], sizeof(T));
 
-    if constexpr (swapped)
+    if (swapped)
       data = Common::FromBigEndian(data);
 
     return data;
@@ -46,7 +47,7 @@ public:
   template <typename T, bool swapped = false>
   DOLPHIN_FORCE_INLINE void Write(T data)
   {
-    if constexpr (swapped)
+    if (swapped)
       data = Common::FromBigEndian(data);
 
     std::memcpy(buffer, &data, sizeof(T));

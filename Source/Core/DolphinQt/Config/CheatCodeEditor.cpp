@@ -1,5 +1,6 @@
 // Copyright 2018 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "DolphinQt/Config/CheatCodeEditor.h"
 
@@ -10,8 +11,6 @@
 #include <QLineEdit>
 #include <QStringList>
 #include <QTextEdit>
-
-#include "Common/StringUtil.h"
 
 #include "Core/ARDecrypt.h"
 #include "Core/ActionReplay.h"
@@ -32,10 +31,16 @@ void CheatCodeEditor::SetARCode(ActionReplay::ARCode* code)
 {
   m_name_edit->setText(QString::fromStdString(code->name));
 
-  m_code_edit->clear();
+  QString s;
 
   for (ActionReplay::AREntry& e : code->ops)
-    m_code_edit->append(QString::fromStdString(ActionReplay::SerializeLine(e)));
+  {
+    s += QStringLiteral("%1 %2\n")
+             .arg(e.cmd_addr, 8, 16, QLatin1Char('0'))
+             .arg(e.value, 8, 16, QLatin1Char('0'));
+  }
+
+  m_code_edit->setText(s);
 
   m_creator_label->setHidden(true);
   m_creator_edit->setHidden(true);
@@ -51,10 +56,14 @@ void CheatCodeEditor::SetGeckoCode(Gecko::GeckoCode* code)
   m_name_edit->setText(QString::fromStdString(code->name));
   m_creator_edit->setText(QString::fromStdString(code->creator));
 
-  m_code_edit->clear();
+  QString code_string;
 
   for (const auto& c : code->codes)
-    m_code_edit->append(QString::fromStdString(c.original_line));
+    code_string += QStringLiteral("%1 %2\n")
+                       .arg(c.address, 8, 16, QLatin1Char('0'))
+                       .arg(c.data, 8, 16, QLatin1Char('0'));
+
+  m_code_edit->setText(code_string);
 
   QString notes_string;
   for (const auto& line : code->notes)
@@ -112,12 +121,10 @@ void CheatCodeEditor::ConnectWidgets()
 
 bool CheatCodeEditor::AcceptAR()
 {
-  QString name = m_name_edit->text();
-
   std::vector<ActionReplay::AREntry> entries;
   std::vector<std::string> encrypted_lines;
 
-  QStringList lines = m_code_edit->toPlainText().split(QLatin1Char{'\n'});
+  QStringList lines = m_code_edit->toPlainText().split(QStringLiteral("\n"));
 
   for (int i = 0; i < lines.size(); i++)
   {
@@ -125,25 +132,41 @@ bool CheatCodeEditor::AcceptAR()
 
     if (line.isEmpty())
       continue;
-    if (i == 0 && line[0] == u'$')
-    {
-      if (name.isEmpty())
-        name = line.right(line.size() - 1);
 
-      continue;
-    }
+    QStringList values = line.split(QStringLiteral(" "));
 
-    const auto parse_result = ActionReplay::DeserializeLine(line.toStdString());
+    bool good = true;
 
-    if (std::holds_alternative<ActionReplay::AREntry>(parse_result))
+    u32 addr = 0;
+    u32 value = 0;
+
+    if (values.size() == 2)
     {
-      entries.push_back(std::get<ActionReplay::AREntry>(parse_result));
-    }
-    else if (std::holds_alternative<ActionReplay::EncryptedLine>(parse_result))
-    {
-      encrypted_lines.emplace_back(std::get<ActionReplay::EncryptedLine>(parse_result));
+      addr = values[0].toUInt(&good, 16);
+
+      if (good)
+        value = values[1].toUInt(&good, 16);
+
+      if (good)
+        entries.push_back(ActionReplay::AREntry(addr, value));
     }
     else
+    {
+      QStringList blocks = line.split(QStringLiteral("-"));
+
+      if (blocks.size() == 3 && blocks[0].size() == 4 && blocks[1].size() == 4 &&
+          blocks[2].size() == 5)
+      {
+        encrypted_lines.emplace_back(blocks[0].toStdString() + blocks[1].toStdString() +
+                                     blocks[2].toStdString());
+      }
+      else
+      {
+        good = false;
+      }
+    }
+
+    if (!good)
     {
       auto result = ModalMessageBox::warning(
           this, tr("Parsing Error"),
@@ -196,7 +219,7 @@ bool CheatCodeEditor::AcceptAR()
     return false;
   }
 
-  m_ar_code->name = name.toStdString();
+  m_ar_code->name = m_name_edit->text().toStdString();
   m_ar_code->ops = std::move(entries);
   m_ar_code->user_defined = true;
 
@@ -205,11 +228,9 @@ bool CheatCodeEditor::AcceptAR()
 
 bool CheatCodeEditor::AcceptGecko()
 {
-  QString name = m_name_edit->text();
-
   std::vector<Gecko::GeckoCode::Code> entries;
 
-  QStringList lines = m_code_edit->toPlainText().split(QLatin1Char{'\n'});
+  QStringList lines = m_code_edit->toPlainText().split(QStringLiteral("\n"));
 
   for (int i = 0; i < lines.size(); i++)
   {
@@ -218,19 +239,20 @@ bool CheatCodeEditor::AcceptGecko()
     if (line.isEmpty())
       continue;
 
-    if (i == 0 && line[0] == u'$')
-    {
-      if (name.isEmpty())
-        name = line.right(line.size() - 1);
+    QStringList values = line.split(QStringLiteral(" "));
 
-      continue;
-    }
+    bool good = values.size() == 2;
 
-    if (std::optional<Gecko::GeckoCode::Code> c = Gecko::DeserializeLine(line.toStdString()))
-    {
-      entries.push_back(*c);
-    }
-    else
+    u32 addr = 0;
+    u32 value = 0;
+
+    if (good)
+      addr = values[0].toUInt(&good, 16);
+
+    if (good)
+      value = values[1].toUInt(&good, 16);
+
+    if (!good)
     {
       auto result = ModalMessageBox::warning(
           this, tr("Parsing Error"),
@@ -243,19 +265,34 @@ bool CheatCodeEditor::AcceptGecko()
       if (result == QMessageBox::Abort)
         return false;
     }
+    else
+    {
+      Gecko::GeckoCode::Code c;
+      c.address = addr;
+      c.data = value;
+      c.original_line = line.toStdString();
+
+      entries.push_back(c);
+    }
   }
 
   if (entries.empty())
   {
-    ModalMessageBox::critical(this, tr("Error"), tr("This Gecko code doesn't contain any lines."));
+    ModalMessageBox::critical(this, tr("Error"),
+                              tr("The resulting decrypted AR code doesn't contain any lines."));
     return false;
   }
 
-  m_gecko_code->name = name.toStdString();
+  m_gecko_code->name = m_name_edit->text().toStdString();
   m_gecko_code->creator = m_creator_edit->text().toStdString();
   m_gecko_code->codes = std::move(entries);
-  m_gecko_code->notes = SplitString(m_notes_edit->toPlainText().toStdString(), '\n');
   m_gecko_code->user_defined = true;
+
+  std::vector<std::string> note_lines;
+  for (QString line : m_notes_edit->toPlainText().split(QStringLiteral("\n")))
+    note_lines.push_back(line.toStdString());
+
+  m_gecko_code->notes = std::move(note_lines);
 
   return true;
 }

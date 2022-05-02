@@ -1,5 +1,6 @@
 // Copyright 2017 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
@@ -18,12 +19,12 @@ public:
 
   explicit Force(const std::string& name);
 
-  ReshapeData GetReshapableState(bool adjusted) const final override;
+  ReshapeData GetReshapableState(bool adjusted) final override;
   ControlState GetGateRadiusAtAngle(double ang) const final override;
 
   ControlState GetDefaultInputRadiusAtAngle(double angle) const final override;
 
-  StateData GetState(bool adjusted = true) const;
+  StateData GetState(bool adjusted = true);
 
   // Velocities returned in m/s.
   ControlState GetSpeed() const;

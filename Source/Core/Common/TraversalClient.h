@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CC0-1.0
+// This file is public domain, in case it's useful to anyone. -comex
 
 #pragma once
 
@@ -6,7 +6,6 @@
 #include <list>
 #include <memory>
 #include <string>
-#include <string_view>
 
 #include <enet/enet.h>
 
@@ -20,17 +19,17 @@ public:
   virtual ~TraversalClientClient() = default;
   virtual void OnTraversalStateChanged() = 0;
   virtual void OnConnectReady(ENetAddress addr) = 0;
-  virtual void OnConnectFailed(TraversalConnectFailedReason reason) = 0;
+  virtual void OnConnectFailed(u8 reason) = 0;
 };
 
 class TraversalClient
 {
 public:
-  enum class State
+  enum State
   {
     Connecting,
     Connected,
-    Failure,
+    Failure
   };
   enum class FailureReason
   {
@@ -47,12 +46,8 @@ public:
   State GetState() const;
   FailureReason GetFailureReason() const;
 
-  bool HasFailed() const { return m_State == State::Failure; }
-  bool IsConnecting() const { return m_State == State::Connecting; }
-  bool IsConnected() const { return m_State == State::Connected; }
-
   void Reset();
-  void ConnectToClient(std::string_view host);
+  void ConnectToClient(const std::string& host);
   void ReconnectToServer();
   void Update();
   void HandleResends();

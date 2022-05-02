@@ -545,7 +545,7 @@ int TPpContext::evalToToken(int token, bool shortCircuit, int& res, bool& err, T
         case MacroExpandStarted:
             break;
         case MacroExpandUndef:
-            if (! shortCircuit && parseContext.isEsProfile()) {
+            if (! shortCircuit && parseContext.profile == EEsProfile) {
                 const char* message = "undefined macro in expression not allowed in es profile";
                 if (parseContext.relaxedErrors())
                     parseContext.ppWarn(ppToken->loc, message, "preprocessor evaluation", ppToken->name);
@@ -722,7 +722,6 @@ int TPpContext::CPPline(TPpToken* ppToken)
         parseContext.setCurrentLine(lineRes);
 
         if (token != '\n') {
-#ifndef GLSLANG_WEB
             if (token == PpAtomConstString) {
                 parseContext.ppRequireExtensions(directiveLoc, 1, &E_GL_GOOGLE_cpp_style_line_directive, "filename-based #line");
                 // We need to save a copy of the string instead of pointing
@@ -732,9 +731,7 @@ int TPpContext::CPPline(TPpToken* ppToken)
                 parseContext.setCurrentSourceName(sourceName);
                 hasFile = true;
                 token = scanToken(ppToken);
-            } else
-#endif
-            {
+            } else {
                 token = eval(token, MIN_PRECEDENCE, false, fileRes, fileErr, ppToken);
                 if (! fileErr) {
                     parseContext.setCurrentString(fileRes);
@@ -795,8 +792,10 @@ int TPpContext::CPPpragma(TPpToken* ppToken)
         case PpAtomConstUint:
         case PpAtomConstInt64:
         case PpAtomConstUint64:
+#ifdef AMD_EXTENSIONS
         case PpAtomConstInt16:
         case PpAtomConstUint16:
+#endif
         case PpAtomConstFloat:
         case PpAtomConstDouble:
         case PpAtomConstFloat16:
@@ -955,20 +954,18 @@ int TPpContext::readCPPline(TPpToken* ppToken)
         case PpAtomIfndef:
             token = CPPifdef(0, ppToken);
             break;
-        case PpAtomLine:
-            token = CPPline(ppToken);
-            break;
-#ifndef GLSLANG_WEB
         case PpAtomInclude:
             if(!parseContext.isReadingHLSL()) {
                 parseContext.ppRequireExtensions(ppToken->loc, 1, &E_GL_GOOGLE_include_directive, "#include");
             }
             token = CPPinclude(ppToken);
             break;
+        case PpAtomLine:
+            token = CPPline(ppToken);
+            break;
         case PpAtomPragma:
             token = CPPpragma(ppToken);
             break;
-#endif
         case PpAtomUndef:
             token = CPPundef(ppToken);
             break;

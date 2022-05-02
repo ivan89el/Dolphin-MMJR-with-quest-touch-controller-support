@@ -1,5 +1,6 @@
 // Copyright 2019 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "Core/HW/GCMemcard/GCIFile.h"
 
@@ -7,11 +8,9 @@
 
 #include "Common/ChunkFile.h"
 #include "Common/CommonTypes.h"
-#include "Common/IOFile.h"
+#include "Common/File.h"
 #include "Common/Logging/Log.h"
 
-namespace Memcard
-{
 bool GCIFile::LoadHeader()
 {
   if (m_filename.empty())
@@ -21,10 +20,10 @@ bool GCIFile::LoadHeader()
   if (!save_file)
     return false;
 
-  INFO_LOG_FMT(EXPANSIONINTERFACE, "Reading header from disk for {}", m_filename);
+  INFO_LOG(EXPANSIONINTERFACE, "Reading header from disk for %s", m_filename.c_str());
   if (!save_file.ReadBytes(&m_gci_header, sizeof(m_gci_header)))
   {
-    ERROR_LOG_FMT(EXPANSIONINTERFACE, "Failed to read header for {}", m_filename);
+    ERROR_LOG(EXPANSIONINTERFACE, "Failed to read header for %s", m_filename.c_str());
     return false;
   }
 
@@ -42,17 +41,17 @@ bool GCIFile::LoadSaveBlocks()
     if (!save_file)
       return false;
 
-    INFO_LOG_FMT(EXPANSIONINTERFACE, "Reading savedata from disk for {}", m_filename);
-    const u16 num_blocks = m_gci_header.m_block_count;
+    INFO_LOG(EXPANSIONINTERFACE, "Reading savedata from disk for %s", m_filename.c_str());
+    u16 num_blocks = m_gci_header.m_block_count;
 
     const u32 size = num_blocks * BLOCK_SIZE;
-    const u64 file_size = save_file.GetSize();
+    u64 file_size = save_file.GetSize();
     if (file_size != size + DENTRY_SIZE)
     {
-      ERROR_LOG_FMT(EXPANSIONINTERFACE,
-                    "{}\nwas not loaded because it is an invalid GCI.\n File size ({:#x}) does not "
-                    "match the size recorded in the header ({:#x})",
-                    m_filename.c_str(), file_size, size + DENTRY_SIZE);
+      ERROR_LOG(EXPANSIONINTERFACE,
+                "%s\nwas not loaded because it is an invalid GCI.\n File size (0x%" PRIx64
+                ") does not match the size recorded in the header (0x%x)",
+                m_filename.c_str(), file_size, size + DENTRY_SIZE);
       return false;
     }
 
@@ -60,7 +59,7 @@ bool GCIFile::LoadSaveBlocks()
     save_file.Seek(DENTRY_SIZE, SEEK_SET);
     if (!save_file.ReadBytes(m_save_data.data(), size))
     {
-      ERROR_LOG_FMT(EXPANSIONINTERFACE, "Failed to read data from GCI file {}", m_filename);
+      ERROR_LOG(EXPANSIONINTERFACE, "Failed to read data from GCI file %s", m_filename.c_str());
       m_save_data.clear();
       return false;
     }
@@ -101,4 +100,3 @@ void GCIFile::DoState(PointerWrap& p)
   }
   p.Do(m_used_blocks);
 }
-}  // namespace Memcard

@@ -1,8 +1,8 @@
 // Copyright 2008 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
-#include <functional>
 
 namespace Common
 {
@@ -53,9 +53,6 @@ void EnableStepping(bool stepping);
 //   should not be used by the Host.
 void Break();
 
-// This should only be called from the CPU thread
-void Continue();
-
 // Shorthand for GetState() == State::Stepping.
 // WARNING: State::PowerDown will return false, not just State::Running.
 bool IsStepping();
@@ -77,8 +74,4 @@ const State* GetStatePtr();
 // "control_adjacent" causes PauseAndLock to behave like EnableStepping by modifying the
 //   state of the Audio and FIFO subsystems as well.
 bool PauseAndLock(bool do_lock, bool unpause_on_unlock = true, bool control_adjacent = false);
-
-// Adds a job to be executed during on the CPU thread. This should be combined with PauseAndLock(),
-// as while the CPU is in the run loop, it won't execute the function.
-void AddCPUThreadJob(std::function<void()> function);
 }  // namespace CPU

@@ -1,5 +1,6 @@
 // Copyright 2019 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
@@ -21,8 +22,6 @@ enum ExtensionNumber : u8
   UDRAW_TABLET,
   DRAWSOME_TABLET,
   TATACON,
-
-  MAX
 };
 
 // FYI: An extension must be attached.

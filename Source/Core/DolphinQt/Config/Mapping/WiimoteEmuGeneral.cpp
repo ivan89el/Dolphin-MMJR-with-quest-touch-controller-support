@@ -1,5 +1,6 @@
 // Copyright 2017 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "DolphinQt/Config/Mapping/WiimoteEmuGeneral.h"
 
@@ -7,8 +8,6 @@
 #include <QFormLayout>
 #include <QGridLayout>
 #include <QGroupBox>
-#include <QLabel>
-#include <QPushButton>
 
 #include "Core/HW/Wiimote.h"
 #include "Core/HW/WiimoteEmu/WiimoteEmu.h"
@@ -23,7 +22,7 @@ WiimoteEmuGeneral::WiimoteEmuGeneral(MappingWindow* window, WiimoteEmuExtension*
     : MappingWidget(window), m_extension_widget(extension)
 {
   CreateMainLayout();
-  Connect();
+  Connect(window);
 }
 
 void WiimoteEmuGeneral::CreateMainLayout()
@@ -46,20 +45,14 @@ void WiimoteEmuGeneral::CreateMainLayout()
       Wiimote::GetWiimoteGroup(GetPort(), WiimoteEmu::WiimoteGroup::Attachments);
   auto* extension = CreateGroupBox(tr("Extension"), extension_group);
   auto* ce_extension = static_cast<ControllerEmu::Attachments*>(extension_group);
-
-  const auto combo_hbox = new QHBoxLayout;
-  combo_hbox->addWidget(m_extension_combo = new QComboBox());
-  combo_hbox->addWidget(m_extension_combo_dynamic_indicator = new QLabel(QString::fromUtf8("🎮")));
-  combo_hbox->addWidget(CreateSettingAdvancedMappingButton(ce_extension->GetSelectionSetting()));
-
-  m_extension_combo_dynamic_indicator->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Ignored);
+  m_extension_combo = new QComboBox();
 
   for (const auto& attachment : ce_extension->GetAttachmentList())
     m_extension_combo->addItem(tr(attachment->GetDisplayName().c_str()));
 
   extension->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
-  static_cast<QFormLayout*>(extension->layout())->insertRow(0, combo_hbox);
+  static_cast<QFormLayout*>(extension->layout())->insertRow(0, m_extension_combo);
 
   layout->addWidget(extension, 0, 3);
   layout->addWidget(CreateGroupBox(tr("Rumble"), Wiimote::GetWiimoteGroup(
@@ -74,46 +67,25 @@ void WiimoteEmuGeneral::CreateMainLayout()
   setLayout(layout);
 }
 
-void WiimoteEmuGeneral::Connect()
+void WiimoteEmuGeneral::Connect(MappingWindow* window)
 {
-  connect(m_extension_combo, qOverload<int>(&QComboBox::currentIndexChanged), this,
-          &WiimoteEmuGeneral::OnAttachmentChanged);
-  connect(m_extension_combo, qOverload<int>(&QComboBox::activated), this,
-          &WiimoteEmuGeneral::OnAttachmentSelected);
-  connect(this, &MappingWidget::ConfigChanged, this, &WiimoteEmuGeneral::ConfigChanged);
-  connect(this, &MappingWidget::Update, this, &WiimoteEmuGeneral::Update);
+  connect(m_extension_combo, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
+          this, &WiimoteEmuGeneral::OnAttachmentChanged);
+  connect(window, &MappingWindow::ConfigChanged, this, &WiimoteEmuGeneral::ConfigChanged);
 }
 
 void WiimoteEmuGeneral::OnAttachmentChanged(int extension)
 {
-  GetParent()->ShowExtensionMotionTabs(extension == WiimoteEmu::ExtensionNumber::NUNCHUK);
-
   m_extension_widget->ChangeExtensionType(extension);
-}
 
-void WiimoteEmuGeneral::OnAttachmentSelected(int extension)
-{
   auto* ce_extension = static_cast<ControllerEmu::Attachments*>(
       Wiimote::GetWiimoteGroup(GetPort(), WiimoteEmu::WiimoteGroup::Attachments));
-
   ce_extension->SetSelectedAttachment(extension);
 
-  ConfigChanged();
   SaveSettings();
 }
 
 void WiimoteEmuGeneral::ConfigChanged()
-{
-  auto* ce_extension = static_cast<ControllerEmu::Attachments*>(
-      Wiimote::GetWiimoteGroup(GetPort(), WiimoteEmu::WiimoteGroup::Attachments));
-
-  m_extension_combo->setCurrentIndex(ce_extension->GetSelectedAttachment());
-
-  m_extension_combo_dynamic_indicator->setVisible(
-      !ce_extension->GetSelectionSetting().IsSimpleValue());
-}
-
-void WiimoteEmuGeneral::Update()
 {
   auto* ce_extension = static_cast<ControllerEmu::Attachments*>(
       Wiimote::GetWiimoteGroup(GetPort(), WiimoteEmu::WiimoteGroup::Attachments));

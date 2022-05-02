@@ -1,5 +1,6 @@
 // Copyright 2008 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 // Dolphin notes:
 //  Added some info from bluetooth.h
@@ -2651,7 +2652,6 @@ struct SHCIEventInquiryComplete
   u8 EventType;
   u8 PayloadLength;
   u8 EventStatus;
-  u8 num_responses;
 };
 
 struct SHCIEventReadClockOffsetComplete

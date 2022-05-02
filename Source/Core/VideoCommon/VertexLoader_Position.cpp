@@ -1,5 +1,6 @@
 // Copyright 2008 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "VideoCommon/VertexLoader_Position.h"
 
@@ -199,15 +200,12 @@ constexpr u32 s_table_read_position_vertex_size[4][8][2] = {
 };
 }  // Anonymous namespace
 
-u32 VertexLoader_Position::GetSize(VertexComponentFormat type, ComponentFormat format,
-                                   CoordComponentCount elements)
+u32 VertexLoader_Position::GetSize(u64 type, u32 format, u32 elements)
 {
-  return s_table_read_position_vertex_size[u32(type)][u32(format)][u32(elements)];
+  return s_table_read_position_vertex_size[type][format][elements];
 }
 
-TPipelineFunction VertexLoader_Position::GetFunction(VertexComponentFormat type,
-                                                     ComponentFormat format,
-                                                     CoordComponentCount elements)
+TPipelineFunction VertexLoader_Position::GetFunction(u64 type, u32 format, u32 elements)
 {
-  return s_table_read_position[u32(type)][u32(format)][u32(elements)];
+  return s_table_read_position[type][format][elements];
 }

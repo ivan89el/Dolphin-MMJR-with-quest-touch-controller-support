@@ -1,34 +1,41 @@
 // Copyright 2008 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 //
 // Additional copyrights go to Duddie and Tratax (c) 2004
 
 #pragma once
 
-#include "Common/CommonTypes.h"
-
 // Anything to do with SR and conditions goes here.
+
+#include "Common/CommonTypes.h"
 
 namespace DSP::Interpreter
 {
-constexpr bool isCarryAdd(u64 val, u64 result)
+bool CheckCondition(u8 _Condition);
+
+void Update_SR_Register16(s16 _Value, bool carry = false, bool overflow = false,
+                          bool overS32 = false);
+void Update_SR_Register64(s64 _Value, bool carry = false, bool overflow = false);
+void Update_SR_LZ(bool value);
+
+inline bool isCarry(u64 val, u64 result)
 {
-  return val > result;
+  return (val > result);
 }
 
-constexpr bool isCarrySubtract(u64 val, u64 result)
+inline bool isCarry2(u64 val, u64 result)
 {
-  return val >= result;
+  return (val >= result);
 }
 
-constexpr bool isOverflow(s64 val1, s64 val2, s64 res)
+inline bool isOverflow(s64 val1, s64 val2, s64 res)
 {
-  // val1 > 0 and val1 > 0 yet res < 0, or val1 < 0 and val2 < 0 yet res > 0.
   return ((val1 ^ res) & (val2 ^ res)) < 0;
 }
 
-constexpr bool isOverS32(s64 acc)
+inline bool isOverS32(s64 acc)
 {
-  return acc != static_cast<s32>(acc);
+  return (acc != (s32)acc) ? true : false;
 }
 }  // namespace DSP::Interpreter

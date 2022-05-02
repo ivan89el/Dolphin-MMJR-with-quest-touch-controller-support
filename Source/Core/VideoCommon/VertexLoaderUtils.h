@@ -1,12 +1,13 @@
 // Copyright 2008 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
 #include <cstring>
 
 #include "Common/CommonTypes.h"
-#include "Common/Inline.h"
+#include "Common/Compiler.h"
 
 extern u8* g_video_buffer_read_ptr;
 extern u8* g_vertex_manager_write_ptr;

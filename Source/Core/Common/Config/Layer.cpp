@@ -1,5 +1,6 @@
 // Copyright 2016 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include <algorithm>
 #include <cstring>
@@ -36,23 +37,17 @@ Layer::~Layer()
   Save();
 }
 
-bool Layer::Exists(const Location& location) const
+bool Layer::Exists(const ConfigLocation& location) const
 {
   const auto iter = m_map.find(location);
   return iter != m_map.end() && iter->second.has_value();
 }
 
-bool Layer::DeleteKey(const Location& location)
+bool Layer::DeleteKey(const ConfigLocation& location)
 {
   m_is_dirty = true;
-  bool had_value = false;
-  const auto iter = m_map.find(location);
-  if (iter != m_map.end() && iter->second.has_value())
-  {
-    iter->second.reset();
-    had_value = true;
-  }
-
+  bool had_value = m_map[location].has_value();
+  m_map[location].reset();
   return had_value;
 }
 
@@ -67,14 +62,14 @@ void Layer::DeleteAllKeys()
 
 Section Layer::GetSection(System system, const std::string& section)
 {
-  return Section{m_map.lower_bound(Location{system, section, ""}),
-                 m_map.lower_bound(Location{system, section + '\001', ""})};
+  return Section{m_map.lower_bound(ConfigLocation{system, section, ""}),
+                 m_map.lower_bound(ConfigLocation{system, section + '\001', ""})};
 }
 
 ConstSection Layer::GetSection(System system, const std::string& section) const
 {
-  return ConstSection{m_map.lower_bound(Location{system, section, ""}),
-                      m_map.lower_bound(Location{system, section + '\001', ""})};
+  return ConstSection{m_map.lower_bound(ConfigLocation{system, section, ""}),
+                      m_map.lower_bound(ConfigLocation{system, section + '\001', ""})};
 }
 
 void Layer::Load()

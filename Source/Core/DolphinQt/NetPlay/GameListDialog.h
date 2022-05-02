@@ -1,37 +1,32 @@
 // Copyright 2017 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
 #include <QDialog>
 
-#include "DolphinQt/GameList/GameListModel.h"
-
+class GameListModel;
 class QVBoxLayout;
 class QListWidget;
 class QDialogButtonBox;
-
-namespace UICommon
-{
-class GameFile;
-}
 
 class GameListDialog : public QDialog
 {
   Q_OBJECT
 public:
-  explicit GameListDialog(const GameListModel& game_list_model, QWidget* parent);
+  explicit GameListDialog(QWidget* parent);
 
   int exec() override;
-  const UICommon::GameFile& GetSelectedGame() const;
+  const QString& GetSelectedUniqueID() const;
 
 private:
   void CreateWidgets();
   void ConnectWidgets();
   void PopulateGameList();
 
-  const GameListModel& m_game_list_model;
   QVBoxLayout* m_main_layout;
   QListWidget* m_game_list;
   QDialogButtonBox* m_button_box;
+  QString m_game_id;
 };

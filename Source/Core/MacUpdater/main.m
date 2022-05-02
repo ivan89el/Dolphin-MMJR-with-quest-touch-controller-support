@@ -1,9 +1,8 @@
 // Copyright 2019 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include <Cocoa/Cocoa.h>
-
-// Refer to docs/autoupdate_overview.md for a detailed overview of the autoupdate process
 
 int main(int argc, const char** argv)
 {

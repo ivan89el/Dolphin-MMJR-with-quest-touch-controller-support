@@ -1,5 +1,6 @@
 // Copyright 2016 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include <atomic>
 #include <cstdarg>
@@ -8,6 +9,7 @@
 #include "Common/CommonFuncs.h"
 #include "Common/DynamicLibrary.h"
 #include "Common/FileUtil.h"
+#include "Common/Logging/Log.h"
 #include "Common/StringUtil.h"
 
 #include "VideoBackends/Vulkan/VulkanLoader.h"
@@ -43,8 +45,8 @@ static bool OpenVulkanLibrary()
   if (libvulkan_env && s_vulkan_module.Open(libvulkan_env))
     return true;
 
-  // Use the libMoltenVK.dylib from the application bundle.
-  std::string filename = File::GetBundleDirectory() + "/Contents/Frameworks/libMoltenVK.dylib";
+  // Use the libvulkan.dylib from the application bundle.
+  std::string filename = File::GetBundleDirectory() + "/Contents/Frameworks/libvulkan.dylib";
   return s_vulkan_module.Open(filename.c_str());
 #else
   std::string filename = Common::DynamicLibrary::GetVersionedFilename("vulkan", 1);
@@ -65,7 +67,7 @@ bool LoadVulkanLibrary()
 #define VULKAN_MODULE_ENTRY_POINT(name, required)                                                  \
   if (!s_vulkan_module.GetSymbol(#name, &name) && required)                                        \
   {                                                                                                \
-    ERROR_LOG_FMT(VIDEO, "Vulkan: Failed to load required module function {}", #name);             \
+    ERROR_LOG(VIDEO, "Vulkan: Failed to load required module function %s", #name);                 \
     ResetVulkanLibraryFunctionPointers();                                                          \
     s_vulkan_module.Close();                                                                       \
     return false;                                                                                  \
@@ -90,7 +92,7 @@ bool LoadVulkanInstanceFunctions(VkInstance instance)
     *func_ptr = vkGetInstanceProcAddr(instance, name);
     if (!(*func_ptr) && is_required)
     {
-      ERROR_LOG_FMT(VIDEO, "Vulkan: Failed to load required instance function {}", name);
+      ERROR_LOG(VIDEO, "Vulkan: Failed to load required instance function %s", name);
       required_functions_missing = true;
     }
   };
@@ -110,7 +112,7 @@ bool LoadVulkanDeviceFunctions(VkDevice device)
     *func_ptr = vkGetDeviceProcAddr(device, name);
     if (!(*func_ptr) && is_required)
     {
-      ERROR_LOG_FMT(VIDEO, "Vulkan: Failed to load required device function {}", name);
+      ERROR_LOG(VIDEO, "Vulkan: Failed to load required device function %s", name);
       required_functions_missing = true;
     }
   };
@@ -204,18 +206,17 @@ const char* VkResultToString(VkResult res)
   }
 }
 
-void LogVulkanResult(Common::Log::LogLevel level, const char* func_name, VkResult res,
-                     const char* msg, ...)
+void LogVulkanResult(int level, const char* func_name, VkResult res, const char* msg, ...)
 {
   std::va_list ap;
   va_start(ap, msg);
   std::string real_msg = StringFromFormatV(msg, ap);
   va_end(ap);
 
-  real_msg = fmt::format("({}) {} ({}: {})", func_name, real_msg, static_cast<int>(res),
-                         VkResultToString(res));
+  real_msg = StringFromFormat("(%s) %s (%d: %s)", func_name, real_msg.c_str(),
+                              static_cast<int>(res), VkResultToString(res));
 
-  GENERIC_LOG_FMT(Common::Log::LogType::VIDEO, level, "{}", real_msg);
+  GENERIC_LOG(LogTypes::VIDEO, static_cast<LogTypes::LOG_LEVELS>(level), "%s", real_msg.c_str());
 }
 
 }  // namespace Vulkan

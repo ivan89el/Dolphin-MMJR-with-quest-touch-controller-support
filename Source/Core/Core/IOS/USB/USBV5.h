@@ -1,5 +1,6 @@
 // Copyright 2017 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
@@ -62,13 +63,16 @@ struct V5IsoMessage final : IsoMessage
 };
 }  // namespace USB
 
+namespace Device
+{
 class USBV5ResourceManager : public USBHost
 {
 public:
   using USBHost::USBHost;
+  ~USBV5ResourceManager() override;
 
-  std::optional<IPCReply> IOCtl(const IOCtlRequest& request) override = 0;
-  std::optional<IPCReply> IOCtlV(const IOCtlVRequest& request) override = 0;
+  IPCCommandResult IOCtl(const IOCtlRequest& request) override = 0;
+  IPCCommandResult IOCtlV(const IOCtlVRequest& request) override = 0;
 
   void DoState(PointerWrap& p) override;
 
@@ -76,13 +80,13 @@ protected:
   struct USBV5Device;
   USBV5Device* GetUSBV5Device(u32 in_buffer);
 
-  std::optional<IPCReply> GetDeviceChange(const IOCtlRequest& request);
-  IPCReply SetAlternateSetting(USBV5Device& device, const IOCtlRequest& request);
-  IPCReply Shutdown(const IOCtlRequest& request);
-  IPCReply SuspendResume(USBV5Device& device, const IOCtlRequest& request);
+  IPCCommandResult GetDeviceChange(const IOCtlRequest& request);
+  IPCCommandResult SetAlternateSetting(USBV5Device& device, const IOCtlRequest& request);
+  IPCCommandResult Shutdown(const IOCtlRequest& request);
+  IPCCommandResult SuspendResume(USBV5Device& device, const IOCtlRequest& request);
 
-  using Handler = std::function<std::optional<IPCReply>(USBV5Device&)>;
-  std::optional<IPCReply> HandleDeviceIOCtl(const IOCtlRequest& request, Handler handler);
+  using Handler = std::function<IPCCommandResult(USBV5Device&)>;
+  IPCCommandResult HandleDeviceIOCtl(const IOCtlRequest& request, Handler handler);
 
   void OnDeviceChange(ChangeEvent event, std::shared_ptr<USB::Device> device) override;
   void OnDeviceChangeEnd() override;
@@ -106,4 +110,5 @@ protected:
   mutable std::mutex m_usbv5_devices_mutex;
   u16 m_current_device_number = 0x21;
 };
+}  // namespace Device
 }  // namespace IOS::HLE

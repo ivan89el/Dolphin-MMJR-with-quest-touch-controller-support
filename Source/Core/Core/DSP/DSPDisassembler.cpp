@@ -1,6 +1,7 @@
 // Copyright 2008 Dolphin Emulator Project
 // Copyright 2005 Duddie
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "Core/DSP/DSPDisassembler.h"
 
@@ -8,8 +9,6 @@
 #include <limits>
 #include <string>
 #include <vector>
-
-#include <fmt/format.h>
 
 #include "Common/CommonTypes.h"
 #include "Common/Logging/Log.h"
@@ -74,16 +73,16 @@ std::string DSPDisassembler::DisassembleParameters(const DSPOPCTemplate& opc, u1
     {
     case P_REG:
       if (settings_.decode_registers)
-        buf += fmt::format("${}", pdregname(val));
+        buf += StringFromFormat("$%s", pdregname(val));
       else
-        buf += fmt::format("${}", val);
+        buf += StringFromFormat("$%d", val);
       break;
 
     case P_PRG:
       if (settings_.decode_registers)
-        buf += fmt::format("@${}", pdregname(val));
+        buf += StringFromFormat("@$%s", pdregname(val));
       else
-        buf += fmt::format("@${}", val);
+        buf += StringFromFormat("@$%d", val);
       break;
 
     case P_VAL:
@@ -95,28 +94,22 @@ std::string DSPDisassembler::DisassembleParameters(const DSPOPCTemplate& opc, u1
       }
       else
       {
-        buf += fmt::format("0x{:04x}", val);
+        buf += StringFromFormat("0x%04x", val);
       }
       break;
 
     case P_IMM:
       if (opc.params[j].size != 2)
       {
-        // LSL, LSR, ASL, ASR
-        if (opc.params[j].mask == 0x003f)
-        {
-          // Left and right shifts function essentially as a single shift by a 7-bit signed value,
-          // but are split into two intructions for clarity.
-          buf += fmt::format("#{}", (val & 0x20) != 0 ? (64 - val) : val);
-        }
+        if (opc.params[j].mask == 0x003f)  // LSL, LSR, ASL, ASR
+          buf += StringFromFormat("#%d",
+                                  (val & 0x20) ? (val | 0xFFFFFFC0) : val);  // 6-bit sign extension
         else
-        {
-          buf += fmt::format("#0x{:02x}", val);
-        }
+          buf += StringFromFormat("#0x%02x", val);
       }
       else
       {
-        buf += fmt::format("#0x{:04x}", val);
+        buf += StringFromFormat("#0x%04x", val);
       }
       break;
 
@@ -125,13 +118,13 @@ std::string DSPDisassembler::DisassembleParameters(const DSPOPCTemplate& opc, u1
         val = (u16)(s16)(s8)val;
 
       if (settings_.decode_names)
-        buf += fmt::format("@{}", pdname(val));
+        buf += StringFromFormat("@%s", pdname(val));
       else
-        buf += fmt::format("@0x{:04x}", val);
+        buf += StringFromFormat("@0x%04x", val);
       break;
 
     default:
-      ERROR_LOG_FMT(DSPLLE, "Unknown parameter type: {:x}", opc.params[j].type);
+      ERROR_LOG(DSPLLE, "Unknown parameter type: %x", opc.params[j].type);
       break;
     }
   }
@@ -181,7 +174,7 @@ bool DSPDisassembler::DisassembleOpcode(const u16* binbuf, u16* pc, std::string&
   // printing
 
   if (settings_.show_pc)
-    dest += fmt::format("{:04x} ", *pc);
+    dest += StringFromFormat("%04x ", *pc);
 
   u16 op2;
 
@@ -190,25 +183,25 @@ bool DSPDisassembler::DisassembleOpcode(const u16* binbuf, u16* pc, std::string&
   {
     op2 = binbuf[(*pc + 1) & 0x0fff];
     if (settings_.show_hex)
-      dest += fmt::format("{:04x} {:04x} ", op1, op2);
+      dest += StringFromFormat("%04x %04x ", op1, op2);
   }
   else
   {
     op2 = 0;
     if (settings_.show_hex)
-      dest += fmt::format("{:04x}      ", op1);
+      dest += StringFromFormat("%04x      ", op1);
   }
 
   std::string opname = opc->name;
   if (is_extended)
-    opname += fmt::format("{}{}", settings_.ext_separator, opc_ext->name);
+    opname += StringFromFormat("%c%s", settings_.ext_separator, opc_ext->name);
   if (settings_.lower_case_ops)
     std::transform(opname.begin(), opname.end(), opname.begin(), ::tolower);
 
   if (settings_.print_tabs)
-    dest += fmt::format("{}\t", opname);
+    dest += StringFromFormat("%s\t", opname.c_str());
   else
-    dest += fmt::format("{:<12}", opname);
+    dest += StringFromFormat("%-12s", opname.c_str());
 
   if (opc->param_count > 0)
     dest += DisassembleParameters(*opc, op1, op2);

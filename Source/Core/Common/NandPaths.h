@@ -1,5 +1,6 @@
 // Copyright 2008 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
@@ -42,6 +43,4 @@ std::string EscapeFileName(const std::string& filename);
 std::string EscapePath(const std::string& path);
 // Reverses escaping done by EscapeFileName
 std::string UnescapeFileName(const std::string& filename);
-// Tests for a file name being "safe" as per the escaping defined in EscapeFileName
-bool IsFileNameSafe(const std::string_view filename);
 }  // namespace Common

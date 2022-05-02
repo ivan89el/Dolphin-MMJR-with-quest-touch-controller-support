@@ -1,29 +1,38 @@
 // Copyright 2018 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
 #include <functional>
 #include <memory>
-#include <optional>
 #include <vector>
 
 #include <QDialog>
 
 #include "Common/CommonTypes.h"
-#include "DolphinQt/GameList/GameListModel.h"
-
-#include "Core/CheatSearch.h"
 
 class ARCodeWidget;
-class GeckoCodeWidget;
-class CheatSearchFactoryWidget;
+class QComboBox;
 class QDialogButtonBox;
-class PartiallyClosableTabWidget;
+class QLabel;
+class QLineEdit;
+class QPushButton;
+class QRadioButton;
+class QSplitter;
+class QTabWidget;
+class QTableWidget;
+class QTableWidgetItem;
+struct Result;
 
 namespace Core
 {
 enum class State;
+}
+
+namespace UICommon
+{
+class GameFile;
 }
 
 class CheatsManager : public QDialog
@@ -33,26 +42,49 @@ public:
   explicit CheatsManager(QWidget* parent = nullptr);
   ~CheatsManager();
 
-signals:
-  void OpenGeneralSettings();
-
 private:
+  QWidget* CreateCheatSearch();
   void CreateWidgets();
   void ConnectWidgets();
   void OnStateChanged(Core::State state);
-  void OnNewSessionCreated(const Cheats::CheatSearchSessionBase& session);
-  void OnTabCloseRequested(int index);
 
-  void RefreshCodeTabs(Core::State state, bool force);
+  size_t GetTypeSize() const;
+  std::function<bool(u32)> CreateMatchFunction();
 
-  std::string m_game_id;
-  std::string m_game_tdb_id;
-  u16 m_revision = 0;
+  void Reset();
+  void NewSearch();
+  void NextSearch();
+  void Update();
+  void GenerateARCode();
 
+  void OnWatchContextMenu();
+  void OnMatchContextMenu();
+  void OnWatchItemChanged(QTableWidgetItem* item);
+
+  std::vector<Result> m_results;
+  std::vector<Result> m_watch;
+  std::shared_ptr<const UICommon::GameFile> m_game_file;
   QDialogButtonBox* m_button_box;
-  PartiallyClosableTabWidget* m_tab_widget = nullptr;
+  QTabWidget* m_tab_widget = nullptr;
 
+  QWidget* m_cheat_search;
   ARCodeWidget* m_ar_code = nullptr;
-  GeckoCodeWidget* m_gecko_code = nullptr;
-  CheatSearchFactoryWidget* m_cheat_search_new = nullptr;
+
+  QLabel* m_result_label;
+  QTableWidget* m_match_table;
+  QTableWidget* m_watch_table;
+  QSplitter* m_option_splitter;
+  QSplitter* m_table_splitter;
+  QComboBox* m_match_length;
+  QComboBox* m_match_operation;
+  QLineEdit* m_match_value;
+  QPushButton* m_match_new;
+  QPushButton* m_match_next;
+  QPushButton* m_match_refresh;
+  QPushButton* m_match_reset;
+
+  QRadioButton* m_match_decimal;
+  QRadioButton* m_match_hexadecimal;
+  QRadioButton* m_match_octal;
+  bool m_updating = false;
 };

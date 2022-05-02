@@ -1,8 +1,4 @@
 add_library(inputcommon
-  DynamicInputTextureManager.cpp
-  DynamicInputTextureManager.h
-  ImageOperations.cpp
-  ImageOperations.h
   InputConfig.cpp
   InputConfig.h
   InputProfile.cpp
@@ -29,12 +25,6 @@ add_library(inputcommon
   ControllerEmu/ControlGroup/Cursor.h
   ControllerEmu/ControlGroup/Force.cpp
   ControllerEmu/ControlGroup/Force.h
-  ControllerEmu/ControlGroup/IMUAccelerometer.cpp
-  ControllerEmu/ControlGroup/IMUAccelerometer.h
-  ControllerEmu/ControlGroup/IMUCursor.cpp
-  ControllerEmu/ControlGroup/IMUCursor.h
-  ControllerEmu/ControlGroup/IMUGyroscope.cpp
-  ControllerEmu/ControlGroup/IMUGyroscope.h
   ControllerEmu/ControlGroup/MixedTriggers.cpp
   ControllerEmu/ControlGroup/MixedTriggers.h
   ControllerEmu/ControlGroup/ModifySettingsButton.cpp
@@ -47,35 +37,18 @@ add_library(inputcommon
   ControllerEmu/ControlGroup/Triggers.h
   ControllerEmu/Setting/NumericSetting.cpp
   ControllerEmu/Setting/NumericSetting.h
-  ControllerInterface/DualShockUDPClient/DualShockUDPClient.cpp
-  ControllerInterface/DualShockUDPClient/DualShockUDPClient.h
-  ControllerInterface/DualShockUDPClient/DualShockUDPProto.h
   ControllerInterface/ControllerInterface.cpp
   ControllerInterface/ControllerInterface.h
-  ControllerInterface/CoreDevice.cpp
-  ControllerInterface/CoreDevice.h
-  ControllerInterface/Wiimote/WiimoteController.cpp
-  ControllerInterface/Wiimote/WiimoteController.h
+  ControllerInterface/Device.cpp
+  ControllerInterface/Device.h
   ControlReference/ControlReference.cpp
   ControlReference/ControlReference.h
   ControlReference/ExpressionParser.cpp
   ControlReference/ExpressionParser.h
-  ControlReference/FunctionExpression.cpp
-  ControlReference/FunctionExpression.h
-  DynamicInputTextures/DITConfiguration.cpp
-  DynamicInputTextures/DITConfiguration.h
-  DynamicInputTextures/DITData.h
-  DynamicInputTextures/DITSpecification.cpp
-  DynamicInputTextures/DITSpecification.h
 )
 
-target_link_libraries(inputcommon
-PUBLIC
+target_link_libraries(inputcommon PUBLIC
   common
-
-PRIVATE
-  fmt::fmt
-  png
 )
 
 if(WIN32)
@@ -132,10 +105,6 @@ elseif(ANDROID)
   target_sources(inputcommon PRIVATE
     ControllerInterface/Android/Android.cpp
     ControllerInterface/Android/Android.h
-    ControllerInterface/Touch/ButtonManager.cpp
-    ControllerInterface/Touch/ButtonManager.h
-    ControllerInterface/Touch/Touchscreen.cpp
-    ControllerInterface/Touch/Touchscreen.h
   )
 endif()
 

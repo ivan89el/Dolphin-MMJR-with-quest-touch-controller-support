@@ -1,5 +1,6 @@
 // Copyright 2017 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
@@ -8,9 +9,7 @@
 #include <map>
 #include <memory>
 #include <mutex>
-#include <optional>
 #include <string>
-#include <string_view>
 #include <vector>
 
 #include "Common/CommonTypes.h"
@@ -27,55 +26,21 @@ namespace FS
 class FileSystem;
 }
 
+namespace Device
+{
 class Device;
-class ESDevice;
-class FSDevice;
+class ES;
+}  // namespace Device
 
 struct Request;
 struct OpenRequest;
 
-struct IPCReply
+struct IPCCommandResult
 {
-  /// Constructs a reply with an average reply time.
-  /// Please avoid using this function if more accurate timings are known.
-  explicit IPCReply(s32 return_value_);
-  explicit IPCReply(s32 return_value_, u64 reply_delay_ticks_);
-
   s32 return_value;
+  bool send_reply;
   u64 reply_delay_ticks;
 };
-
-constexpr SystemTimers::TimeBaseTick IPC_OVERHEAD_TICKS = 2700_tbticks;
-
-// Used to make it more convenient for functions to return timing information
-// without having to explicitly keep track of ticks in callers.
-class Ticks
-{
-public:
-  Ticks(u64* ticks = nullptr) : m_ticks(ticks) {}
-
-  void Add(u64 ticks)
-  {
-    if (m_ticks != nullptr)
-      *m_ticks += ticks;
-  }
-
-private:
-  u64* m_ticks = nullptr;
-};
-
-template <typename ResultProducer>
-IPCReply MakeIPCReply(u64 ticks, const ResultProducer& fn)
-{
-  const s32 result_value = fn(Ticks{&ticks});
-  return IPCReply{result_value, ticks};
-}
-
-template <typename ResultProducer>
-IPCReply MakeIPCReply(const ResultProducer& fn)
-{
-  return MakeIPCReply(0, fn);
-}
 
 enum IPCCommandType : u32
 {
@@ -89,20 +54,6 @@ enum IPCCommandType : u32
   // This is used for replies to commands.
   IPC_REPLY = 8,
 };
-
-enum class MemorySetupType
-{
-  IOSReload,
-  Full,
-};
-
-enum class HangPPC : bool
-{
-  No = false,
-  Yes = true,
-};
-
-void RAMOverrideForIOSMemoryValues(MemorySetupType setup_type);
 
 void WriteReturnValue(s32 value, u32 address);
 
@@ -122,13 +73,12 @@ public:
   // These are *always* part of the IOS kernel and always available.
   // They are also the only available resource managers even before loading any module.
   std::shared_ptr<FS::FileSystem> GetFS();
-  std::shared_ptr<FSDevice> GetFSDevice();
-  std::shared_ptr<ESDevice> GetES();
+  std::shared_ptr<Device::ES> GetES();
 
   void SDIO_EventNotify();
 
   void EnqueueIPCRequest(u32 address);
-  void EnqueueIPCReply(const Request& request, s32 return_value, s64 cycles_in_future = 0,
+  void EnqueueIPCReply(const Request& request, s32 return_value, int cycles_in_future = 0,
                        CoreTiming::FromThread from = CoreTiming::FromThread::CPU);
 
   void SetUidForPPC(u32 uid);
@@ -137,9 +87,7 @@ public:
   u16 GetGidForPPC() const;
 
   bool BootstrapPPC(const std::string& boot_content_path);
-  bool BootIOS(u64 ios_title_id, HangPPC hang_ppc = HangPPC::No,
-               const std::string& boot_content_path = {});
-  void InitIPC();
+  bool BootIOS(u64 ios_title_id, const std::string& boot_content_path = "");
   u32 GetVersion() const;
 
   IOSC& GetIOSC();
@@ -148,22 +96,23 @@ protected:
   explicit Kernel(u64 title_id);
 
   void ExecuteIPCCommand(u32 address);
-  std::optional<IPCReply> HandleIPCCommand(const Request& request);
+  IPCCommandResult HandleIPCCommand(const Request& request);
+  void EnqueueIPCAcknowledgement(u32 address, int cycles_in_future = 0);
 
-  void AddDevice(std::unique_ptr<Device> device);
+  void AddDevice(std::unique_ptr<Device::Device> device);
   void AddCoreDevices();
   void AddStaticDevices();
-  std::shared_ptr<Device> GetDeviceByName(std::string_view device_name);
+  std::shared_ptr<Device::Device> GetDeviceByName(const std::string& device_name);
   s32 GetFreeDeviceID();
-  std::optional<IPCReply> OpenDevice(OpenRequest& request);
+  IPCCommandResult OpenDevice(OpenRequest& request);
 
   bool m_is_responsible_for_nand_root = false;
   u64 m_title_id = 0;
   static constexpr u8 IPC_MAX_FDS = 0x18;
-  std::map<std::string, std::shared_ptr<Device>, std::less<>> m_device_map;
+  std::map<std::string, std::shared_ptr<Device::Device>> m_device_map;
   std::mutex m_device_map_mutex;
   // TODO: make this fdmap per process.
-  std::array<std::shared_ptr<Device>, IPC_MAX_FDS> m_fdmap;
+  std::array<std::shared_ptr<Device::Device>, IPC_MAX_FDS> m_fdmap;
 
   u32 m_ppc_uid = 0;
   u16 m_ppc_gid = 0;
@@ -171,8 +120,8 @@ protected:
   using IPCMsgQueue = std::deque<u32>;
   IPCMsgQueue m_request_queue;  // ppc -> arm
   IPCMsgQueue m_reply_queue;    // arm -> ppc
+  IPCMsgQueue m_ack_queue;      // arm -> ppc
   u64 m_last_reply_time = 0;
-  bool m_ipc_paused = false;
 
   IOSC m_iosc;
   std::shared_ptr<FS::FileSystem> m_fs;
@@ -187,7 +136,7 @@ public:
 
   // Get a resource manager by name.
   // This only works for devices which are part of the device map.
-  std::shared_ptr<Device> GetDeviceByName(std::string_view device_name);
+  std::shared_ptr<Device::Device> GetDeviceByName(const std::string& device_name);
 };
 
 // Used for controlling and accessing an IOS instance that is tied to emulation.

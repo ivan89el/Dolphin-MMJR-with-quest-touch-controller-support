@@ -1,7 +1,6 @@
 add_library(common
-  Analytics.cpp
-  Analytics.h
   Assert.h
+  Atomic.h
   BitField.h
   BitSet.h
   BitUtils.h
@@ -17,6 +16,7 @@ add_library(common
   CommonFuncs.h
   CommonPaths.h
   CommonTypes.h
+  Compiler.h
   Config/Config.cpp
   Config/Config.h
   Config/ConfigInfo.cpp
@@ -25,8 +25,6 @@ add_library(common
   Config/Layer.cpp
   Config/Layer.h
   CPUDetect.h
-  CRC32.cpp
-  CRC32.h
   Crypto/AES.cpp
   Crypto/AES.h
   Crypto/bn.cpp
@@ -35,7 +33,6 @@ add_library(common
   Crypto/ec.h
   Debug/MemoryPatches.cpp
   Debug/MemoryPatches.h
-  Debug/Threads.h
   Debug/Watches.cpp
   Debug/Watches.h
   DebugInterface.h
@@ -43,9 +40,9 @@ add_library(common
   DynamicLibrary.h
   ENetUtil.cpp
   ENetUtil.h
-  EnumFormatter.h
-  EnumMap.h
   Event.h
+  File.cpp
+  File.h
   FileSearch.cpp
   FileSearch.h
   FileUtil.cpp
@@ -54,21 +51,15 @@ add_library(common
   Flag.h
   FloatUtils.cpp
   FloatUtils.h
-  FormatUtil.h
   FPURoundMode.h
   GekkoDisassembler.cpp
   GekkoDisassembler.h
   Hash.cpp
   Hash.h
-  HttpRequest.cpp
-  HttpRequest.h
   Image.cpp
   Image.h
   IniFile.cpp
   IniFile.h
-  Inline.h
-  IOFile.cpp
-  IOFile.h
   JitRegister.cpp
   JitRegister.h
   Lazy.h
@@ -87,7 +78,6 @@ add_library(common
   MemArena.h
   MemoryUtil.cpp
   MemoryUtil.h
-  MinizipUtil.h
   MsgHandler.cpp
   MsgHandler.h
   NandPaths.cpp
@@ -109,12 +99,10 @@ add_library(common
   SDCardUtil.cpp
   SDCardUtil.h
   Semaphore.h
-  SettingsHandler.cpp
-  SettingsHandler.h
   SFMLHelper.cpp
   SFMLHelper.h
-  SocketContext.cpp
-  SocketContext.h
+  SettingsHandler.cpp
+  SettingsHandler.h
   SPSCQueue.h
   StringUtil.cpp
   StringUtil.h
@@ -127,7 +115,6 @@ add_library(common
   TraversalClient.cpp
   TraversalClient.h
   TraversalProto.h
-  TypeUtils.h
   UPnP.cpp
   UPnP.h
   VariantUtil.h
@@ -143,10 +130,8 @@ PUBLIC
   enet
   fmt::fmt
   ${MBEDTLS_LIBRARIES}
-  minizip
 
 PRIVATE
-  ${CURL_LIBRARIES}
   ${ICONV_LIBRARIES}
   png
   ${VTUNE_LIBRARIES}
@@ -164,24 +149,26 @@ elseif(WIN32)
   PRIVATE
     kernel32.lib
     shlwapi.lib
+    opengl32.lib
     winmm.lib
   )
-  if (_M_X86_64)
-	  target_link_libraries(common PRIVATE opengl32.lib)
-  endif()
-elseif (ANDROID)
+endif()
+
+if(NOT ANDROID)
+  target_sources(common PRIVATE
+    Analytics.cpp
+    Analytics.h
+    HttpRequest.cpp
+    HttpRequest.h
+  )
   target_link_libraries(common
   PRIVATE
-    androidcommon
+    ${CURL_LIBRARIES}
   )
-elseif(HAIKU)
-  target_link_libraries(common PRIVATE be GL)
 endif()
 
 if(ANDROID)
   target_sources(common PRIVATE
-    AndroidAnalytics.cpp
-    AndroidAnalytics.h
     Logging/ConsoleListenerDroid.cpp
   )
 elseif(WIN32)
@@ -202,7 +189,7 @@ if(_M_ARM_64)
     Arm64Emitter.h
     ArmCommon.h
     ArmCPUDetect.cpp
-    ArmFPURoundMode.cpp
+    GenericFPURoundMode.cpp
   )
 else()
   if(_M_X86) #X86
@@ -263,11 +250,6 @@ elseif(APPLE)
   target_sources(common PRIVATE
     GL/GLInterface/AGL.h
     GL/GLInterface/AGL.mm
-  )
-elseif(HAIKU)
-  target_sources(common PRIVATE
-    GL/GLInterface/BGL.h
-    GL/GLInterface/BGL.cpp
   )
 elseif(ENABLE_X11 AND X11_FOUND)
   target_sources(common PRIVATE

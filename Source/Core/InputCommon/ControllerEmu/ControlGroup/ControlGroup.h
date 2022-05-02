@@ -1,5 +1,6 @@
 // Copyright 2017 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
@@ -12,7 +13,6 @@
 
 #include "Common/CommonTypes.h"
 #include "Common/IniFile.h"
-#include "InputCommon/ControllerEmu/Control/Control.h"
 
 namespace ControllerEmu
 {
@@ -40,25 +40,13 @@ enum class GroupType
   Triggers,
   Slider,
   Shake,
-  IMUAccelerometer,
-  IMUGyroscope,
-  IMUCursor
 };
 
 class ControlGroup
 {
 public:
-  enum class DefaultValue
-  {
-    AlwaysEnabled,
-    Enabled,
-    Disabled,
-  };
-
-  explicit ControlGroup(std::string name, GroupType type = GroupType::Other,
-                        DefaultValue default_value = DefaultValue::AlwaysEnabled);
-  ControlGroup(std::string name, std::string ui_name, GroupType type = GroupType::Other,
-               DefaultValue default_value = DefaultValue::AlwaysEnabled);
+  explicit ControlGroup(std::string name, GroupType type = GroupType::Other);
+  ControlGroup(std::string name, std::string ui_name, GroupType type = GroupType::Other);
   virtual ~ControlGroup();
 
   virtual void LoadConfig(IniFile::Section* sec, const std::string& defdev = "",
@@ -68,20 +56,14 @@ public:
 
   void SetControlExpression(int index, const std::string& expression);
 
-  void AddInput(Translatability translate, std::string name);
-  void AddInput(Translatability translate, std::string name, std::string ui_name);
-  void AddOutput(Translatability translate, std::string name);
-
   template <typename T>
   void AddSetting(SettingValue<T>* value, const NumericSettingDetails& details,
-                  std::common_type_t<T> default_value_, std::common_type_t<T> min_value = {},
+                  std::common_type_t<T> default_value, std::common_type_t<T> min_value = {},
                   std::common_type_t<T> max_value = T(100))
   {
     numeric_settings.emplace_back(
-        std::make_unique<NumericSetting<T>>(value, details, default_value_, min_value, max_value));
+        std::make_unique<NumericSetting<T>>(value, details, default_value, min_value, max_value));
   }
-
-  void AddVirtualNotchSetting(SettingValue<double>* value, double max_virtual_notch_deg);
 
   void AddDeadzoneSetting(SettingValue<double>* value, double maximum_deadzone);
 
@@ -94,9 +76,7 @@ public:
   const std::string name;
   const std::string ui_name;
   const GroupType type;
-  const DefaultValue default_value;
 
-  bool enabled = true;
   std::vector<std::unique_ptr<Control>> controls;
   std::vector<std::unique_ptr<NumericSettingBase>> numeric_settings;
 };

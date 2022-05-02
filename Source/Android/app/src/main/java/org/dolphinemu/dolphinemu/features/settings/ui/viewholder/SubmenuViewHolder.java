@@ -1,12 +1,7 @@
-// SPDX-License-Identifier: GPL-2.0-or-later
-
 package org.dolphinemu.dolphinemu.features.settings.ui.viewholder;
 
-import android.text.TextUtils;
 import android.view.View;
 import android.widget.TextView;
-
-import androidx.annotation.Nullable;
 
 import org.dolphinemu.dolphinemu.R;
 import org.dolphinemu.dolphinemu.features.settings.model.view.SettingsItem;
@@ -37,11 +32,11 @@ public final class SubmenuViewHolder extends SettingViewHolder
   {
     mItem = (SubmenuSetting) item;
 
-    mTextSettingName.setText(item.getName());
+    mTextSettingName.setText(item.getNameId());
 
-    if (!TextUtils.isEmpty(item.getDescription()))
+    if (item.getDescriptionId() > 0)
     {
-      mTextSettingDescription.setText(item.getDescription());
+      mTextSettingDescription.setText(item.getDescriptionId());
     }
   }
 
@@ -49,11 +44,5 @@ public final class SubmenuViewHolder extends SettingViewHolder
   public void onClick(View clicked)
   {
     getAdapter().onSubmenuClick(mItem);
-  }
-
-  @Nullable @Override
-  protected SettingsItem getItem()
-  {
-    return mItem;
   }
 }

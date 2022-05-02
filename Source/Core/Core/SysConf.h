@@ -1,5 +1,6 @@
 // Copyright 2009 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 // Utilities to parse and modify a Wii SYSCONF file and its sections.
 
@@ -8,13 +9,11 @@
 #include <cstring>
 #include <memory>
 #include <string>
-#include <string_view>
 #include <vector>
 
 #include "Common/Assert.h"
 #include "Common/CommonTypes.h"
 #include "Common/NandPaths.h"
-#include "Common/Swap.h"
 
 namespace IOS::HLE::FS
 {
@@ -46,8 +45,9 @@ public:
       ByteBool = 7,
     };
 
-    Entry(Type type_, std::string name_);
-    Entry(Type type_, std::string name_, std::vector<u8> bytes_);
+    Entry(Type type_, const std::string& name_);
+    Entry(Type type_, const std::string& name_, const std::vector<u8>& bytes_);
+    Entry(Type type_, const std::string& name_, std::vector<u8>&& bytes_);
 
     // Intended for use with the non array types.
     template <typename T>
@@ -55,17 +55,14 @@ public:
     {
       if (bytes.size() != sizeof(T))
         return default_value;
-
       T value;
       std::memcpy(&value, bytes.data(), bytes.size());
-      return Common::FromBigEndian(value);
+      return value;
     }
     template <typename T>
     void SetData(T value)
     {
       ASSERT(sizeof(value) == bytes.size());
-
-      value = Common::FromBigEndian(value);
       std::memcpy(bytes.data(), &value, bytes.size());
     }
 
@@ -74,21 +71,21 @@ public:
     std::vector<u8> bytes;
   };
 
-  Entry& AddEntry(Entry&& entry);
-  Entry* GetEntry(std::string_view key);
-  const Entry* GetEntry(std::string_view key) const;
-  Entry* GetOrAddEntry(std::string_view key, Entry::Type type);
-  void RemoveEntry(std::string_view key);
+  void AddEntry(Entry&& entry);
+  Entry* GetEntry(const std::string& key);
+  const Entry* GetEntry(const std::string& key) const;
+  Entry* GetOrAddEntry(const std::string& key, Entry::Type type);
+  void RemoveEntry(const std::string& key);
 
   // Intended for use with the non array types.
   template <typename T>
-  T GetData(std::string_view key, T default_value) const
+  T GetData(const std::string& key, T default_value) const
   {
     const Entry* entry = GetEntry(key);
     return entry ? entry->GetData(default_value) : default_value;
   }
   template <typename T>
-  void SetData(std::string_view key, Entry::Type type, T value)
+  void SetData(const std::string& key, Entry::Type type, T value)
   {
     GetOrAddEntry(key, type)->SetData(value);
   }

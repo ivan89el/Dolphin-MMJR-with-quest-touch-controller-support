@@ -1,12 +1,12 @@
 // Copyright 2017 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
 #include <QDialog>
 
-#include "DolphinQt/GameList/GameListModel.h"
-
+class GameListModel;
 class QCheckBox;
 class QComboBox;
 class QDialogButtonBox;
@@ -18,23 +18,18 @@ class QPushButton;
 class QSpinBox;
 class QTabWidget;
 
-namespace UICommon
-{
-class GameFile;
-}
-
 class NetPlaySetupDialog : public QDialog
 {
   Q_OBJECT
 public:
-  explicit NetPlaySetupDialog(const GameListModel& game_list_model, QWidget* parent);
+  explicit NetPlaySetupDialog(QWidget* parent);
 
   void accept() override;
   void show();
 
 signals:
   bool Join();
-  bool Host(const UICommon::GameFile& game);
+  bool Host(const QString& game_identifier);
 
 private:
   void CreateMainLayout();
@@ -79,5 +74,5 @@ private:
   QCheckBox* m_host_upnp;
 #endif
 
-  const GameListModel& m_game_list_model;
+  GameListModel* m_game_list_model;
 };

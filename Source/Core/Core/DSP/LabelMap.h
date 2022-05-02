@@ -1,5 +1,6 @@
 // Copyright 2008 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
@@ -29,7 +30,7 @@ public:
   void RegisterDefaults();
   void RegisterLabel(std::string label, u16 lval, LabelType type = LABEL_VALUE);
   void DeleteLabel(std::string_view label);
-  std::optional<u16> GetLabelValue(std::string_view name, LabelType type = LABEL_ANY) const;
+  std::optional<u16> GetLabelValue(const std::string& label, LabelType type = LABEL_ANY) const;
   void Clear();
 
 private:

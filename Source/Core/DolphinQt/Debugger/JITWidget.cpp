@@ -1,5 +1,6 @@
 // Copyright 2018 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "DolphinQt/Debugger/JITWidget.h"
 
@@ -14,7 +15,6 @@
 #include "Core/PowerPC/PPCAnalyst.h"
 #include "UICommon/Disassembler.h"
 
-#include "DolphinQt/Host.h"
 #include "DolphinQt/Settings.h"
 
 JITWidget::JITWidget(QWidget* parent) : QDockWidget(parent)
@@ -40,14 +40,13 @@ JITWidget::JITWidget(QWidget* parent) : QDockWidget(parent)
   m_asm_splitter->restoreState(
       settings.value(QStringLiteral("jitwidget/asmsplitter")).toByteArray());
 
-  connect(&Settings::Instance(), &Settings::JITVisibilityChanged, this,
+  connect(&Settings::Instance(), &Settings::JITVisibilityChanged,
           [this](bool visible) { setHidden(!visible); });
 
-  connect(&Settings::Instance(), &Settings::DebugModeToggled, this,
+  connect(&Settings::Instance(), &Settings::DebugModeToggled,
           [this](bool enabled) { setHidden(!enabled || !Settings::Instance().IsJITVisible()); });
 
   connect(&Settings::Instance(), &Settings::EmulationStateChanged, this, &JITWidget::Update);
-  connect(Host::GetInstance(), &Host::UpdateDisasmDialog, this, &JITWidget::Update);
 
   ConnectWidgets();
 
@@ -74,7 +73,6 @@ void JITWidget::CreateWidgets()
 {
   m_table_widget = new QTableWidget;
 
-  m_table_widget->setTabKeyNavigation(false);
   m_table_widget->setColumnCount(7);
   m_table_widget->setHorizontalHeaderLabels(
       {tr("Address"), tr("PPC Size"), tr("Host Size"),
@@ -115,7 +113,7 @@ void JITWidget::CreateWidgets()
 
 void JITWidget::ConnectWidgets()
 {
-  connect(m_refresh_button, &QPushButton::clicked, this, &JITWidget::Update);
+  connect(m_refresh_button, &QPushButton::pressed, this, &JITWidget::Update);
 }
 
 void JITWidget::Compare(u32 address)
@@ -186,22 +184,14 @@ void JITWidget::Update()
     ppc_disasm << st.numCycles << " estimated cycles" << std::endl;
 
     ppc_disasm << "Num instr: PPC: " << code_block.m_num_instructions
-               << " Host: " << host_instructions_count;
-    if (code_block.m_num_instructions != 0)
-    {
-      ppc_disasm << " (blowup: "
-                 << 100 * host_instructions_count / code_block.m_num_instructions - 100 << "%)";
-    }
-    ppc_disasm << std::endl;
+               << " Host: " << host_instructions_count << " (blowup: "
+               << 100 * host_instructions_count / code_block.m_num_instructions - 100 << "%)"
+               << std::endl;
 
     ppc_disasm << "Num bytes: PPC: " << code_block.m_num_instructions * 4
-               << " Host: " << host_code_size;
-    if (code_block.m_num_instructions != 0)
-    {
-      ppc_disasm << " (blowup: " << 100 * host_code_size / (4 * code_block.m_num_instructions) - 100
-                 << "%)";
-    }
-    ppc_disasm << std::endl;
+               << " Host: " << host_code_size
+               << " (blowup: " << 100 * host_code_size / (4 * code_block.m_num_instructions) - 100
+               << "%)" << std::endl;
 
     m_ppc_asm_widget->setHtml(
         QStringLiteral("<pre>%1</pre>").arg(QString::fromStdString(ppc_disasm.str())));

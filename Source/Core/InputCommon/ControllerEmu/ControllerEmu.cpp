@@ -1,5 +1,6 @@
 // Copyright 2010 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "InputCommon/ControllerEmu/ControllerEmu.h"
 
@@ -13,13 +14,10 @@
 #include "InputCommon/ControllerEmu/Control/Control.h"
 #include "InputCommon/ControllerEmu/ControlGroup/Attachments.h"
 #include "InputCommon/ControllerEmu/ControlGroup/ControlGroup.h"
-#include "InputCommon/ControllerEmu/Setting/NumericSetting.h"
 #include "InputCommon/ControllerInterface/ControllerInterface.h"
 
 namespace ControllerEmu
 {
-// This should theoretically be per EmulatedController instance,
-// though no EmulatedController usually run in parallel, so it makes little difference
 static std::recursive_mutex s_get_state_mutex;
 
 std::string EmulatedController::GetDisplayName() const
@@ -40,64 +38,19 @@ std::unique_lock<std::recursive_mutex> EmulatedController::GetStateLock()
 
 void EmulatedController::UpdateReferences(const ControllerInterface& devi)
 {
-  m_default_device_is_connected = devi.HasConnectedDevice(m_default_device);
-
-  ciface::ExpressionParser::ControlEnvironment env(devi, GetDefaultDevice(), m_expression_vars);
-
-  UpdateReferences(env);
-
-  env.CleanUnusedVariables();
-}
-
-void EmulatedController::UpdateReferences(ciface::ExpressionParser::ControlEnvironment& env)
-{
   const auto lock = GetStateLock();
+  m_default_device_is_connected = devi.HasConnectedDevice(m_default_device);
 
   for (auto& ctrlGroup : groups)
   {
     for (auto& control : ctrlGroup->controls)
-      control->control_ref->UpdateReference(env);
-
-    for (auto& setting : ctrlGroup->numeric_settings)
-      setting->GetInputReference().UpdateReference(env);
+      control->control_ref.get()->UpdateReference(devi, GetDefaultDevice());
 
     // Attachments:
     if (ctrlGroup->type == GroupType::Attachments)
     {
-      auto* const attachments = static_cast<Attachments*>(ctrlGroup.get());
-
-      attachments->GetSelectionSetting().GetInputReference().UpdateReference(env);
-
-      for (auto& attachment : attachments->GetAttachmentList())
-        attachment->UpdateReferences(env);
-    }
-  }
-}
-
-void EmulatedController::UpdateSingleControlReference(const ControllerInterface& devi,
-                                                      ControlReference* ref)
-{
-  ciface::ExpressionParser::ControlEnvironment env(devi, GetDefaultDevice(), m_expression_vars);
-
-  const auto lock = GetStateLock();
-  ref->UpdateReference(env);
-
-  env.CleanUnusedVariables();
-}
-
-const ciface::ExpressionParser::ControlEnvironment::VariableContainer&
-EmulatedController::GetExpressionVariables() const
-{
-  return m_expression_vars;
-}
-
-void EmulatedController::ResetExpressionVariables()
-{
-  for (auto& var : m_expression_vars)
-  {
-    if (var.second)
-    {
-      *var.second = 0;
+      for (auto& attachment : static_cast<Attachments*>(ctrlGroup.get())->GetAttachmentList())
+        attachment->UpdateReferences(devi);
     }
   }
 }

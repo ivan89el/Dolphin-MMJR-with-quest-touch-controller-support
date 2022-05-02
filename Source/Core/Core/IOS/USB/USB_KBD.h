@@ -1,5 +1,6 @@
 // Copyright 2009 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
@@ -12,16 +13,16 @@
 #include "Core/IOS/Device.h"
 #include "Core/IOS/IOS.h"
 
-namespace IOS::HLE
+namespace IOS::HLE::Device
 {
 class USB_KBD : public Device
 {
 public:
   USB_KBD(Kernel& ios, const std::string& device_name);
 
-  std::optional<IPCReply> Open(const OpenRequest& request) override;
-  std::optional<IPCReply> Write(const ReadWriteRequest& request) override;
-  std::optional<IPCReply> IOCtl(const IOCtlRequest& request) override;
+  IPCCommandResult Open(const OpenRequest& request) override;
+  IPCCommandResult Write(const ReadWriteRequest& request) override;
+  IPCCommandResult IOCtl(const IOCtlRequest& request) override;
   void Update() override;
 
 private:
@@ -63,4 +64,4 @@ private:
   };
   int m_keyboard_layout = KBD_LAYOUT_QWERTY;
 };
-}  // namespace IOS::HLE
+}  // namespace IOS::HLE::Device

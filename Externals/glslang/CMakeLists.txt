@@ -35,9 +35,8 @@ set(SRCS
 	SPIRV/InReadableOrder.cpp
 	SPIRV/Logger.cpp
 	SPIRV/SpvBuilder.cpp
-	SPIRV/SpvPostProcess.cpp
 	SPIRV/SPVRemapper.cpp
-	StandAlone/ResourceLimits.cpp
+	SPIRV/SpvPostProcess.cpp
 )
 
 if(WIN32)
@@ -64,8 +63,3 @@ endif()
 endif()
 
 add_library(glslang STATIC ${SRCS})
-
-target_include_directories(glslang
-PRIVATE
-	${CMAKE_SOURCE_DIR}/Externals/glslang
-)

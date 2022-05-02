@@ -1,5 +1,6 @@
 // Copyright 2017 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "Core/Debugger/RSO.h"
 
@@ -328,33 +329,33 @@ void RSOView::LoadSections()
 
 void RSOView::LoadImports()
 {
-  const std::size_t size = m_header.GetImportsSize();
+  std::size_t size = m_header.GetImportsSize();
   if (size % sizeof(RSOImport) != 0)
-    WARN_LOG_FMT(SYMBOLS, "RSO Imports Table has an incoherent size ({:08x})", size);
+    WARN_LOG(SYMBOLS, "RSO Imports Table has an incoherent size (%08zx)", size);
   m_imports.Load(m_header.GetImportsOffset(), size / sizeof(RSOImport));
 }
 
 void RSOView::LoadExports()
 {
-  const std::size_t size = m_header.GetExportsSize();
+  std::size_t size = m_header.GetExportsSize();
   if (size % sizeof(RSOExport) != 0)
-    WARN_LOG_FMT(SYMBOLS, "RSO Exports Table has an incoherent size ({:08x})", size);
+    WARN_LOG(SYMBOLS, "RSO Exports Table has an incoherent size (%08zx)", size);
   m_exports.Load(m_header.GetExportsOffset(), size / sizeof(RSOExport));
 }
 
 void RSOView::LoadInternals()
 {
-  const std::size_t size = m_header.GetInternalsSize();
+  std::size_t size = m_header.GetInternalsSize();
   if (size % sizeof(RSOInternalsEntry) != 0)
-    WARN_LOG_FMT(SYMBOLS, "RSO Internals Relocation Table has an incoherent size ({:08x})", size);
+    WARN_LOG(SYMBOLS, "RSO Internals Relocation Table has an incoherent size (%08zx)", size);
   m_imports.Load(m_header.GetInternalsOffset(), size / sizeof(RSOInternalsEntry));
 }
 
 void RSOView::LoadExternals()
 {
-  const std::size_t size = m_header.GetExternalsSize();
+  std::size_t size = m_header.GetExternalsSize();
   if (size % sizeof(RSOExternalsEntry) != 0)
-    WARN_LOG_FMT(SYMBOLS, "RSO Externals Relocation Table has an incoherent size ({:08x})", size);
+    WARN_LOG(SYMBOLS, "RSO Externals Relocation Table has an incoherent size (%08zx)", size);
   m_imports.Load(m_header.GetExternalsOffset(), size / sizeof(RSOExternalsEntry));
 }
 
@@ -392,7 +393,7 @@ void RSOView::Apply(PPCSymbolDB* symbol_db) const
       }
     }
   }
-  DEBUG_LOG_FMT(SYMBOLS, "RSO({}): {} symbols applied", GetName(), GetExportsCount());
+  DEBUG_LOG(SYMBOLS, "RSO(%s): %zu symbols applied", GetName().c_str(), GetExportsCount());
 }
 
 u32 RSOView::GetNextEntry() const
@@ -527,11 +528,11 @@ std::string RSOView::GetName(const RSOExport& rso_export) const
 
 u32 RSOView::GetProlog() const
 {
-  const u32 section_index = m_header.GetPrologSectionIndex();
+  u32 section_index = m_header.GetPrologSectionIndex();
   if (section_index == 0)
-    WARN_LOG_FMT(SYMBOLS, "RSO doesn't have a prolog function");
+    WARN_LOG(SYMBOLS, "RSO doesn't have a prolog function");
   else if (section_index >= m_sections.Count())
-    WARN_LOG_FMT(SYMBOLS, "RSO prolog section index out of bound");
+    WARN_LOG(SYMBOLS, "RSO prolog section index out of bound");
   else
     return GetSection(section_index).offset + m_header.GetPrologSectionOffset();
   return 0;
@@ -539,11 +540,11 @@ u32 RSOView::GetProlog() const
 
 u32 RSOView::GetEpilog() const
 {
-  const u32 section_index = m_header.GetEpilogSectionIndex();
+  u32 section_index = m_header.GetEpilogSectionIndex();
   if (section_index == 0)
-    WARN_LOG_FMT(SYMBOLS, "RSO doesn't have an epilog function");
+    WARN_LOG(SYMBOLS, "RSO doesn't have an epilog function");
   else if (section_index >= m_sections.Count())
-    WARN_LOG_FMT(SYMBOLS, "RSO epilog section index out of bound");
+    WARN_LOG(SYMBOLS, "RSO epilog section index out of bound");
   else
     return GetSection(section_index).offset + m_header.GetEpilogSectionOffset();
   return 0;
@@ -551,11 +552,11 @@ u32 RSOView::GetEpilog() const
 
 u32 RSOView::GetUnresolved() const
 {
-  const u32 section_index = m_header.GetUnresolvedSectionIndex();
+  u32 section_index = m_header.GetUnresolvedSectionIndex();
   if (section_index == 0)
-    WARN_LOG_FMT(SYMBOLS, "RSO doesn't have a unresolved function");
+    WARN_LOG(SYMBOLS, "RSO doesn't have a unresolved function");
   else if (section_index >= m_sections.Count())
-    WARN_LOG_FMT(SYMBOLS, "RSO unresolved section index out of bound");
+    WARN_LOG(SYMBOLS, "RSO unresolved section index out of bound");
   else
     return GetSection(section_index).offset + m_header.GetUnresolvedSectionOffset();
   return 0;
@@ -566,7 +567,7 @@ bool RSOChainView::Load(u32 address)
   // Load node
   RSOView node;
   node.LoadHeader(address);
-  DEBUG_LOG_FMT(SYMBOLS, "RSOChain node name: {}", node.GetName());
+  DEBUG_LOG(SYMBOLS, "RSOChain node name: %s", node.GetName().c_str());
   m_chain.emplace_front(std::move(node));
 
   if (LoadNextChain(m_chain.front()) && LoadPrevChain(m_chain.front()))
@@ -612,8 +613,8 @@ bool RSOChainView::LoadNextChain(const RSOView& view)
 
     if (prev_address != next_node.GetPrevEntry())
     {
-      ERROR_LOG_FMT(SYMBOLS, "RSOChain has an incoherent previous link {:08x} != {:08x} in {}",
-                    prev_address, next_node.GetPrevEntry(), next_node.GetName());
+      ERROR_LOG(SYMBOLS, "RSOChain has an incoherent previous link %08x != %08x in %s",
+                prev_address, next_node.GetPrevEntry(), next_node.GetName().c_str());
       return false;
     }
 
@@ -637,8 +638,8 @@ bool RSOChainView::LoadPrevChain(const RSOView& view)
 
     if (next_address != prev_node.GetNextEntry())
     {
-      ERROR_LOG_FMT(SYMBOLS, "RSOChain has an incoherent next link {:08x} != {:08x} in {}",
-                    next_address, prev_node.GetNextEntry(), prev_node.GetName());
+      ERROR_LOG(SYMBOLS, "RSOChain has an incoherent next link %08x != %08x in %s", next_address,
+                prev_node.GetNextEntry(), prev_node.GetName().c_str());
       return false;
     }
 

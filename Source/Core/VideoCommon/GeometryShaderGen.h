@@ -1,5 +1,6 @@
 // Copyright 2014 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
@@ -23,7 +24,6 @@ struct geometry_shader_uid_data
 
 using GeometryShaderUid = ShaderUid<geometry_shader_uid_data>;
 
-ShaderCode GenerateGeometryShaderCode(APIType api_type, const ShaderHostConfig& host_config,
+ShaderCode GenerateGeometryShaderCode(APIType ApiType, const ShaderHostConfig& host_config,
                                       const geometry_shader_uid_data* uid_data);
 GeometryShaderUid GetGeometryShaderUid(PrimitiveType primitive_type);
-void EnumerateGeometryShaderUids(const std::function<void(const GeometryShaderUid&)>& callback);

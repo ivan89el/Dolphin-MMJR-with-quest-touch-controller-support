@@ -1,5 +1,6 @@
 // Copyright 2008 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
@@ -10,19 +11,32 @@
 
 namespace OSD
 {
+struct Message
+{
+    Message() {}
+    Message(const std::string& text_, u32 timestamp_, u32 color_)
+      : text(text_), timestamp(timestamp_), color(color_)
+    {
+    }
+    std::string text;
+    u32 timestamp;
+    u32 color;
+};
+
 enum class MessageType
 {
   NetPlayPing,
   NetPlayBuffer,
+  EFBScale,
+  LogicOpsNotice,
+  StrideNotice,
+  OutOfRangeNotice,
+  BoundingBoxNotice,
+  GPUDecodeNotice,
 
   // This entry must be kept last so that persistent typed messages are
   // displayed before other messages
   Typeless,
-
-  // emulation messages
-  BoundingBoxNotice,
-  EFBScale,
-  LogicOpsNotice,
 };
 
 namespace Color
@@ -41,14 +55,10 @@ constexpr u32 VERY_LONG = 10000;
 };  // namespace Duration
 
 // On-screen message display (colored yellow by default)
-void AddMessage(std::string message, u32 ms = Duration::SHORT, u32 argb = Color::YELLOW);
-void AddTypedMessage(MessageType type, std::string message, u32 ms = Duration::SHORT,
-                     u32 argb = Color::YELLOW);
-
-// Draw the current messages on the screen. Only call once per frame.
-void DrawMessages();
+void AddMessage(const std::string& message, u32 ms = Duration::SHORT, u32 rgba = Color::YELLOW);
+void AddTypedMessage(MessageType type, const std::string& message, u32 ms = Duration::SHORT, u32 rgba = Color::YELLOW);
+void DrawMessage(const Message& msg, int top, int left, int time_left);  // draw one message
+void DrawMessages();  // draw the current messages on the screen. Only call once
+                      // per frame.
 void ClearMessages();
-
-void SetObscuredPixelsLeft(int width);
-void SetObscuredPixelsTop(int height);
 }  // namespace OSD

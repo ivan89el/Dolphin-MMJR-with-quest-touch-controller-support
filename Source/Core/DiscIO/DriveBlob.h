@@ -1,5 +1,6 @@
 // Copyright 2008 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
@@ -7,7 +8,7 @@
 #include <string>
 
 #include "Common/CommonTypes.h"
-#include "Common/IOFile.h"
+#include "Common/File.h"
 #include "DiscIO/Blob.h"
 
 #ifdef _WIN32
@@ -22,16 +23,10 @@ class DriveReader : public SectorReader
 public:
   static std::unique_ptr<DriveReader> Create(const std::string& drive);
   ~DriveReader();
-
   BlobType GetBlobType() const override { return BlobType::DRIVE; }
-
   u64 GetRawSize() const override { return m_size; }
   u64 GetDataSize() const override { return m_size; }
   bool IsDataSizeAccurate() const override { return true; }
-
-  u64 GetBlockSize() const override { return ECC_BLOCK_SIZE; }
-  bool HasFastRandomAccessInBlock() const override { return false; }
-  std::string GetCompressionMethod() const override { return {}; }
 
 private:
   DriveReader(const std::string& drive);
@@ -46,7 +41,6 @@ private:
   File::IOFile m_file;
   bool IsOK() const { return m_file.IsOpen() && m_file.IsGood(); }
 #endif
-  static constexpr u64 ECC_BLOCK_SIZE = 0x8000;
   u64 m_size = 0;
 };
 

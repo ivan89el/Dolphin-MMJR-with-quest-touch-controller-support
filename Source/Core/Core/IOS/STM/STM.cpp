@@ -1,5 +1,6 @@
 // Copyright 2016 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "Core/IOS/STM/STM.h"
 
@@ -11,18 +12,18 @@
 #include "Core/Core.h"
 #include "Core/HW/Memmap.h"
 
-namespace IOS::HLE
+namespace IOS::HLE::Device
 {
 static std::unique_ptr<IOCtlRequest> s_event_hook_request;
 
-std::optional<IPCReply> STMImmediateDevice::IOCtl(const IOCtlRequest& request)
+IPCCommandResult STMImmediate::IOCtl(const IOCtlRequest& request)
 {
   s32 return_value = IPC_SUCCESS;
   switch (request.request)
   {
   case IOCTL_STM_IDLE:
   case IOCTL_STM_SHUTDOWN:
-    NOTICE_LOG_FMT(IOS_STM, "IOCTL_STM_IDLE or IOCTL_STM_SHUTDOWN received, shutting down");
+    NOTICE_LOG(IOS_STM, "IOCTL_STM_IDLE or IOCTL_STM_SHUTDOWN received, shutting down");
     Core::QueueHostJob(&Core::Stop, false);
     break;
 
@@ -38,48 +39,48 @@ std::optional<IPCReply> STMImmediateDevice::IOCtl(const IOCtlRequest& request)
     break;
 
   case IOCTL_STM_HOTRESET:
-    INFO_LOG_FMT(IOS_STM, "{} - IOCtl:", GetDeviceName());
-    INFO_LOG_FMT(IOS_STM, "    IOCTL_STM_HOTRESET");
+    INFO_LOG(IOS_STM, "%s - IOCtl:", GetDeviceName().c_str());
+    INFO_LOG(IOS_STM, "    IOCTL_STM_HOTRESET");
     break;
 
   case IOCTL_STM_VIDIMMING:  // (Input: 20 bytes, Output: 20 bytes)
-    INFO_LOG_FMT(IOS_STM, "{} - IOCtl:", GetDeviceName());
-    INFO_LOG_FMT(IOS_STM, "    IOCTL_STM_VIDIMMING");
+    INFO_LOG(IOS_STM, "%s - IOCtl:", GetDeviceName().c_str());
+    INFO_LOG(IOS_STM, "    IOCTL_STM_VIDIMMING");
     // Memory::Write_U32(1, buffer_out);
     // return_value = 1;
     break;
 
   case IOCTL_STM_LEDMODE:  // (Input: 20 bytes, Output: 20 bytes)
-    INFO_LOG_FMT(IOS_STM, "{} - IOCtl:", GetDeviceName());
-    INFO_LOG_FMT(IOS_STM, "    IOCTL_STM_LEDMODE");
+    INFO_LOG(IOS_STM, "%s - IOCtl:", GetDeviceName().c_str());
+    INFO_LOG(IOS_STM, "    IOCTL_STM_LEDMODE");
     break;
 
   default:
-    request.DumpUnknown(GetDeviceName(), Common::Log::LogType::IOS_STM);
+    request.DumpUnknown(GetDeviceName(), LogTypes::IOS_STM);
   }
 
-  return IPCReply(return_value);
+  return GetDefaultReply(return_value);
 }
 
-STMEventHookDevice::~STMEventHookDevice()
+STMEventHook::~STMEventHook()
 {
   s_event_hook_request.reset();
 }
 
-std::optional<IPCReply> STMEventHookDevice::IOCtl(const IOCtlRequest& request)
+IPCCommandResult STMEventHook::IOCtl(const IOCtlRequest& request)
 {
   if (request.request != IOCTL_STM_EVENTHOOK)
-    return IPCReply(IPC_EINVAL);
+    return GetDefaultReply(IPC_EINVAL);
 
   if (s_event_hook_request)
-    return IPCReply(IPC_EEXIST);
+    return GetDefaultReply(IPC_EEXIST);
 
   // IOCTL_STM_EVENTHOOK waits until the reset button or power button is pressed.
   s_event_hook_request = std::make_unique<IOCtlRequest>(request.address);
-  return std::nullopt;
+  return GetNoReply();
 }
 
-void STMEventHookDevice::DoState(PointerWrap& p)
+void STMEventHook::DoState(PointerWrap& p)
 {
   u32 address = s_event_hook_request ? s_event_hook_request->address : 0;
   p.Do(address);
@@ -90,12 +91,12 @@ void STMEventHookDevice::DoState(PointerWrap& p)
   Device::DoState(p);
 }
 
-bool STMEventHookDevice::HasHookInstalled() const
+bool STMEventHook::HasHookInstalled() const
 {
   return s_event_hook_request != nullptr;
 }
 
-void STMEventHookDevice::TriggerEvent(const u32 event) const
+void STMEventHook::TriggerEvent(const u32 event) const
 {
   // If the device isn't open, ignore the button press.
   if (!m_is_active || !s_event_hook_request)
@@ -106,14 +107,14 @@ void STMEventHookDevice::TriggerEvent(const u32 event) const
   s_event_hook_request.reset();
 }
 
-void STMEventHookDevice::ResetButton() const
+void STMEventHook::ResetButton() const
 {
   // The reset button triggers STM_EVENT_RESET.
   TriggerEvent(STM_EVENT_RESET);
 }
 
-void STMEventHookDevice::PowerButton() const
+void STMEventHook::PowerButton() const
 {
   TriggerEvent(STM_EVENT_POWER);
 }
-}  // namespace IOS::HLE
+}  // namespace IOS::HLE::Device

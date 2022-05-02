@@ -1,5 +1,6 @@
 // Copyright 2008 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "Core/HW/EXI/EXI_Device.h"
 
@@ -101,8 +102,7 @@ void IEXIDevice::TransferByte(u8& byte)
 }
 
 // F A C T O R Y
-std::unique_ptr<IEXIDevice> EXIDevice_Create(const TEXIDevices device_type, const int channel_num,
-                                             const Memcard::HeaderData& memcard_header_data)
+std::unique_ptr<IEXIDevice> EXIDevice_Create(const TEXIDevices device_type, const int channel_num)
 {
   std::unique_ptr<IEXIDevice> result;
 
@@ -116,7 +116,7 @@ std::unique_ptr<IEXIDevice> EXIDevice_Create(const TEXIDevices device_type, cons
   case EXIDEVICE_MEMORYCARDFOLDER:
   {
     bool gci_folder = (device_type == EXIDEVICE_MEMORYCARDFOLDER);
-    result = std::make_unique<CEXIMemoryCard>(channel_num, gci_folder, memcard_header_data);
+    result = std::make_unique<CEXIMemoryCard>(channel_num, gci_folder);
     break;
   }
   case EXIDEVICE_MASKROM:
@@ -132,17 +132,7 @@ std::unique_ptr<IEXIDevice> EXIDevice_Create(const TEXIDevices device_type, cons
     break;
 
   case EXIDEVICE_ETH:
-    result = std::make_unique<CEXIETHERNET>(BBADeviceType::TAP);
-    break;
-
-#if defined(__APPLE__)
-  case EXIDEVICE_ETHTAPSERVER:
-    result = std::make_unique<CEXIETHERNET>(BBADeviceType::TAPSERVER);
-    break;
-#endif
-
-  case EXIDEVICE_ETHXLINK:
-    result = std::make_unique<CEXIETHERNET>(BBADeviceType::XLINK);
+    result = std::make_unique<CEXIETHERNET>();
     break;
 
   case EXIDEVICE_GECKO:

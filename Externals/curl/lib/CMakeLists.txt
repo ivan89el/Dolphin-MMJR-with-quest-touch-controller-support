@@ -1,7 +1,5 @@
-if(CMAKE_SYSTEM_NAME MATCHES "Windows")
-    add_definitions(-DUSE_SCHANNEL -DUSE_WINDOWS_SSPI)
-else()
-    add_definitions(-DHAVE_CONFIG_H)
+if(NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
+  add_definitions(-DHAVE_CONFIG_H)
 endif()
 
 include_directories(.)
@@ -13,5 +11,5 @@ add_library(
   ${SRCS}
   )
 
-target_link_libraries(curl ${MBEDTLS_LIBRARIES} z)
+target_link_libraries(curl ${MBEDTLS_LIBRARIES})
 target_compile_definitions(curl PUBLIC CURL_STATICLIB PRIVATE CURL_DISABLE_LDAP)

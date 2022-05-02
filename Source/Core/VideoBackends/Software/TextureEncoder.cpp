@@ -1,5 +1,6 @@
 // Copyright 2009 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "VideoBackends/Software/TextureEncoder.h"
 
@@ -220,7 +221,7 @@ static void SetSpans(int sBlkSize, int tBlkSize, s32* tSpan, s32* sBlkSpan, s32*
 {
   // width is 1 less than the number of pixels of width
   u32 width = bpmem.copyTexSrcWH.x >> bpmem.triggerEFBCopy.half_scale;
-  u32 alignedWidth = Common::AlignUp(width + 1, sBlkSize);
+  u32 alignedWidth = Common::AlignUp(width, sBlkSize);
 
   u32 readStride = 3 << bpmem.triggerEFBCopy.half_scale;
 
@@ -503,7 +504,7 @@ static void EncodeRGBA6(u8* dst, const u8* src, EFBCopyFormat format, bool yuv)
     break;
 
   default:
-    PanicAlertFmt("Unknown texture copy format: {}\n", format);
+    PanicAlert("Unknown texture copy format: 0x%x\n", static_cast<int>(format));
     break;
   }
 }
@@ -742,7 +743,7 @@ static void EncodeRGBA6halfscale(u8* dst, const u8* src, EFBCopyFormat format, b
     break;
 
   default:
-    PanicAlertFmt("Unknown texture copy format: {}\n", format);
+    PanicAlert("Unknown texture copy format: 0x%x\n", static_cast<int>(format));
     break;
   }
 }
@@ -959,7 +960,7 @@ static void EncodeRGB8(u8* dst, const u8* src, EFBCopyFormat format, bool yuv)
     break;
 
   default:
-    PanicAlertFmt("Unknown texture copy format: {}\n", format);
+    PanicAlert("Unknown texture copy format: 0x%x\n", static_cast<int>(format));
     break;
   }
 }
@@ -1191,7 +1192,7 @@ static void EncodeRGB8halfscale(u8* dst, const u8* src, EFBCopyFormat format, bo
     break;
 
   default:
-    PanicAlertFmt("Unknown texture copy format: {}\n", format);
+    PanicAlert("Unknown texture copy format: 0x%x\n", static_cast<int>(format));
     break;
   }
 }
@@ -1299,7 +1300,7 @@ static void EncodeZ24(u8* dst, const u8* src, EFBCopyFormat format)
     break;
 
   default:
-    PanicAlertFmt("Unknown texture copy format: {}\n", format);
+    PanicAlert("Unknown texture copy format: 0x%x\n", static_cast<int>(format));
     break;
   }
 }
@@ -1413,7 +1414,7 @@ static void EncodeZ24halfscale(u8* dst, const u8* src, EFBCopyFormat format)
     break;
 
   default:
-    PanicAlertFmt("Unknown texture copy format: {}\n", format);
+    PanicAlert("Unknown texture copy format: 0x%x\n", static_cast<int>(format));
     break;
   }
 }
@@ -1430,16 +1431,16 @@ void EncodeEfbCopy(u8* dst, const EFBCopyParams& params, u32 native_width, u32 b
   {
     switch (params.efb_format)
     {
-    case PixelFormat::RGBA6_Z24:
+    case PEControl::RGBA6_Z24:
       EncodeRGBA6halfscale(dst, src, params.copy_format, params.yuv);
       break;
-    case PixelFormat::RGB8_Z24:
+    case PEControl::RGB8_Z24:
       EncodeRGB8halfscale(dst, src, params.copy_format, params.yuv);
       break;
-    case PixelFormat::RGB565_Z16:
+    case PEControl::RGB565_Z16:
       EncodeRGB8halfscale(dst, src, params.copy_format, params.yuv);
       break;
-    case PixelFormat::Z24:
+    case PEControl::Z24:
       EncodeZ24halfscale(dst, src, params.copy_format);
       break;
     default:
@@ -1450,16 +1451,16 @@ void EncodeEfbCopy(u8* dst, const EFBCopyParams& params, u32 native_width, u32 b
   {
     switch (params.efb_format)
     {
-    case PixelFormat::RGBA6_Z24:
+    case PEControl::RGBA6_Z24:
       EncodeRGBA6(dst, src, params.copy_format, params.yuv);
       break;
-    case PixelFormat::RGB8_Z24:
+    case PEControl::RGB8_Z24:
       EncodeRGB8(dst, src, params.copy_format, params.yuv);
       break;
-    case PixelFormat::RGB565_Z16:
+    case PEControl::RGB565_Z16:
       EncodeRGB8(dst, src, params.copy_format, params.yuv);
       break;
-    case PixelFormat::Z24:
+    case PEControl::Z24:
       EncodeZ24(dst, src, params.copy_format);
       break;
     default:

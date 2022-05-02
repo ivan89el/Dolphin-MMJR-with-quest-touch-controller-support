@@ -1,5 +1,6 @@
 // Copyright 2008 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include <algorithm>
 
@@ -33,6 +34,21 @@ void UpdateActiveConfig()
   g_ActiveConfig.bVSyncActive = IsVSyncActive(g_ActiveConfig.bVSync);
 }
 
+VideoConfig::VideoConfig()
+{
+  // Needed for the first frame, I think
+  fAspectRatioHackW = 1;
+  fAspectRatioHackH = 1;
+
+  // disable all features by default
+  backend_info.api_type = APIType::Nothing;
+  backend_info.MaxTextureSize = 16384;
+  backend_info.bSupportsExclusiveFullscreen = false;
+  backend_info.bSupportsMultithreading = false;
+  backend_info.bSupportsST3CTextures = false;
+  backend_info.bSupportsBPTCTextures = false;
+}
+
 void VideoConfig::Refresh()
 {
   if (!s_has_registered_callback)
@@ -52,25 +68,22 @@ void VideoConfig::Refresh()
   bWidescreenHack = Config::Get(Config::GFX_WIDESCREEN_HACK);
   aspect_mode = Config::Get(Config::GFX_ASPECT_RATIO);
   suggested_aspect_mode = Config::Get(Config::GFX_SUGGESTED_ASPECT_RATIO);
-  fDisplayScale = Config::Get(Config::GFX_DISPLAY_SCALE);
   bCrop = Config::Get(Config::GFX_CROP);
+  fDisplayScale = Config::Get(Config::GFX_DISPLAY_SCALE);
   iSafeTextureCache_ColorSamples = Config::Get(Config::GFX_SAFE_TEXTURE_CACHE_COLOR_SAMPLES);
   bShowFPS = Config::Get(Config::GFX_SHOW_FPS);
-  bShowActiveTitle = Config::Get(Config::GFX_SHOW_ACTIVE_TITLE);
   bShowNetPlayPing = Config::Get(Config::GFX_SHOW_NETPLAY_PING);
   bShowNetPlayMessages = Config::Get(Config::GFX_SHOW_NETPLAY_MESSAGES);
-  fFontScale = Config::Get(Config::GFX_FONT_SCALE);
   bLogRenderTimeToFile = Config::Get(Config::GFX_LOG_RENDER_TIME_TO_FILE);
   bOverlayStats = Config::Get(Config::GFX_OVERLAY_STATS);
   bOverlayProjStats = Config::Get(Config::GFX_OVERLAY_PROJ_STATS);
   bDumpTextures = Config::Get(Config::GFX_DUMP_TEXTURES);
-  bDumpMipmapTextures = Config::Get(Config::GFX_DUMP_MIP_TEXTURES);
-  bDumpBaseTextures = Config::Get(Config::GFX_DUMP_BASE_TEXTURES);
   bHiresTextures = Config::Get(Config::GFX_HIRES_TEXTURES);
   bCacheHiresTextures = Config::Get(Config::GFX_CACHE_HIRES_TEXTURES);
   bDumpEFBTarget = Config::Get(Config::GFX_DUMP_EFB_TARGET);
   bDumpXFBTarget = Config::Get(Config::GFX_DUMP_XFB_TARGET);
   bDumpFramesAsImages = Config::Get(Config::GFX_DUMP_FRAMES_AS_IMAGES);
+  bFreeLook = Config::Get(Config::GFX_FREE_LOOK);
   bUseFFV1 = Config::Get(Config::GFX_USE_FFV1);
   sDumpFormat = Config::Get(Config::GFX_DUMP_FORMAT);
   sDumpCodec = Config::Get(Config::GFX_DUMP_CODEC);
@@ -78,7 +91,6 @@ void VideoConfig::Refresh()
   sDumpPath = Config::Get(Config::GFX_DUMP_PATH);
   iBitrateKbps = Config::Get(Config::GFX_BITRATE_KBPS);
   bInternalResolutionFrameDumps = Config::Get(Config::GFX_INTERNAL_RESOLUTION_FRAME_DUMPS);
-  bPaletteTextureCopy = Config::Get(Config::GFX_PALETTE_TEXTURE_COPY);
   bEnableGPUTextureDecoding = Config::Get(Config::GFX_ENABLE_GPU_TEXTURE_DECODING);
   bEnablePixelLighting = Config::Get(Config::GFX_ENABLE_PIXEL_LIGHTING);
   bFastDepthCalc = Config::Get(Config::GFX_FAST_DEPTH_CALC);
@@ -113,7 +125,6 @@ void VideoConfig::Refresh()
   bForceTrueColor = Config::Get(Config::GFX_ENHANCE_FORCE_TRUE_COLOR);
   bDisableCopyFilter = Config::Get(Config::GFX_ENHANCE_DISABLE_COPY_FILTER);
   bArbitraryMipmapDetection = Config::Get(Config::GFX_ENHANCE_ARBITRARY_MIPMAP_DETECTION);
-  bSkipApproximateLogicOp = Config::Get(Config::GFX_ENHANCE_SKIP_APPROXIMATE_LOGIC_OP);
   fArbitraryMipmapDetectionThreshold =
       Config::Get(Config::GFX_ENHANCE_ARBITRARY_MIPMAP_DETECTION_THRESHOLD);
 
@@ -129,10 +140,9 @@ void VideoConfig::Refresh()
   bSkipPresentingDuplicateXFBs = Config::Get(Config::GFX_HACK_SKIP_DUPLICATE_XFBS);
   bCopyEFBScaled = Config::Get(Config::GFX_HACK_COPY_EFB_SCALED);
   bEFBEmulateFormatChanges = Config::Get(Config::GFX_HACK_EFB_EMULATE_FORMAT_CHANGES);
+  bTMEMCacheEmulation = Config::Get(Config::GFX_HACK_TMEM_CACHE_EMULATION);
   bVertexRounding = Config::Get(Config::GFX_HACK_VERTEX_ROUDING);
   iEFBAccessTileSize = Config::Get(Config::GFX_HACK_EFB_ACCESS_TILE_SIZE);
-  iMissingColorValue = Config::Get(Config::GFX_HACK_MISSING_COLOR_VALUE);
-  bFastTextureSampling = Config::Get(Config::GFX_HACK_FAST_TEXTURE_SAMPLING);
 
   bPerfQueriesEnable = Config::Get(Config::GFX_PERF_QUERIES_ENABLE);
 
@@ -147,6 +157,7 @@ void VideoConfig::Refresh()
   }
 
   VerifyValidity();
+  bDirty = true;
 }
 
 void VideoConfig::VerifyValidity()
@@ -158,12 +169,6 @@ void VideoConfig::VerifyValidity()
   if (std::find(backend_info.AAModes.begin(), backend_info.AAModes.end(), iMultisamples) ==
       backend_info.AAModes.end())
     iMultisamples = 1;
-}
-
-bool VideoConfig::UsingUberShaders() const
-{
-  return iShaderCompilationMode == ShaderCompilationMode::SynchronousUberShaders ||
-         iShaderCompilationMode == ShaderCompilationMode::AsynchronousUberShaders;
 }
 
 static u32 GetNumAutoShaderCompilerThreads()

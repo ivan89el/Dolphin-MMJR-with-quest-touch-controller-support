@@ -2,6 +2,7 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:background="#000000"
     android:clickable="false"
     android:focusable="true"
     android:padding="10dp">
@@ -24,7 +25,6 @@
         android:layout_centerVertical="true"
         android:layout_toStartOf="@id/checkbox"
         android:text="Setting"
-        android:textColor="@android:color/white"
-        android:typeface="monospace" />
+        android:textColor="#FFFFFF" />
 
 </RelativeLayout>

@@ -1,5 +1,6 @@
 // Copyright 2010 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
@@ -27,7 +28,7 @@ namespace JIT::x64
 class DSPEmitter final : public JIT::DSPEmitter, public Gen::X64CodeBlock
 {
 public:
-  explicit DSPEmitter(DSPCore& dsp);
+  DSPEmitter();
   ~DSPEmitter() override;
 
   u16 RunCycles(u16 cycles) override;
@@ -88,7 +89,6 @@ public:
   void bloopi(UDSPInstruction opc);
 
   // Load/Store
-  void srsh(UDSPInstruction opc);
   void srs(UDSPInstruction opc);
   void lrs(UDSPInstruction opc);
   void lr(UDSPInstruction opc);
@@ -197,9 +197,6 @@ private:
   // within the class itself to allow access to member variables.
   static void CompileCurrent(DSPEmitter& emitter);
 
-  static u16 ReadIFXRegisterHelper(DSPEmitter& emitter, u16 address);
-  static void WriteIFXRegisterHelper(DSPEmitter& emitter, u16 address, u16 value);
-
   void EmitInstruction(UDSPInstruction inst);
   void ClearIRAMandDSPJITCodespaceReset();
 
@@ -221,14 +218,12 @@ private:
   void r_callr(UDSPInstruction opc);
   void r_ifcc(UDSPInstruction opc);
   void r_ret(UDSPInstruction opc);
-  void r_rti(UDSPInstruction opc);
 
   void Update_SR_Register(Gen::X64Reg val = Gen::EAX, Gen::X64Reg scratch = Gen::EDX);
 
   void get_long_prod(Gen::X64Reg long_prod = Gen::RAX);
   void get_long_prod_round_prodl(Gen::X64Reg long_prod = Gen::RAX);
   void set_long_prod();
-  void dsp_convert_long_acc(Gen::X64Reg long_acc);  // s64 -> s40
   void round_long_acc(Gen::X64Reg long_acc = Gen::EAX);
   void set_long_acc(int _reg, Gen::X64Reg acc = Gen::EAX);
   void get_acc_h(int _reg, Gen::X64Reg acc = Gen::EAX, bool sign = true);
@@ -247,16 +242,7 @@ private:
 
   // CC helpers
   void Update_SR_Register64(Gen::X64Reg val = Gen::EAX, Gen::X64Reg scratch = Gen::EDX);
-  void UpdateSR64AddSub(Gen::X64Reg val1, Gen::X64Reg val2, Gen::X64Reg result, Gen::X64Reg scratch,
-                        bool subtract);
-  void UpdateSR64Add(Gen::X64Reg val1, Gen::X64Reg val2, Gen::X64Reg result, Gen::X64Reg scratch)
-  {
-    UpdateSR64AddSub(val1, val2, result, scratch, false);
-  }
-  void UpdateSR64Sub(Gen::X64Reg val1, Gen::X64Reg val2, Gen::X64Reg result, Gen::X64Reg scratch)
-  {
-    UpdateSR64AddSub(val1, val2, result, scratch, true);
-  }
+  void Update_SR_Register64_Carry(Gen::X64Reg val, Gen::X64Reg carry_ovfl, bool carry_eq = false);
   void Update_SR_Register16(Gen::X64Reg val = Gen::EAX);
   void Update_SR_Register16_OverS32(Gen::X64Reg val = Gen::EAX);
 
@@ -297,7 +283,7 @@ private:
   Gen::OpArg M_SDSP_cr();
   Gen::OpArg M_SDSP_external_interrupt_waiting();
   Gen::OpArg M_SDSP_r_st(size_t index);
-  Gen::OpArg M_SDSP_reg_stack_ptrs(size_t index);
+  Gen::OpArg M_SDSP_reg_stack_ptr(size_t index);
 
   // Ext command helpers
   void popExtValueToReg();
@@ -335,8 +321,6 @@ private:
   const u8* m_enter_dispatcher;
   const u8* m_return_dispatcher;
   const u8* m_stub_entry_point;
-
-  DSPCore& m_dsp_core;
 };
 
 }  // namespace JIT::x64

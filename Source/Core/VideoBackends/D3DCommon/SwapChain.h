@@ -1,5 +1,6 @@
 // Copyright 2019 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
@@ -8,7 +9,7 @@
 
 #include "Common/CommonTypes.h"
 #include "Common/WindowSystemInfo.h"
-#include "VideoBackends/D3DCommon/D3DCommon.h"
+#include "VideoBackends/D3DCommon/Common.h"
 #include "VideoCommon/TextureConfig.h"
 
 namespace D3DCommon
@@ -22,15 +23,11 @@ public:
   // Sufficient buffers for triple buffering.
   static const u32 SWAP_CHAIN_BUFFER_COUNT = 3;
 
-  // Returns true if the stereo mode is quad-buffering.
-  static bool WantsStereo();
-
   IDXGISwapChain* GetDXGISwapChain() const { return m_swap_chain.Get(); }
   AbstractTextureFormat GetFormat() const { return m_texture_format; }
   u32 GetWidth() const { return m_width; }
   u32 GetHeight() const { return m_height; }
-  u32 GetLayers() const { return m_stereo ? 2u : 1u; }
-  bool IsStereoEnabled() const { return m_stereo; }
+  u32 GetLayers() const { return 1u; }
   bool HasExclusiveFullscreen() const { return m_has_fullscreen; }
 
   // Mode switches.
@@ -45,11 +42,10 @@ public:
 
   bool ChangeSurface(void* native_handle);
   bool ResizeSwapChain();
-  void SetStereo(bool stereo);
 
 protected:
   u32 GetSwapChainFlags() const;
-  bool CreateSwapChain(bool stereo);
+  bool CreateSwapChain();
   void DestroySwapChain();
 
   virtual bool CreateSwapChainBuffers() = 0;
@@ -64,7 +60,6 @@ protected:
   u32 m_width = 1;
   u32 m_height = 1;
 
-  bool m_stereo = false;
   bool m_allow_tearing_supported = false;
   bool m_has_fullscreen = false;
   bool m_fullscreen_request = false;

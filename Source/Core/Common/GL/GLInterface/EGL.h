@@ -1,5 +1,6 @@
 // Copyright 2008 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
@@ -33,14 +34,15 @@ protected:
   virtual EGLDisplay OpenEGLDisplay();
   virtual EGLNativeWindowType GetEGLNativeWindow(EGLConfig config);
 
-  bool Initialize(const WindowSystemInfo& wsi, bool core) override;
+  bool Initialize(void* display_handle, void* window_handle, bool core) override;
 
   bool CreateWindowSurface();
   void DestroyWindowSurface();
-  void DetectMode();
+  void DetectMode(bool has_handle);
   void DestroyContext();
 
-  WindowSystemInfo m_wsi = {};
+  void* m_host_display = nullptr;
+  void* m_host_window = nullptr;
 
   EGLConfig m_config;
   bool m_supports_surfaceless = false;

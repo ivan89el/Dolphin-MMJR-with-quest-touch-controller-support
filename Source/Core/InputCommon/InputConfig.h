@@ -1,5 +1,6 @@
 // Copyright 2010 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
@@ -9,7 +10,6 @@
 #include <vector>
 
 #include "InputCommon/ControllerInterface/ControllerInterface.h"
-#include "InputCommon/DynamicInputTextureManager.h"
 
 namespace ControllerEmu
 {
@@ -24,14 +24,7 @@ public:
 
   ~InputConfig();
 
-  enum class InputClass
-  {
-    GC,
-    Wii,
-    GBA,
-  };
-
-  bool LoadConfig(InputClass type);
+  bool LoadConfig(bool isGC);
   void SaveConfig();
 
   template <typename T, typename... Args>
@@ -40,20 +33,18 @@ public:
     m_controllers.emplace_back(std::make_unique<T>(std::forward<Args>(args)...));
   }
 
-  ControllerEmu::EmulatedController* GetController(int index) const;
+  ControllerEmu::EmulatedController* GetController(int index);
   void ClearControllers();
   bool ControllersNeedToBeCreated() const;
   bool IsControllerControlledByGamepadDevice(int index) const;
 
   std::string GetGUIName() const { return m_gui_name; }
   std::string GetProfileName() const { return m_profile_name; }
-  int GetControllerCount() const;
+  std::size_t GetControllerCount() const;
 
   // These should be used after creating all controllers and before clearing them, respectively.
   void RegisterHotplugCallback();
   void UnregisterHotplugCallback();
-
-  void GenerateControllerTextures(const IniFile& file);
 
 private:
   ControllerInterface::HotplugCallbackHandle m_hotplug_callback_handle;
@@ -61,5 +52,4 @@ private:
   const std::string m_ini_name;
   const std::string m_gui_name;
   const std::string m_profile_name;
-  InputCommon::DynamicInputTextureManager m_dynamic_input_tex_config_manager;
 };

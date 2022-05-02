@@ -1,5 +1,6 @@
 // Copyright 2017 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
@@ -8,11 +9,11 @@
 #include "Common/CommonTypes.h"
 
 class QAction;
-class QCloseEvent;
-class QShowEvent;
 class QTableWidget;
 class QTableWidgetItem;
 class QToolBar;
+class QCloseEvent;
+class QShowEvent;
 
 class WatchWidget : public QDockWidget
 {
@@ -33,10 +34,6 @@ private:
   void CreateWidgets();
   void ConnectWidgets();
 
-  void OnDelete();
-  void OnClear();
-  void OnNewWatch();
-
   void OnLoad();
   void OnSave();
 
@@ -50,9 +47,6 @@ private:
 
   void UpdateIcons();
 
-  QAction* m_new;
-  QAction* m_delete;
-  QAction* m_clear;
   QAction* m_load;
   QAction* m_save;
   QToolBar* m_toolbar;
@@ -60,5 +54,5 @@ private:
 
   bool m_updating = false;
 
-  static constexpr int NUM_COLUMNS = 6;
+  static constexpr size_t NUM_COLUMNS = 6;
 };

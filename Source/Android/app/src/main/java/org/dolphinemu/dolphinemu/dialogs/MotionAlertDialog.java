@@ -1,17 +1,12 @@
-// SPDX-License-Identifier: GPL-2.0-or-later
-
 package org.dolphinemu.dolphinemu.dialogs;
 
+import android.app.AlertDialog;
 import android.content.Context;
 import android.view.InputDevice;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 
-import androidx.annotation.NonNull;
-import androidx.appcompat.app.AlertDialog;
-
 import org.dolphinemu.dolphinemu.features.settings.model.view.InputBindingSetting;
-import org.dolphinemu.dolphinemu.features.settings.ui.SettingsAdapter;
 import org.dolphinemu.dolphinemu.utils.ControllerMappingHelper;
 import org.dolphinemu.dolphinemu.utils.Log;
 
@@ -29,7 +24,6 @@ public final class MotionAlertDialog extends AlertDialog
   private final ArrayList<Float> mPreviousValues = new ArrayList<>();
   private int mPrevDeviceId = 0;
   private boolean mWaitingForEvent = true;
-  private SettingsAdapter mAdapter;
 
   /**
    * Constructor
@@ -37,41 +31,30 @@ public final class MotionAlertDialog extends AlertDialog
    * @param context The current {@link Context}.
    * @param setting The Preference to show this dialog for.
    */
-  public MotionAlertDialog(Context context, InputBindingSetting setting, SettingsAdapter adapter)
+  public MotionAlertDialog(Context context, InputBindingSetting setting)
   {
     super(context);
 
     this.setting = setting;
-    mAdapter = adapter;
   }
 
   public boolean onKeyEvent(int keyCode, KeyEvent event)
   {
     Log.debug("[MotionAlertDialog] Received key event: " + event.getAction());
-    if (event.getAction() == KeyEvent.ACTION_UP)
+    switch (event.getAction())
     {
-      if (!ControllerMappingHelper.shouldKeyBeIgnored(event.getDevice(), keyCode))
-      {
-        setting.onKeyInput(mAdapter.getSettings(), event);
-        dismiss();
-      }
-      // Even if we ignore the key, we still consume it. Thus return true regardless.
-      return true;
-    }
-    return false;
-  }
+      case KeyEvent.ACTION_UP:
+        if (!ControllerMappingHelper.shouldKeyBeIgnored(event.getDevice(), keyCode))
+        {
+          setting.onKeyInput(event);
+          dismiss();
+        }
+        // Even if we ignore the key, we still consume it. Thus return true regardless.
+        return true;
 
-  @Override
-  public boolean onKeyLongPress(int keyCode, @NonNull KeyEvent event)
-  {
-    // Intended for devices with no touchscreen or mouse
-    if (keyCode == KeyEvent.KEYCODE_BACK)
-    {
-      setting.clearValue(mAdapter.getSettings());
-      dismiss();
-      return true;
+      default:
+        return false;
     }
-    return super.onKeyLongPress(keyCode, event);
   }
 
   @Override
@@ -82,7 +65,7 @@ public final class MotionAlertDialog extends AlertDialog
   }
 
   @Override
-  public boolean dispatchGenericMotionEvent(@NonNull MotionEvent event)
+  public boolean dispatchGenericMotionEvent(MotionEvent event)
   {
     // Handle this event if we care about it, otherwise pass it down the framework
     return onMotionEvent(event) || super.dispatchGenericMotionEvent(event);
@@ -162,7 +145,7 @@ public final class MotionAlertDialog extends AlertDialog
       if (numMovedAxis == 1)
       {
         mWaitingForEvent = false;
-        setting.onMotionInput(mAdapter.getSettings(), input, lastMovedRange, lastMovedDir);
+        setting.onMotionInput(input, lastMovedRange, lastMovedDir);
         dismiss();
       }
     }

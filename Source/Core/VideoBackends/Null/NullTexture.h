@@ -1,5 +1,6 @@
 // Copyright 2017 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
@@ -18,6 +19,7 @@ class NullTexture final : public AbstractTexture
 {
 public:
   explicit NullTexture(const TextureConfig& config);
+  ~NullTexture() = default;
 
   void CopyRectangleFromTexture(const AbstractTexture* src,
                                 const MathUtil::Rectangle<int>& src_rect, u32 src_layer,
@@ -56,6 +58,7 @@ public:
   explicit NullFramebuffer(AbstractTexture* color_attachment, AbstractTexture* depth_attachment,
                            AbstractTextureFormat color_format, AbstractTextureFormat depth_format,
                            u32 width, u32 height, u32 layers, u32 samples);
+  ~NullFramebuffer() override = default;
 
   static std::unique_ptr<NullFramebuffer> Create(NullTexture* color_attachment,
                                                  NullTexture* depth_attachment);

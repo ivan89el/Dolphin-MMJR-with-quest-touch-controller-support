@@ -1,5 +1,6 @@
 // Copyright 2017 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "Core/IOS/IOSC.h"
 
@@ -21,8 +22,8 @@
 #include "Common/ChunkFile.h"
 #include "Common/Crypto/AES.h"
 #include "Common/Crypto/ec.h"
+#include "Common/File.h"
 #include "Common/FileUtil.h"
-#include "Common/IOFile.h"
 #include "Common/ScopeGuard.h"
 #include "Common/Swap.h"
 #include "Core/IOS/Device.h"
@@ -327,7 +328,7 @@ ReturnCode IOSC::VerifyPublicKeySign(const std::array<u8, 20>& sha1, Handle sign
                                              MBEDTLS_MD_SHA1, 0, sha1.data(), signature.data());
     if (ret != 0)
     {
-      WARN_LOG_FMT(IOS, "VerifyPublicKeySign: RSA verification failed (error {})", ret);
+      WARN_LOG(IOS, "VerifyPublicKeySign: RSA verification failed (error %d)", ret);
       return IOSC_FAIL_CHECKVALUE;
     }
 
@@ -345,7 +346,7 @@ ReturnCode IOSC::VerifyPublicKeySign(const std::array<u8, 20>& sha1, Handle sign
   }
 }
 
-ReturnCode IOSC::ImportCertificate(const ES::CertReader& cert, Handle signer_handle,
+ReturnCode IOSC::ImportCertificate(const IOS::ES::CertReader& cert, Handle signer_handle,
                                    Handle dest_handle, u32 pid)
 {
   if (!HasOwnership(signer_handle, pid) || !HasOwnership(dest_handle, pid))
@@ -419,9 +420,9 @@ static CertECC MakeBlankEccCert(const std::string& issuer, const std::string& na
 {
   CertECC cert{};
   cert.signature.type = SignatureType(Common::swap32(u32(SignatureType::ECC)));
-  issuer.copy(cert.signature.issuer, sizeof(cert.signature.issuer) - 1);
+  std::strncpy(cert.signature.issuer, issuer.c_str(), 0x40);
   cert.header.public_key_type = PublicKeyType(Common::swap32(u32(PublicKeyType::ECC)));
-  name.copy(cert.header.name, sizeof(cert.header.name) - 1);
+  std::strncpy(cert.header.name, name.c_str(), 0x40);
   cert.header.id = Common::swap32(key_id);
   cert.public_key = Common::ec::PrivToPub(private_key);
   return cert;
@@ -560,14 +561,14 @@ void IOSC::LoadEntries()
   File::IOFile file{File::GetUserPath(D_WIIROOT_IDX) + "/keys.bin", "rb"};
   if (!file)
   {
-    WARN_LOG_FMT(IOS, "keys.bin could not be found. Default values will be used.");
+    WARN_LOG(IOS, "keys.bin could not be found. Default values will be used.");
     return;
   }
 
   BootMiiKeyDump dump;
   if (!file.ReadBytes(&dump, sizeof(dump)))
   {
-    ERROR_LOG_FMT(IOS, "Failed to read from keys.bin.");
+    ERROR_LOG(IOS, "Failed to read from keys.bin.");
     return;
   }
 

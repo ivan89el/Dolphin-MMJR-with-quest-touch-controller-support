@@ -1,7 +1,6 @@
 // Copyright 2014 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
-
-#pragma once
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "Common/CommonTypes.h"
 
@@ -25,4 +24,4 @@ enum CCFlags
   CC_HS = CC_CS,  // Alias of CC_CS  Unsigned higher or same
   CC_LO = CC_CC,  // Alias of CC_CC  Unsigned lower
 };
-constexpr u32 NO_COND = 0xE0000000;
+const u32 NO_COND = 0xE0000000;

@@ -1,14 +1,15 @@
 // Copyright 2019 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "DolphinQt/QtUtils/ModalMessageBox.h"
 
 #include <QApplication>
 
-ModalMessageBox::ModalMessageBox(QWidget* parent, Qt::WindowModality modality)
+ModalMessageBox::ModalMessageBox(QWidget* parent)
     : QMessageBox(parent != nullptr ? parent->window() : nullptr)
 {
-  setWindowModality(modality);
+  setWindowModality(Qt::WindowModal);
   setWindowFlags(Qt::Sheet | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
 
   // No parent is still preferable to showing a hidden parent here.
@@ -18,10 +19,9 @@ ModalMessageBox::ModalMessageBox(QWidget* parent, Qt::WindowModality modality)
 
 static inline int ExecMessageBox(ModalMessageBox::Icon icon, QWidget* parent, const QString& title,
                                  const QString& text, ModalMessageBox::StandardButtons buttons,
-                                 ModalMessageBox::StandardButton default_button,
-                                 Qt::WindowModality modality)
+                                 ModalMessageBox::StandardButton default_button)
 {
-  ModalMessageBox msg(parent, modality);
+  ModalMessageBox msg(parent);
   msg.setIcon(icon);
   msg.setWindowTitle(title);
   msg.setText(text);
@@ -32,33 +32,25 @@ static inline int ExecMessageBox(ModalMessageBox::Icon icon, QWidget* parent, co
 }
 
 int ModalMessageBox::critical(QWidget* parent, const QString& title, const QString& text,
-                              StandardButtons buttons, StandardButton default_button,
-                              Qt::WindowModality modality)
+                              StandardButtons buttons, StandardButton default_button)
 {
-  return ExecMessageBox(QMessageBox::Critical, parent, title, text, buttons, default_button,
-                        modality);
+  return ExecMessageBox(QMessageBox::Critical, parent, title, text, buttons, default_button);
 }
 
 int ModalMessageBox::information(QWidget* parent, const QString& title, const QString& text,
-                                 StandardButtons buttons, StandardButton default_button,
-                                 Qt::WindowModality modality)
+                                 StandardButtons buttons, StandardButton default_button)
 {
-  return ExecMessageBox(QMessageBox::Information, parent, title, text, buttons, default_button,
-                        modality);
+  return ExecMessageBox(QMessageBox::Information, parent, title, text, buttons, default_button);
 }
 
 int ModalMessageBox::question(QWidget* parent, const QString& title, const QString& text,
-                              StandardButtons buttons, StandardButton default_button,
-                              Qt::WindowModality modality)
+                              StandardButtons buttons, StandardButton default_button)
 {
-  return ExecMessageBox(QMessageBox::Warning, parent, title, text, buttons, default_button,
-                        modality);
+  return ExecMessageBox(QMessageBox::Warning, parent, title, text, buttons, default_button);
 }
 
 int ModalMessageBox::warning(QWidget* parent, const QString& title, const QString& text,
-                             StandardButtons buttons, StandardButton default_button,
-                             Qt::WindowModality modality)
+                             StandardButtons buttons, StandardButton default_button)
 {
-  return ExecMessageBox(QMessageBox::Warning, parent, title, text, buttons, default_button,
-                        modality);
+  return ExecMessageBox(QMessageBox::Warning, parent, title, text, buttons, default_button);
 }

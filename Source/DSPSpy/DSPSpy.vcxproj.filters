@@ -78,6 +78,7 @@
       <Filter>DSP Interface</Filter>
     </ClCompile>
     <ClCompile Include="main_spy.cpp" />
+    <ClCompile Include="Stubs.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="dsp_interface.h">

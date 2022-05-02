@@ -1,5 +1,6 @@
 // Copyright 2009 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "Core/SysConf.h"
 
@@ -9,8 +10,8 @@
 
 #include "Common/CommonPaths.h"
 #include "Common/CommonTypes.h"
+#include "Common/File.h"
 #include "Common/FileUtil.h"
-#include "Common/IOFile.h"
 #include "Common/Logging/Log.h"
 #include "Common/Swap.h"
 #include "Core/IOS/FS/FileSystem.h"
@@ -59,7 +60,7 @@ void SysConf::Load()
                                    "/shared2/sys/SYSCONF", IOS::HLE::FS::Mode::Read);
   if (!file || file->GetStatus()->size != SYSCONF_SIZE || !LoadFromFile(*file))
   {
-    WARN_LOG_FMT(CORE, "No valid SYSCONF detected. Creating a new one.");
+    WARN_LOG(CORE, "No valid SYSCONF detected. Creating a new one.");
     InsertDefaultEntries();
   }
 }
@@ -117,8 +118,8 @@ bool SysConf::LoadFromFile(const IOS::HLE::FS::FileHandle& file)
       data.resize(GetNonArrayEntrySize(type));
       break;
     default:
-      ERROR_LOG_FMT(CORE, "Unknown entry type {} in SYSCONF for {} (offset {})",
-                    static_cast<u8>(type), name, offset);
+      ERROR_LOG(CORE, "Unknown entry type %d in SYSCONF for %s (offset %u)", static_cast<u8>(type),
+                name.c_str(), offset);
       return false;
     }
 
@@ -210,45 +211,50 @@ bool SysConf::Save() const
   return result == IOS::HLE::FS::ResultCode::Success;
 }
 
-SysConf::Entry::Entry(Type type_, std::string name_) : type(type_), name(std::move(name_))
+SysConf::Entry::Entry(Type type_, const std::string& name_) : type(type_), name(name_)
 {
   if (type != Type::SmallArray && type != Type::BigArray)
     bytes.resize(GetNonArrayEntrySize(type));
 }
 
-SysConf::Entry::Entry(Type type_, std::string name_, std::vector<u8> bytes_)
-    : type(type_), name(std::move(name_)), bytes(std::move(bytes_))
+SysConf::Entry::Entry(Type type_, const std::string& name_, const std::vector<u8>& bytes_)
+    : type(type_), name(name_), bytes(bytes_)
 {
 }
 
-SysConf::Entry& SysConf::AddEntry(Entry&& entry)
+SysConf::Entry::Entry(Type type_, const std::string& name_, std::vector<u8>&& bytes_)
+    : type(type_), name(name_), bytes(std::move(bytes_))
 {
-  return m_entries.emplace_back(std::move(entry));
 }
 
-SysConf::Entry* SysConf::GetEntry(std::string_view key)
+void SysConf::AddEntry(Entry&& entry)
 {
-  const auto iterator = std::find_if(m_entries.begin(), m_entries.end(),
-                                     [&key](const auto& entry) { return entry.name == key; });
-  return iterator != m_entries.end() ? &*iterator : nullptr;
+  m_entries.emplace_back(std::move(entry));
 }
 
-const SysConf::Entry* SysConf::GetEntry(std::string_view key) const
+SysConf::Entry* SysConf::GetEntry(const std::string& key)
 {
   const auto iterator = std::find_if(m_entries.begin(), m_entries.end(),
                                      [&key](const auto& entry) { return entry.name == key; });
   return iterator != m_entries.end() ? &*iterator : nullptr;
 }
 
-SysConf::Entry* SysConf::GetOrAddEntry(std::string_view key, Entry::Type type)
+const SysConf::Entry* SysConf::GetEntry(const std::string& key) const
+{
+  const auto iterator = std::find_if(m_entries.begin(), m_entries.end(),
+                                     [&key](const auto& entry) { return entry.name == key; });
+  return iterator != m_entries.end() ? &*iterator : nullptr;
+}
+
+SysConf::Entry* SysConf::GetOrAddEntry(const std::string& key, Entry::Type type)
 {
   if (Entry* entry = GetEntry(key))
     return entry;
-
-  return &AddEntry({type, std::string(key)});
+  AddEntry({type, key});
+  return GetEntry(key);
 }
 
-void SysConf::RemoveEntry(std::string_view key)
+void SysConf::RemoveEntry(const std::string& key)
 {
   m_entries.erase(std::remove_if(m_entries.begin(), m_entries.end(),
                                  [&key](const auto& entry) { return entry.name == key; }),

@@ -1,263 +1,223 @@
 // Copyright 2013 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
-
-#include "InputCommon/ControlReference/ExpressionParser.h"
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include <algorithm>
-#include <cmath>
-#include <functional>
+#include <cassert>
 #include <iostream>
 #include <map>
 #include <memory>
-#include <regex>
 #include <string>
-#include <utility>
 #include <vector>
 
-#include "Common/Assert.h"
-#include "Common/Common.h"
 #include "Common/StringUtil.h"
-
-#include "InputCommon/ControlReference/FunctionExpression.h"
+#include "InputCommon/ControlReference/ExpressionParser.h"
 
 namespace ciface::ExpressionParser
 {
 using namespace ciface::Core;
 
-class ControlExpression;
-
-class HotkeySuppressions
+enum TokenType
 {
-public:
-  using Modifiers = std::vector<std::unique_ptr<ControlExpression>>;
-
-  struct InvokingDeleter
-  {
-    template <typename T>
-    void operator()(T* func)
-    {
-      (*func)();
-    }
-  };
-
-  using Suppressor = std::unique_ptr<std::function<void()>, InvokingDeleter>;
-
-  bool IsSuppressed(Device::Input* input) const
-  {
-    // Input is suppressed if it exists in the map at all.
-    return m_suppressions.lower_bound({input, nullptr}) !=
-           m_suppressions.lower_bound({input + 1, nullptr});
-  }
-
-  bool IsSuppressedIgnoringModifiers(Device::Input* input, const Modifiers& ignore_modifiers) const;
-
-  // Suppresses each input + modifier pair.
-  // The returned object removes the suppression on destruction.
-  Suppressor MakeSuppressor(const Modifiers* modifiers,
-                            const std::unique_ptr<ControlExpression>* final_input);
-
-private:
-  using Suppression = std::pair<Device::Input*, Device::Input*>;
-  using SuppressionLevel = u16;
-
-  void RemoveSuppression(Device::Input* modifier, Device::Input* final_input)
-  {
-    auto it = m_suppressions.find({final_input, modifier});
-    if (it != m_suppressions.end() && (--it->second) == 0)
-      m_suppressions.erase(it);
-  }
-
-  // Holds counts of suppressions for each input/modifier pair.
-  std::map<Suppression, SuppressionLevel> m_suppressions;
+  TOK_DISCARD,
+  TOK_INVALID,
+  TOK_EOF,
+  TOK_LPAREN,
+  TOK_RPAREN,
+  TOK_AND,
+  TOK_OR,
+  TOK_NOT,
+  TOK_ADD,
+  TOK_CONTROL,
 };
 
-static HotkeySuppressions s_hotkey_suppressions;
-
-Token::Token(TokenType type_) : type(type_)
+inline std::string OpName(TokenType op)
 {
-}
-
-Token::Token(TokenType type_, std::string data_) : type(type_), data(std::move(data_))
-{
-}
-
-bool Token::IsBinaryOperator() const
-{
-  return type >= TOK_BINARY_OPS_BEGIN && type < TOK_BINARY_OPS_END;
-}
-
-Lexer::Lexer(std::string expr_) : expr(std::move(expr_))
-{
-  it = expr.begin();
-}
-
-std::string Lexer::FetchDelimString(char delim)
-{
-  const std::string result = FetchCharsWhile([delim](char c) { return c != delim; });
-  if (it != expr.end())
-    ++it;
-  return result;
-}
-
-std::string Lexer::FetchWordChars()
-{
-  // Valid word characters:
-  std::regex rx(R"([a-z\d_])", std::regex_constants::icase);
-
-  return FetchCharsWhile([&rx](char c) { return std::regex_match(std::string(1, c), rx); });
-}
-
-Token Lexer::GetDelimitedLiteral()
-{
-  return Token(TOK_LITERAL, FetchDelimString('\''));
-}
-
-Token Lexer::GetVariable()
-{
-  return Token(TOK_VARIABLE, FetchWordChars());
-}
-
-Token Lexer::GetFullyQualifiedControl()
-{
-  return Token(TOK_CONTROL, FetchDelimString('`'));
-}
-
-Token Lexer::GetBareword(char first_char)
-{
-  return Token(TOK_BAREWORD, first_char + FetchWordChars());
-}
-
-Token Lexer::GetRealLiteral(char first_char)
-{
-  std::string value;
-  value += first_char;
-  value += FetchCharsWhile([](char c) { return isdigit(c, std::locale::classic()) || ('.' == c); });
-
-  if (std::regex_match(value, std::regex(R"(\d+(\.\d+)?)")))
-    return Token(TOK_LITERAL, value);
-
-  return Token(TOK_INVALID);
-}
-
-Token Lexer::PeekToken()
-{
-  const auto old_it = it;
-  const auto tok = NextToken();
-  it = old_it;
-  return tok;
-}
-
-Token Lexer::NextToken()
-{
-  if (it == expr.end())
-    return Token(TOK_EOF);
-
-  char c = *it++;
-  switch (c)
+  switch (op)
   {
-  case ' ':
-  case '\t':
-  case '\n':
-  case '\r':
-    return Token(TOK_WHITESPACE);
-  case '(':
-    return Token(TOK_LPAREN);
-  case ')':
-    return Token(TOK_RPAREN);
-  case '@':
-    return Token(TOK_HOTKEY);
-  case '&':
-    return Token(TOK_AND);
-  case '|':
-    return Token(TOK_OR);
-  case '!':
-    return Token(TOK_NOT);
-  case '+':
-    return Token(TOK_ADD);
-  case '-':
-    return Token(TOK_SUB);
-  case '*':
-    return Token(TOK_MUL);
-  case '/':
-    return Token(TOK_DIV);
-  case '%':
-    return Token(TOK_MOD);
-  case '=':
-    return Token(TOK_ASSIGN);
-  case '<':
-    return Token(TOK_LTHAN);
-  case '>':
-    return Token(TOK_GTHAN);
-  case ',':
-    return Token(TOK_COMMA);
-  case '^':
-    return Token(TOK_XOR);
-  case '\'':
-    return GetDelimitedLiteral();
-  case '$':
-    return GetVariable();
-  case '`':
-    return GetFullyQualifiedControl();
+  case TOK_AND:
+    return "And";
+  case TOK_OR:
+    return "Or";
+  case TOK_NOT:
+    return "Not";
+  case TOK_ADD:
+    return "Add";
   default:
-    if (isalpha(c, std::locale::classic()))
-      return GetBareword(c);
-    else if (isdigit(c, std::locale::classic()))
-      return GetRealLiteral(c);
-    else
-      return Token(TOK_INVALID);
+    assert(false);
+    return "";
   }
 }
 
-ParseStatus Lexer::Tokenize(std::vector<Token>& tokens)
+class Token
 {
-  while (true)
+public:
+  TokenType type;
+  ControlQualifier qualifier;
+
+  Token(TokenType type_) : type(type_) {}
+  Token(TokenType type_, ControlQualifier qualifier_) : type(type_), qualifier(qualifier_) {}
+  operator std::string() const
   {
-    const std::size_t string_position = it - expr.begin();
-    Token tok = NextToken();
-
-    tok.string_position = string_position;
-    tok.string_length = it - expr.begin();
-
-    // Handle /* */ style comments.
-    if (tok.type == TOK_DIV && PeekToken().type == TOK_MUL)
+    switch (type)
     {
-      const auto end_of_comment = expr.find("*/", it - expr.begin());
-
-      if (end_of_comment == std::string::npos)
-        return ParseStatus::SyntaxError;
-
-      tok.type = TOK_COMMENT;
-      tok.string_length = end_of_comment + 4;
-
-      it = expr.begin() + end_of_comment + 2;
+    case TOK_DISCARD:
+      return "Discard";
+    case TOK_EOF:
+      return "EOF";
+    case TOK_LPAREN:
+      return "(";
+    case TOK_RPAREN:
+      return ")";
+    case TOK_AND:
+      return "&";
+    case TOK_OR:
+      return "|";
+    case TOK_NOT:
+      return "!";
+    case TOK_ADD:
+      return "+";
+    case TOK_CONTROL:
+      return "Device(" + (std::string)qualifier + ")";
+    case TOK_INVALID:
+      break;
     }
 
-    tokens.push_back(tok);
-
-    if (tok.type == TOK_INVALID)
-      return ParseStatus::SyntaxError;
-
-    if (tok.type == TOK_EOF)
-      break;
+    return "Invalid";
   }
-  return ParseStatus::Successful;
-}
+};
+
+class Lexer
+{
+public:
+  std::string expr;
+  std::string::iterator it;
+
+  Lexer(const std::string& expr_) : expr(expr_) { it = expr.begin(); }
+  bool FetchBacktickString(std::string& value, char otherDelim = 0)
+  {
+    value = "";
+    while (it != expr.end())
+    {
+      char c = *it;
+      ++it;
+      if (c == '`')
+        return false;
+      if (c > 0 && c == otherDelim)
+        return true;
+      value += c;
+    }
+    return false;
+  }
+
+  Token GetFullyQualifiedControl()
+  {
+    ControlQualifier qualifier;
+    std::string value;
+
+    if (FetchBacktickString(value, ':'))
+    {
+      // Found colon, this is the device name
+      qualifier.has_device = true;
+      qualifier.device_qualifier.FromString(value);
+      FetchBacktickString(value);
+    }
+
+    qualifier.control_name = value;
+
+    return Token(TOK_CONTROL, qualifier);
+  }
+
+  Token GetBarewordsControl(char c)
+  {
+    std::string name;
+    name += c;
+
+    while (it != expr.end())
+    {
+      c = *it;
+      if (!isalpha(c))
+        break;
+      name += c;
+      ++it;
+    }
+
+    ControlQualifier qualifier;
+    qualifier.control_name = name;
+    return Token(TOK_CONTROL, qualifier);
+  }
+
+  Token NextToken()
+  {
+    if (it == expr.end())
+      return Token(TOK_EOF);
+
+    char c = *it++;
+    switch (c)
+    {
+    case ' ':
+    case '\t':
+    case '\n':
+    case '\r':
+      return Token(TOK_DISCARD);
+    case '(':
+      return Token(TOK_LPAREN);
+    case ')':
+      return Token(TOK_RPAREN);
+    case '&':
+      return Token(TOK_AND);
+    case '|':
+      return Token(TOK_OR);
+    case '!':
+      return Token(TOK_NOT);
+    case '+':
+      return Token(TOK_ADD);
+    case '`':
+      return GetFullyQualifiedControl();
+    default:
+      if (isalpha(c))
+        return GetBarewordsControl(c);
+      else
+        return Token(TOK_INVALID);
+    }
+  }
+
+  ParseStatus Tokenize(std::vector<Token>& tokens)
+  {
+    while (true)
+    {
+      Token tok = NextToken();
+
+      if (tok.type == TOK_DISCARD)
+        continue;
+
+      if (tok.type == TOK_INVALID)
+      {
+        tokens.clear();
+        return ParseStatus::SyntaxError;
+      }
+
+      tokens.push_back(tok);
+
+      if (tok.type == TOK_EOF)
+        break;
+    }
+    return ParseStatus::Successful;
+  }
+};
 
 class ControlExpression : public Expression
 {
 public:
-  explicit ControlExpression(ControlQualifier qualifier) : m_qualifier(qualifier) {}
+  ControlQualifier qualifier;
+  Device::Control* control = nullptr;
+  // Keep a shared_ptr to the device so the control pointer doesn't become invalid
+  std::shared_ptr<Device> m_device;
 
+  explicit ControlExpression(ControlQualifier qualifier_) : qualifier(qualifier_) {}
   ControlState GetValue() const override
   {
-    if (s_hotkey_suppressions.IsSuppressed(m_input))
-      return 0;
-    return GetValueIgnoringSuppression();
-  }
-
-  ControlState GetValueIgnoringSuppression() const
-  {
-    if (!m_input)
+    if (!control)
       return 0.0;
 
     // Note: Inputs may return negative values in situations where opposing directions are
@@ -266,68 +226,21 @@ public:
     // FYI: Clamping values greater than 1.0 is purposely not done to support unbounded values in
     // the future. (e.g. raw accelerometer/gyro data)
 
-    return std::max(0.0, m_input->GetState());
+    return std::max(0.0, control->ToInput()->GetState());
   }
   void SetValue(ControlState value) override
   {
-    if (m_output)
-      m_output->SetState(value);
+    if (control)
+      control->ToOutput()->SetState(value);
   }
-  int CountNumControls() const override { return (m_input || m_output) ? 1 : 0; }
-  void UpdateReferences(ControlEnvironment& env) override
+  int CountNumControls() const override { return control ? 1 : 0; }
+  void UpdateReferences(ControlFinder& finder) override
   {
-    m_device = env.FindDevice(m_qualifier);
-    m_input = env.FindInput(m_qualifier);
-    m_output = env.FindOutput(m_qualifier);
+    m_device = finder.FindDevice(qualifier);
+    control = finder.FindControl(qualifier);
   }
-
-  Device::Input* GetInput() const { return m_input; };
-
-private:
-  // Keep a shared_ptr to the device so the control pointer doesn't become invalid.
-  std::shared_ptr<Device> m_device;
-  ControlQualifier m_qualifier;
-  Device::Input* m_input = nullptr;
-  Device::Output* m_output = nullptr;
+  operator std::string() const override { return "`" + static_cast<std::string>(qualifier) + "`"; }
 };
-
-bool HotkeySuppressions::IsSuppressedIgnoringModifiers(Device::Input* input,
-                                                       const Modifiers& ignore_modifiers) const
-{
-  // Input is suppressed if it exists in the map with a modifier that we aren't ignoring.
-  auto it = m_suppressions.lower_bound({input, nullptr});
-  auto it_end = m_suppressions.lower_bound({input + 1, nullptr});
-
-  // We need to ignore L_Ctrl R_Ctrl when supplied Ctrl and vice-versa.
-  const auto is_same_modifier = [](Device::Input* i1, Device::Input* i2) {
-    return i1 && i2 && (i1 == i2 || i1->IsChild(i2) || i2->IsChild(i1));
-  };
-
-  return std::any_of(it, it_end, [&](auto& s) {
-    return std::none_of(begin(ignore_modifiers), end(ignore_modifiers),
-                        [&](auto& m) { return is_same_modifier(m->GetInput(), s.first.second); });
-  });
-}
-
-HotkeySuppressions::Suppressor
-HotkeySuppressions::MakeSuppressor(const Modifiers* modifiers,
-                                   const std::unique_ptr<ControlExpression>* final_input)
-{
-  for (auto& modifier : *modifiers)
-  {
-    // Inputs might be null, don't add nullptr to the map
-    if ((*final_input)->GetInput() && modifier->GetInput())
-    {
-      ++m_suppressions[{(*final_input)->GetInput(), modifier->GetInput()}];
-    }
-  }
-
-  return Suppressor(std::make_unique<std::function<void()>>([this, modifiers, final_input]() {
-                      for (auto& modifier : *modifiers)
-                        RemoveSuppression(modifier->GetInput(), (*final_input)->GetInput());
-                    }).release(),
-                    InvokingDeleter{});
-}
 
 class BinaryExpression : public Expression
 {
@@ -344,52 +257,18 @@ public:
 
   ControlState GetValue() const override
   {
+    ControlState lhsValue = lhs->GetValue();
+    ControlState rhsValue = rhs->GetValue();
     switch (op)
     {
     case TOK_AND:
-      return std::min(lhs->GetValue(), rhs->GetValue());
+      return std::min(lhsValue, rhsValue);
     case TOK_OR:
-      return std::max(lhs->GetValue(), rhs->GetValue());
+      return std::max(lhsValue, rhsValue);
     case TOK_ADD:
-      return lhs->GetValue() + rhs->GetValue();
-    case TOK_SUB:
-      return lhs->GetValue() - rhs->GetValue();
-    case TOK_MUL:
-      return lhs->GetValue() * rhs->GetValue();
-    case TOK_DIV:
-    {
-      const ControlState result = lhs->GetValue() / rhs->GetValue();
-      return std::isinf(result) ? 0.0 : result;
-    }
-    case TOK_MOD:
-    {
-      const ControlState result = std::fmod(lhs->GetValue(), rhs->GetValue());
-      return std::isnan(result) ? 0.0 : result;
-    }
-    case TOK_ASSIGN:
-    {
-      // Use this carefully as it's extremely powerful and can end up in unforeseen situations
-      lhs->SetValue(rhs->GetValue());
-      return lhs->GetValue();
-    }
-    case TOK_LTHAN:
-      return lhs->GetValue() < rhs->GetValue();
-    case TOK_GTHAN:
-      return lhs->GetValue() > rhs->GetValue();
-    case TOK_COMMA:
-    {
-      // Eval and discard lhs:
-      lhs->GetValue();
-      return rhs->GetValue();
-    }
-    case TOK_XOR:
-    {
-      const auto lval = lhs->GetValue();
-      const auto rval = rhs->GetValue();
-      return std::max(std::min(1 - lval, rval), std::min(lval, 1 - rval));
-    }
+      return std::min(lhsValue + rhsValue, 1.0);
     default:
-      ASSERT(false);
+      assert(false);
       return 0;
     }
   }
@@ -407,169 +286,61 @@ public:
     return lhs->CountNumControls() + rhs->CountNumControls();
   }
 
-  void UpdateReferences(ControlEnvironment& env) override
+  void UpdateReferences(ControlFinder& finder) override
   {
-    lhs->UpdateReferences(env);
-    rhs->UpdateReferences(env);
+    lhs->UpdateReferences(finder);
+    rhs->UpdateReferences(finder);
+  }
+
+  operator std::string() const override
+  {
+    return OpName(op) + "(" + (std::string)(*lhs) + ", " + (std::string)(*rhs) + ")";
   }
 };
 
-class LiteralExpression : public Expression
+class UnaryExpression : public Expression
 {
 public:
-  void SetValue(ControlState) override
+  TokenType op;
+  std::unique_ptr<Expression> inner;
+
+  UnaryExpression(TokenType op_, std::unique_ptr<Expression>&& inner_)
+      : op(op_), inner(std::move(inner_))
   {
-    // Do nothing.
   }
-
-  int CountNumControls() const override { return 1; }
-
-  void UpdateReferences(ControlEnvironment&) override
+  ControlState GetValue() const override
   {
-    // Nothing needed.
+    ControlState value = inner->GetValue();
+    switch (op)
+    {
+    case TOK_NOT:
+      return 1.0 - value;
+    default:
+      assert(false);
+      return 0;
+    }
   }
-
-protected:
-  virtual std::string GetName() const = 0;
-};
-
-class LiteralReal : public LiteralExpression
-{
-public:
-  LiteralReal(ControlState value) : m_value(value) {}
-
-  ControlState GetValue() const override { return m_value; }
-
-  std::string GetName() const override { return ValueToString(m_value); }
-
-private:
-  const ControlState m_value{};
-};
-
-static ParseResult MakeLiteralExpression(Token token)
-{
-  ControlState val{};
-  if (TryParse(token.data, &val))
-    return ParseResult::MakeSuccessfulResult(std::make_unique<LiteralReal>(val));
-  else
-    return ParseResult::MakeErrorResult(token, _trans("Invalid literal."));
-}
-
-class VariableExpression : public Expression
-{
-public:
-  VariableExpression(std::string name) : m_name(name) {}
-
-  ControlState GetValue() const override { return m_variable_ptr ? *m_variable_ptr : 0; }
 
   void SetValue(ControlState value) override
   {
-    if (m_variable_ptr)
-      *m_variable_ptr = value;
-  }
-
-  int CountNumControls() const override { return 1; }
-
-  void UpdateReferences(ControlEnvironment& env) override
-  {
-    m_variable_ptr = env.GetVariablePtr(m_name);
-  }
-
-protected:
-  const std::string m_name;
-  std::shared_ptr<ControlState> m_variable_ptr;
-};
-
-class HotkeyExpression : public Expression
-{
-public:
-  HotkeyExpression(std::vector<std::unique_ptr<ControlExpression>> inputs)
-      : m_modifiers(std::move(inputs))
-  {
-    m_final_input = std::move(m_modifiers.back());
-    m_modifiers.pop_back();
-  }
-
-  ControlState GetValue() const override
-  {
-    // True if we have no modifiers
-    const bool modifiers_pressed = std::all_of(m_modifiers.begin(), m_modifiers.end(),
-                                               [](const std::unique_ptr<ControlExpression>& input) {
-                                                 return input->GetValue() > CONDITION_THRESHOLD;
-                                               });
-
-    const auto final_input_state = m_final_input->GetValueIgnoringSuppression();
-
-    if (modifiers_pressed)
+    switch (op)
     {
-      // Ignore suppression of our own modifiers. This also allows superset modifiers to function.
-      const bool is_suppressed = s_hotkey_suppressions.IsSuppressedIgnoringModifiers(
-          m_final_input->GetInput(), m_modifiers);
+    case TOK_NOT:
+      inner->SetValue(1.0 - value);
+      break;
 
-      if (final_input_state <= CONDITION_THRESHOLD)
-        m_is_blocked = false;
-
-      // If some other hotkey suppressed us, require a release of final input to be ready again.
-      if (is_suppressed)
-        m_is_blocked = true;
-
-      if (m_is_blocked)
-        return 0;
-
-      EnableSuppression();
-
-      // Our modifiers are active. Pass through the final input.
-      return final_input_state;
+    default:
+      assert(false);
     }
-    else
-    {
-      m_suppressor = {};
-      m_is_blocked = final_input_state > CONDITION_THRESHOLD;
-    }
-
-    return 0;
   }
 
-  void SetValue(ControlState) override {}
-
-  int CountNumControls() const override
-  {
-    int result = 0;
-    for (auto& input : m_modifiers)
-      result += input->CountNumControls();
-    return result + m_final_input->CountNumControls();
-  }
-
-  void UpdateReferences(ControlEnvironment& env) override
-  {
-    for (auto& input : m_modifiers)
-      input->UpdateReferences(env);
-
-    m_final_input->UpdateReferences(env);
-
-    // We must update our suppression with valid pointers.
-    if (m_suppressor)
-      EnableSuppression(true);
-  }
-
-private:
-  void EnableSuppression(bool force = false) const
-  {
-    if (!m_suppressor || force)
-      m_suppressor = s_hotkey_suppressions.MakeSuppressor(&m_modifiers, &m_final_input);
-  }
-
-  HotkeySuppressions::Modifiers m_modifiers;
-  std::unique_ptr<ControlExpression> m_final_input;
-  mutable HotkeySuppressions::Suppressor m_suppressor;
-  mutable bool m_is_blocked = false;
+  int CountNumControls() const override { return inner->CountNumControls(); }
+  void UpdateReferences(ControlFinder& finder) override { inner->UpdateReferences(finder); }
+  operator std::string() const override { return OpName(op) + "(" + (std::string)(*inner) + ")"; }
 };
 
 // This class proxies all methods to its either left-hand child if it has bound controls, or its
 // right-hand child. Its intended use is for supporting old-style barewords expressions.
-// Note that if you have a keyboard device as default device and the expression is a single digit
-// number, this will usually resolve in a numerical key instead of a numerical value.
-// Though if this expression belongs to NumericSetting, it will likely be simplifed back to a value.
 class CoalesceExpression : public Expression
 {
 public:
@@ -582,10 +353,16 @@ public:
   void SetValue(ControlState value) override { GetActiveChild()->SetValue(value); }
 
   int CountNumControls() const override { return GetActiveChild()->CountNumControls(); }
-  void UpdateReferences(ControlEnvironment& env) override
+  operator std::string() const override
   {
-    m_lhs->UpdateReferences(env);
-    m_rhs->UpdateReferences(env);
+    return "Coalesce(" + static_cast<std::string>(*m_lhs) + ", " +
+           static_cast<std::string>(*m_rhs) + ')';
+  }
+
+  void UpdateReferences(ControlFinder& finder) override
+  {
+    m_lhs->UpdateReferences(finder);
+    m_rhs->UpdateReferences(finder);
   }
 
 private:
@@ -598,7 +375,7 @@ private:
   std::unique_ptr<Expression> m_rhs;
 };
 
-std::shared_ptr<Device> ControlEnvironment::FindDevice(ControlQualifier qualifier) const
+std::shared_ptr<Device> ControlFinder::FindDevice(ControlQualifier qualifier) const
 {
   if (qualifier.has_device)
     return container.FindDevice(qualifier.device_qualifier);
@@ -606,366 +383,150 @@ std::shared_ptr<Device> ControlEnvironment::FindDevice(ControlQualifier qualifie
     return container.FindDevice(default_device);
 }
 
-Device::Input* ControlEnvironment::FindInput(ControlQualifier qualifier) const
+Device::Control* ControlFinder::FindControl(ControlQualifier qualifier) const
 {
   const std::shared_ptr<Device> device = FindDevice(qualifier);
   if (!device)
     return nullptr;
 
-  return device->FindInput(qualifier.control_name);
+  if (is_input)
+    return device->FindInput(qualifier.control_name);
+  else
+    return device->FindOutput(qualifier.control_name);
 }
 
-Device::Output* ControlEnvironment::FindOutput(ControlQualifier qualifier) const
+struct ParseResult
 {
-  const std::shared_ptr<Device> device = FindDevice(qualifier);
-  if (!device)
-    return nullptr;
-
-  return device->FindOutput(qualifier.control_name);
-}
-
-std::shared_ptr<ControlState> ControlEnvironment::GetVariablePtr(const std::string& name)
-{
-  // Do not accept an empty string as key, even if the expression parser already prevents this case.
-  if (name.empty())
-    return nullptr;
-  std::shared_ptr<ControlState>& variable = m_variables[name];
-  // If new, make a shared ptr
-  if (!variable)
+  ParseResult(ParseStatus status_, std::unique_ptr<Expression>&& expr_ = {})
+      : status(status_), expr(std::move(expr_))
   {
-    variable = std::make_shared<ControlState>();
   }
-  return variable;
-}
 
-void ControlEnvironment::CleanUnusedVariables()
-{
-  for (auto it = m_variables.begin(); it != m_variables.end();)
-  {
-    // Don't count ourselves as reference
-    if (it->second.use_count() <= 1)
-      m_variables.erase(it++);
-    else
-      ++it;
-  }
-}
-
-ParseResult ParseResult::MakeEmptyResult()
-{
-  ParseResult result;
-  result.status = ParseStatus::EmptyExpression;
-  return result;
-}
-
-ParseResult ParseResult::MakeSuccessfulResult(std::unique_ptr<Expression>&& expr)
-{
-  ParseResult result;
-  result.status = ParseStatus::Successful;
-  result.expr = std::move(expr);
-  return result;
-}
-
-ParseResult ParseResult::MakeErrorResult(Token token, std::string description)
-{
-  ParseResult result;
-  result.status = ParseStatus::SyntaxError;
-  result.token = std::move(token);
-  result.description = std::move(description);
-  return result;
-}
+  ParseStatus status;
+  std::unique_ptr<Expression> expr;
+};
 
 class Parser
 {
 public:
-  explicit Parser(const std::vector<Token>& tokens_) : tokens(tokens_) { m_it = tokens.begin(); }
-  ParseResult Parse()
-  {
-    ParseResult result = ParseToplevel();
-
-    if (ParseStatus::Successful != result.status)
-      return result;
-
-    if (Peek().type == TOK_EOF)
-      return result;
-
-    return ParseResult::MakeErrorResult(Peek(), _trans("Expected end of expression."));
-  }
+  explicit Parser(std::vector<Token> tokens_) : tokens(tokens_) { m_it = tokens.begin(); }
+  ParseResult Parse() { return Toplevel(); }
 
 private:
-  const std::vector<Token>& tokens;
-  std::vector<Token>::const_iterator m_it;
+  std::vector<Token> tokens;
+  std::vector<Token>::iterator m_it;
 
-  Token Chew()
-  {
-    const Token tok = Peek();
-    if (TOK_EOF != tok.type)
-      ++m_it;
-    return tok;
-  }
-
+  Token Chew() { return *m_it++; }
   Token Peek() { return *m_it; }
-
   bool Expects(TokenType type)
   {
     Token tok = Chew();
     return tok.type == type;
   }
 
-  ParseResult ParseFunctionArguments(const std::string_view& func_name,
-                                     std::unique_ptr<FunctionExpression>&& func,
-                                     const Token& func_tok)
+  ParseResult Atom()
   {
-    std::vector<std::unique_ptr<Expression>> args;
-
-    if (TOK_LPAREN != Peek().type)
-    {
-      // Single argument with no parens (useful for unary ! function)
-      const auto tok = Chew();
-      auto arg = ParseAtom(tok);
-      if (ParseStatus::Successful != arg.status)
-        return arg;
-
-      args.emplace_back(std::move(arg.expr));
-    }
-    else
-    {
-      // Chew the L-Paren
-      Chew();
-
-      // Check for empty argument list:
-      if (TOK_RPAREN == Peek().type)
-      {
-        Chew();
-      }
-      else
-      {
-        while (true)
-        {
-          // Read one argument.
-          // Grab an expression, but stop at comma.
-          auto arg = ParseBinary(BinaryOperatorPrecedence(TOK_COMMA));
-          if (ParseStatus::Successful != arg.status)
-            return arg;
-
-          args.emplace_back(std::move(arg.expr));
-
-          // Right paren is the end of our arguments.
-          const Token tok = Chew();
-          if (TOK_RPAREN == tok.type)
-            break;
-
-          // Comma before the next argument.
-          if (TOK_COMMA != tok.type)
-            return ParseResult::MakeErrorResult(tok, _trans("Expected comma."));
-        };
-      }
-    }
-
-    const auto argument_validation = func->SetArguments(std::move(args));
-
-    if (std::holds_alternative<FunctionExpression::ExpectedArguments>(argument_validation))
-    {
-      const auto text = std::string(func_name) + '(' +
-                        std::get<FunctionExpression::ExpectedArguments>(argument_validation).text +
-                        ')';
-
-      return ParseResult::MakeErrorResult(func_tok, _trans("Expected arguments: " + text));
-    }
-
-    return ParseResult::MakeSuccessfulResult(std::move(func));
-  }
-
-  ParseResult ParseAtom(const Token& tok)
-  {
+    Token tok = Chew();
     switch (tok.type)
     {
-    case TOK_BAREWORD:
-    {
-      auto func = MakeFunctionExpression(tok.data);
-
-      if (!func)
-      {
-        // Invalid function, interpret this as a bareword control.
-        Token control_tok(tok);
-        control_tok.type = TOK_CONTROL;
-        return ParseAtom(control_tok);
-      }
-
-      return ParseFunctionArguments(tok.data, std::move(func), tok);
-    }
     case TOK_CONTROL:
-    {
-      ControlQualifier cq;
-      cq.FromString(tok.data);
-      return ParseResult::MakeSuccessfulResult(std::make_unique<ControlExpression>(cq));
-    }
-    case TOK_NOT:
-    {
-      return ParseFunctionArguments("not", MakeFunctionExpression("not"), tok);
-    }
-    case TOK_LITERAL:
-    {
-      return MakeLiteralExpression(tok);
-    }
-    case TOK_VARIABLE:
-    {
-      if (tok.data.empty())
-        return ParseResult::MakeErrorResult(tok, _trans("Expected variable name."));
-      else
-        return ParseResult::MakeSuccessfulResult(std::make_unique<VariableExpression>(tok.data));
-    }
+      return {ParseStatus::Successful, std::make_unique<ControlExpression>(tok.qualifier)};
     case TOK_LPAREN:
-    {
-      return ParseParens();
-    }
-    case TOK_HOTKEY:
-    {
-      return ParseHotkeys();
-    }
-    case TOK_SUB:
-    {
-      // An atom was expected but we got a subtraction symbol.
-      // Interpret it as a unary minus function.
-      return ParseFunctionArguments("minus", MakeFunctionExpression("minus"), tok);
-    }
+      return Paren();
     default:
-    {
-      return ParseResult::MakeErrorResult(tok, _trans("Expected start of expression."));
-    }
+      return {ParseStatus::SyntaxError};
     }
   }
 
-  static int BinaryOperatorPrecedence(TokenType type)
+  bool IsUnaryExpression(TokenType type)
   {
     switch (type)
     {
-    case TOK_MUL:
-    case TOK_DIV:
-    case TOK_MOD:
-      return 1;
-    case TOK_ADD:
-    case TOK_SUB:
-      return 2;
-    case TOK_GTHAN:
-    case TOK_LTHAN:
-      return 3;
-    case TOK_AND:
-      return 4;
-    case TOK_XOR:
-      return 5;
-    case TOK_OR:
-      return 6;
-    case TOK_ASSIGN:
-      return 7;
-    case TOK_COMMA:
-      return 8;
+    case TOK_NOT:
+      return true;
     default:
-      ASSERT(false);
-      return 0;
+      return false;
     }
   }
 
-  ParseResult ParseBinary(int precedence = 999)
+  ParseResult Unary()
   {
-    ParseResult lhs = ParseAtom(Chew());
-
-    if (lhs.status == ParseStatus::SyntaxError)
-      return lhs;
-
-    std::unique_ptr<Expression> expr = std::move(lhs.expr);
-
-    // TODO: handle LTR/RTL associativity?
-    while (Peek().IsBinaryOperator() && BinaryOperatorPrecedence(Peek().type) < precedence)
+    if (IsUnaryExpression(Peek().type))
     {
-      const Token tok = Chew();
-      ParseResult rhs = ParseBinary(BinaryOperatorPrecedence(tok.type));
-      if (rhs.status == ParseStatus::SyntaxError)
+      Token tok = Chew();
+      ParseResult result = Atom();
+      if (result.status == ParseStatus::SyntaxError)
+        return result;
+      return {ParseStatus::Successful,
+              std::make_unique<UnaryExpression>(tok.type, std::move(result.expr))};
+    }
+
+    return Atom();
+  }
+
+  bool IsBinaryToken(TokenType type)
+  {
+    switch (type)
+    {
+    case TOK_AND:
+    case TOK_OR:
+    case TOK_ADD:
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  ParseResult Binary()
+  {
+    ParseResult result = Unary();
+    if (result.status == ParseStatus::SyntaxError)
+      return result;
+
+    std::unique_ptr<Expression> expr = std::move(result.expr);
+    while (IsBinaryToken(Peek().type))
+    {
+      Token tok = Chew();
+      ParseResult unary_result = Unary();
+      if (unary_result.status == ParseStatus::SyntaxError)
       {
-        return rhs;
+        return unary_result;
       }
 
-      expr = std::make_unique<BinaryExpression>(tok.type, std::move(expr), std::move(rhs.expr));
+      expr = std::make_unique<BinaryExpression>(tok.type, std::move(expr),
+                                                std::move(unary_result.expr));
     }
 
-    return ParseResult::MakeSuccessfulResult(std::move(expr));
+    return {ParseStatus::Successful, std::move(expr)};
   }
 
-  ParseResult ParseParens()
+  ParseResult Paren()
   {
     // lparen already chewed
-    ParseResult result = ParseToplevel();
+    ParseResult result = Toplevel();
     if (result.status != ParseStatus::Successful)
       return result;
 
-    const auto rparen = Chew();
-    if (rparen.type != TOK_RPAREN)
+    if (!Expects(TOK_RPAREN))
     {
-      return ParseResult::MakeErrorResult(rparen, _trans("Expected closing paren."));
+      return {ParseStatus::SyntaxError};
     }
 
     return result;
   }
 
-  ParseResult ParseHotkeys()
-  {
-    Token tok = Chew();
-    if (tok.type != TOK_LPAREN)
-      return ParseResult::MakeErrorResult(tok, _trans("Expected opening paren."));
-
-    std::vector<std::unique_ptr<ControlExpression>> inputs;
-
-    while (true)
-    {
-      tok = Chew();
-
-      if (tok.type != TOK_CONTROL && tok.type != TOK_BAREWORD)
-        return ParseResult::MakeErrorResult(tok, _trans("Expected name of input."));
-
-      ControlQualifier cq;
-      cq.FromString(tok.data);
-      inputs.emplace_back(std::make_unique<ControlExpression>(std::move(cq)));
-
-      tok = Chew();
-
-      if (tok.type == TOK_ADD)
-        continue;
-
-      if (tok.type == TOK_RPAREN)
-        break;
-
-      return ParseResult::MakeErrorResult(tok, _trans("Expected + or closing paren."));
-    }
-
-    return ParseResult::MakeSuccessfulResult(std::make_unique<HotkeyExpression>(std::move(inputs)));
-  }
-
-  ParseResult ParseToplevel() { return ParseBinary(); }
-};  // namespace ExpressionParser
-
-ParseResult ParseTokens(const std::vector<Token>& tokens)
-{
-  return Parser(tokens).Parse();
-}
+  ParseResult Toplevel() { return Binary(); }
+};
 
 static ParseResult ParseComplexExpression(const std::string& str)
 {
   Lexer l(str);
   std::vector<Token> tokens;
-  const ParseStatus tokenize_status = l.Tokenize(tokens);
+  ParseStatus tokenize_status = l.Tokenize(tokens);
   if (tokenize_status != ParseStatus::Successful)
-    return ParseResult::MakeErrorResult(Token(TOK_INVALID), _trans("Tokenizing failed."));
+    return {tokenize_status};
 
-  RemoveInertTokens(&tokens);
-  return ParseTokens(tokens);
-}
-
-void RemoveInertTokens(std::vector<Token>* tokens)
-{
-  tokens->erase(std::remove_if(tokens->begin(), tokens->end(),
-                               [](const Token& tok) {
-                                 return tok.type == TOK_COMMENT || tok.type == TOK_WHITESPACE;
-                               }),
-                tokens->end());
+  return Parser(std::move(tokens)).Parse();
 }
 
 static std::unique_ptr<Expression> ParseBarewordExpression(const std::string& str)
@@ -974,28 +535,24 @@ static std::unique_ptr<Expression> ParseBarewordExpression(const std::string& st
   qualifier.control_name = str;
   qualifier.has_device = false;
 
-  // This control expression will only work (find the specified control) with the default device.
   return std::make_unique<ControlExpression>(qualifier);
 }
 
-ParseResult ParseExpression(const std::string& str)
+std::pair<ParseStatus, std::unique_ptr<Expression>> ParseExpression(const std::string& str)
 {
   if (StripSpaces(str).empty())
-    return ParseResult::MakeEmptyResult();
+    return std::make_pair(ParseStatus::EmptyExpression, nullptr);
 
   auto bareword_expr = ParseBarewordExpression(str);
   ParseResult complex_result = ParseComplexExpression(str);
 
   if (complex_result.status != ParseStatus::Successful)
   {
-    // This is a bit odd.
-    // Return the error status of the complex expression with the fallback barewords expression.
-    complex_result.expr = std::move(bareword_expr);
-    return complex_result;
+    return std::make_pair(complex_result.status, std::move(bareword_expr));
   }
 
-  complex_result.expr = std::make_unique<CoalesceExpression>(std::move(bareword_expr),
-                                                             std::move(complex_result.expr));
-  return complex_result;
+  auto combined_expr = std::make_unique<CoalesceExpression>(std::move(bareword_expr),
+                                                            std::move(complex_result.expr));
+  return std::make_pair(complex_result.status, std::move(combined_expr));
 }
 }  // namespace ciface::ExpressionParser

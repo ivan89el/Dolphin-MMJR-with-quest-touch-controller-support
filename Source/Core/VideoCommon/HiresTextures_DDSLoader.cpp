@@ -1,5 +1,6 @@
 // Copyright 2017 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "VideoCommon/HiresTextures.h"
 
@@ -10,7 +11,7 @@
 #include <functional>
 
 #include "Common/Align.h"
-#include "Common/IOFile.h"
+#include "Common/File.h"
 #include "Common/Logging/Log.h"
 #include "Common/Swap.h"
 #include "VideoCommon/VideoConfig.h"
@@ -409,10 +410,10 @@ bool ReadMipLevel(HiresTexture::Level* level, File::IOFile& file, const std::str
   if (mip_level == 0 && info.block_size > 1 &&
       ((width % info.block_size) != 0 || (height % info.block_size) != 0))
   {
-    ERROR_LOG_FMT(VIDEO,
-                  "Invalid dimensions for DDS texture {}. For compressed textures of this format, "
-                  "the width/height of the first mip level must be a multiple of {}.",
-                  filename, info.block_size);
+    ERROR_LOG(VIDEO,
+              "Invalid dimensions for DDS texture %s. For compressed textures of this format, "
+              "the width/height of the first mip level must be a multiple of %u.",
+              filename.c_str(), info.block_size);
     return false;
   }
 

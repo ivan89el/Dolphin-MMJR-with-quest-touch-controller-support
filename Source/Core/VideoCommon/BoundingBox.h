@@ -1,50 +1,31 @@
 // Copyright 2014 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
-
-#include <array>
-#include <vector>
 
 #include "Common/CommonTypes.h"
 
 class PointerWrap;
 
-using BBoxType = s32;
-constexpr u32 NUM_BBOX_VALUES = 4;
-
-class BoundingBox
+// Bounding Box manager
+namespace BoundingBox
 {
-public:
-  explicit BoundingBox() = default;
-  virtual ~BoundingBox() = default;
+// Determines if bounding box is active
+extern bool active;
 
-  bool IsEnabled() const { return m_is_active; }
-  void Enable();
-  void Disable();
+// Bounding box current coordinates
+extern u16 coords[4];
 
-  void Flush();
-
-  u16 Get(u32 index);
-  void Set(u32 index, u16 value);
-
-  void DoState(PointerWrap& p);
-
-  // Initialize, Read, and Write are only safe to call if the backend supports bounding box,
-  // otherwise unexpected exceptions can occur
-  virtual bool Initialize() = 0;
-
-protected:
-  virtual std::vector<BBoxType> Read(u32 index, u32 length) = 0;
-  // TODO: This can likely use std::span once we're on C++20
-  virtual void Write(u32 index, const std::vector<BBoxType>& values) = 0;
-
-private:
-  void Readback();
-
-  bool m_is_active = false;
-
-  std::array<BBoxType, NUM_BBOX_VALUES> m_values = {};
-  std::array<bool, NUM_BBOX_VALUES> m_dirty = {};
-  bool m_is_valid = true;
+enum
+{
+  LEFT = 0,
+  RIGHT = 1,
+  TOP = 2,
+  BOTTOM = 3
 };
+
+// Save state
+void DoState(PointerWrap& p);
+
+};  // end of namespace BoundingBox

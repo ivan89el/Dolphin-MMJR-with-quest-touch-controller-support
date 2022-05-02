@@ -1,17 +1,20 @@
 // Copyright 2017 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
+
+#include <algorithm>
+#include <cstring>
 
 #include "Common/Assert.h"
 #include "Common/Logging/Log.h"
 
 #include "VideoBackends/D3D/D3DBase.h"
-#include "VideoBackends/D3D/D3DRender.h"
 #include "VideoBackends/D3D/D3DState.h"
-#include "VideoBackends/D3D/D3DVertexManager.h"
 #include "VideoBackends/D3D/DXPipeline.h"
 #include "VideoBackends/D3D/DXShader.h"
 #include "VideoBackends/D3D/DXTexture.h"
-#include "VideoCommon/VideoConfig.h"
+#include "VideoBackends/D3D/Render.h"
+#include "VideoBackends/D3D/VertexManager.h"
 
 namespace DX11
 {
@@ -52,14 +55,10 @@ std::unique_ptr<DXPipeline> DXPipeline::Create(const AbstractPipelineConfig& con
                                vertex_shader->GetByteCode().size()) :
           nullptr;
 
-  // Only use the integer RTV if logic op is supported, and enabled.
-  const bool use_logic_op =
-      config.blending_state.logicopenable && g_ActiveConfig.backend_info.bSupportsLogicOp;
-
-  return std::make_unique<DXPipeline>(input_layout, vertex_shader->GetD3DVertexShader(),
-                                      geometry_shader ? geometry_shader->GetD3DGeometryShader() :
-                                                        nullptr,
-                                      pixel_shader->GetD3DPixelShader(), rasterizer_state,
-                                      depth_state, blend_state, primitive_topology, use_logic_op);
+  return std::make_unique<DXPipeline>(
+      input_layout, vertex_shader->GetD3DVertexShader(),
+      geometry_shader ? geometry_shader->GetD3DGeometryShader() : nullptr,
+      pixel_shader->GetD3DPixelShader(), rasterizer_state, depth_state, blend_state,
+      primitive_topology, config.blending_state.logicopenable);
 }
 }  // namespace DX11

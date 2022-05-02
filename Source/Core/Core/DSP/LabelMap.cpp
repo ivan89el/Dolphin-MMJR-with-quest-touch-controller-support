@@ -1,5 +1,6 @@
 // Copyright 2009 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "Core/DSP/LabelMap.h"
 
@@ -7,7 +8,6 @@
 #include <string>
 #include <vector>
 
-#include "Common/Logging/Log.h"
 #include "Core/DSP/DSPTables.h"
 
 namespace DSP
@@ -47,8 +47,8 @@ void LabelMap::RegisterLabel(std::string label, u16 lval, LabelType type)
   const std::optional<u16> old_value = GetLabelValue(label);
   if (old_value && old_value != lval)
   {
-    WARN_LOG_FMT(AUDIO, "Redefined label {} to {:04x} - old value {:04x}\n", label, lval,
-                 *old_value);
+    printf("WARNING: Redefined label %s to %04x - old value %04x\n", label.c_str(), lval,
+           *old_value);
     DeleteLabel(label);
   }
   labels.emplace_back(std::move(label), lval, type);
@@ -65,7 +65,7 @@ void LabelMap::DeleteLabel(std::string_view label)
   labels.erase(iter);
 }
 
-std::optional<u16> LabelMap::GetLabelValue(std::string_view name, LabelType type) const
+std::optional<u16> LabelMap::GetLabelValue(const std::string& name, LabelType type) const
 {
   for (const auto& label : labels)
   {
@@ -77,7 +77,7 @@ std::optional<u16> LabelMap::GetLabelValue(std::string_view name, LabelType type
       }
       else
       {
-        WARN_LOG_FMT(AUDIO, "Wrong label type requested. {}\n", name);
+        printf("WARNING: Wrong label type requested. %s\n", name.c_str());
       }
     }
   }

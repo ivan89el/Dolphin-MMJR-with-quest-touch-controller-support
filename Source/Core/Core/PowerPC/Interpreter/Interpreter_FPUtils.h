@@ -1,5 +1,6 @@
 // Copyright 2009 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
@@ -11,7 +12,6 @@
 #include "Common/CommonTypes.h"
 #include "Common/FloatUtils.h"
 #include "Core/PowerPC/Gekko.h"
-#include "Core/PowerPC/Interpreter/ExceptionUtils.h"
 #include "Core/PowerPC/PowerPC.h"
 
 constexpr double PPC_NAN = std::numeric_limits<double>::quiet_NaN();
@@ -25,20 +25,6 @@ enum class FPCC
   FU = 1,  // ?
 };
 
-inline void CheckFPExceptions(UReg_FPSCR fpscr)
-{
-  if (fpscr.FEX && (MSR.FE0 || MSR.FE1))
-    GenerateProgramException(ProgramExceptionCause::FloatingPoint);
-}
-
-inline void UpdateFPExceptionSummary(UReg_FPSCR* fpscr)
-{
-  fpscr->VX = (fpscr->Hex & FPSCR_VX_ANY) != 0;
-  fpscr->FEX = ((fpscr->Hex >> 22) & (fpscr->Hex & FPSCR_ANY_E)) != 0;
-
-  CheckFPExceptions(*fpscr);
-}
-
 inline void SetFPException(UReg_FPSCR* fpscr, u32 mask)
 {
   if ((fpscr->Hex & mask) != mask)
@@ -47,16 +33,18 @@ inline void SetFPException(UReg_FPSCR* fpscr, u32 mask)
   }
 
   fpscr->Hex |= mask;
-  UpdateFPExceptionSummary(fpscr);
+  fpscr->VX = (fpscr->Hex & FPSCR_VX_ANY) != 0;
 }
 
-inline float ForceSingle(const UReg_FPSCR& fpscr, double value)
+inline double ForceSingle(const UReg_FPSCR& fpscr, double value)
 {
-  float x = static_cast<float>(value);
+  // convert to float...
+  float x = (float)value;
   if (!cpu_info.bFlushToZero && fpscr.NI)
   {
     x = Common::FlushToZero(x);
   }
+  // ...and back to double:
   return x;
 }
 
@@ -138,15 +126,7 @@ inline FPResult NI_div(UReg_FPSCR* fpscr, double a, double b)
 {
   FPResult result{a / b};
 
-  if (std::isinf(result.value))
-  {
-    if (b == 0.0)
-    {
-      result.SetException(fpscr, FPSCR_ZX);
-      return result;
-    }
-  }
-  else if (std::isnan(result.value))
+  if (std::isnan(result.value))
   {
     if (Common::IsSNAN(a) || Common::IsSNAN(b))
       result.SetException(fpscr, FPSCR_VXSNAN);
@@ -165,9 +145,20 @@ inline FPResult NI_div(UReg_FPSCR* fpscr, double a, double b)
     }
 
     if (b == 0.0)
-      result.SetException(fpscr, FPSCR_VXZDZ);
+    {
+      if (a == 0.0)
+      {
+        result.SetException(fpscr, FPSCR_VXZDZ);
+      }
+      else
+      {
+        result.SetException(fpscr, FPSCR_ZX);
+      }
+    }
     else if (std::isinf(a) && std::isinf(b))
+    {
       result.SetException(fpscr, FPSCR_VXIDI);
+    }
 
     result.value = PPC_NAN;
     return result;
@@ -247,7 +238,7 @@ inline FPResult NI_sub(UReg_FPSCR* fpscr, double a, double b)
 // inputs are checked for NaN is still a, b, c.
 inline FPResult NI_madd(UReg_FPSCR* fpscr, double a, double c, double b)
 {
-  FPResult result{std::fma(a, c, b)};
+  FPResult result{a * c};
 
   if (std::isnan(result.value))
   {
@@ -272,7 +263,27 @@ inline FPResult NI_madd(UReg_FPSCR* fpscr, double a, double c, double b)
       return result;
     }
 
-    result.SetException(fpscr, std::isnan(a * c) ? FPSCR_VXIMZ : FPSCR_VXISI);
+    result.SetException(fpscr, FPSCR_VXIMZ);
+    result.value = PPC_NAN;
+    return result;
+  }
+
+  result.value += b;
+
+  if (std::isnan(result.value))
+  {
+    if (Common::IsSNAN(b))
+      result.SetException(fpscr, FPSCR_VXSNAN);
+
+    fpscr->ClearFIFR();
+
+    if (std::isnan(b))
+    {
+      result.value = MakeQuiet(b);
+      return result;
+    }
+
+    result.SetException(fpscr, FPSCR_VXISI);
     result.value = PPC_NAN;
     return result;
   }
@@ -285,7 +296,7 @@ inline FPResult NI_madd(UReg_FPSCR* fpscr, double a, double c, double b)
 
 inline FPResult NI_msub(UReg_FPSCR* fpscr, double a, double c, double b)
 {
-  FPResult result{std::fma(a, c, -b)};
+  FPResult result{a * c};
 
   if (std::isnan(result.value))
   {
@@ -310,7 +321,27 @@ inline FPResult NI_msub(UReg_FPSCR* fpscr, double a, double c, double b)
       return result;
     }
 
-    result.SetException(fpscr, std::isnan(a * c) ? FPSCR_VXIMZ : FPSCR_VXISI);
+    result.SetException(fpscr, FPSCR_VXIMZ);
+    result.value = PPC_NAN;
+    return result;
+  }
+
+  result.value -= b;
+
+  if (std::isnan(result.value))
+  {
+    if (Common::IsSNAN(b))
+      result.SetException(fpscr, FPSCR_VXSNAN);
+
+    fpscr->ClearFIFR();
+
+    if (std::isnan(b))
+    {
+      result.value = MakeQuiet(b);
+      return result;
+    }
+
+    result.SetException(fpscr, FPSCR_VXISI);
     result.value = PPC_NAN;
     return result;
   }
@@ -324,39 +355,37 @@ inline FPResult NI_msub(UReg_FPSCR* fpscr, double a, double c, double b)
 // used by stfsXX instructions and ps_rsqrte
 inline u32 ConvertToSingle(u64 x)
 {
-  const u32 exp = u32((x >> 52) & 0x7ff);
-
+  u32 exp = (x >> 52) & 0x7ff;
   if (exp > 896 || (x & ~Common::DOUBLE_SIGN) == 0)
   {
-    return u32(((x >> 32) & 0xc0000000) | ((x >> 29) & 0x3fffffff));
+    return ((x >> 32) & 0xc0000000) | ((x >> 29) & 0x3fffffff);
   }
   else if (exp >= 874)
   {
-    u32 t = u32(0x80000000 | ((x & Common::DOUBLE_FRAC) >> 21));
+    u32 t = (u32)(0x80000000 | ((x & Common::DOUBLE_FRAC) >> 21));
     t = t >> (905 - exp);
-    t |= u32((x >> 32) & 0x80000000);
+    t |= (x >> 32) & 0x80000000;
     return t;
   }
   else
   {
     // This is said to be undefined.
     // The code is based on hardware tests.
-    return u32(((x >> 32) & 0xc0000000) | ((x >> 29) & 0x3fffffff));
+    return ((x >> 32) & 0xc0000000) | ((x >> 29) & 0x3fffffff);
   }
 }
 
 // used by psq_stXX operations.
 inline u32 ConvertToSingleFTZ(u64 x)
 {
-  const u32 exp = u32((x >> 52) & 0x7ff);
-
+  u32 exp = (x >> 52) & 0x7ff;
   if (exp > 896 || (x & ~Common::DOUBLE_SIGN) == 0)
   {
-    return u32(((x >> 32) & 0xc0000000) | ((x >> 29) & 0x3fffffff));
+    return ((x >> 32) & 0xc0000000) | ((x >> 29) & 0x3fffffff);
   }
   else
   {
-    return u32((x >> 32) & 0x80000000);
+    return (x >> 32) & 0x80000000;
   }
 }
 

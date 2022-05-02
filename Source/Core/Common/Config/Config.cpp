@@ -1,80 +1,59 @@
 // Copyright 2016 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include <algorithm>
-#include <atomic>
 #include <list>
 #include <map>
-#include <mutex>
-#include <shared_mutex>
 
 #include "Common/Config/Config.h"
 
 namespace Config
 {
-using Layers = std::map<LayerType, std::shared_ptr<Layer>>;
-
 static Layers s_layers;
 static std::list<ConfigChangedCallback> s_callbacks;
 static u32 s_callback_guards = 0;
-static std::atomic<u64> s_config_version = 0;
 
-static std::shared_mutex s_layers_rw_lock;
-
-using ReadLock = std::shared_lock<std::shared_mutex>;
-using WriteLock = std::unique_lock<std::shared_mutex>;
-
-static void AddLayerInternal(std::shared_ptr<Layer> layer)
+Layers* GetLayers()
 {
-  {
-    WriteLock lock(s_layers_rw_lock);
+  return &s_layers;
+}
 
-    const Config::LayerType layer_type = layer->GetLayer();
-    s_layers.insert_or_assign(layer_type, std::move(layer));
-  }
-  OnConfigChanged();
+void AddLayer(std::unique_ptr<Layer> layer)
+{
+  s_layers[layer->GetLayer()] = std::move(layer);
+  InvokeConfigChangedCallbacks();
 }
 
 void AddLayer(std::unique_ptr<ConfigLayerLoader> loader)
 {
-  AddLayerInternal(std::make_shared<Layer>(std::move(loader)));
+  AddLayer(std::make_unique<Layer>(std::move(loader)));
 }
 
-std::shared_ptr<Layer> GetLayer(LayerType layer)
+Layer* GetLayer(LayerType layer)
 {
-  ReadLock lock(s_layers_rw_lock);
-
-  std::shared_ptr<Layer> result;
-  const auto it = s_layers.find(layer);
-  if (it != s_layers.end())
-  {
-    result = it->second;
-  }
-  return result;
+  if (!LayerExists(layer))
+    return nullptr;
+  return s_layers[layer].get();
 }
 
 void RemoveLayer(LayerType layer)
 {
-  {
-    WriteLock lock(s_layers_rw_lock);
-
-    s_layers.erase(layer);
-  }
-  OnConfigChanged();
+  s_layers.erase(layer);
+  InvokeConfigChangedCallbacks();
+}
+bool LayerExists(LayerType layer)
+{
+  return s_layers.find(layer) != s_layers.end();
 }
 
 void AddConfigChangedCallback(ConfigChangedCallback func)
 {
-  s_callbacks.emplace_back(std::move(func));
+  s_callbacks.emplace_back(func);
 }
 
-void OnConfigChanged()
+void InvokeConfigChangedCallbacks()
 {
-  // Increment the config version to invalidate caches.
-  // To ensure that getters do not return stale data, this should always be done
-  // even when callbacks are suppressed.
-  s_config_version.fetch_add(1, std::memory_order_relaxed);
-
   if (s_callback_guards)
     return;
 
@@ -82,32 +61,19 @@ void OnConfigChanged()
     callback();
 }
 
-u64 GetConfigVersion()
-{
-  return s_config_version.load(std::memory_order_relaxed);
-}
-
 // Explicit load and save of layers
 void Load()
 {
-  {
-    ReadLock lock(s_layers_rw_lock);
-
-    for (auto& layer : s_layers)
-      layer.second->Load();
-  }
-  OnConfigChanged();
+  for (auto& layer : s_layers)
+    layer.second->Load();
+  InvokeConfigChangedCallbacks();
 }
 
 void Save()
 {
-  {
-    ReadLock lock(s_layers_rw_lock);
-
-    for (auto& layer : s_layers)
-      layer.second->Save();
-  }
-  OnConfigChanged();
+  for (auto& layer : s_layers)
+    layer.second->Save();
+  InvokeConfigChangedCallbacks();
 }
 
 void Init()
@@ -118,31 +84,19 @@ void Init()
 
 void Shutdown()
 {
-  WriteLock lock(s_layers_rw_lock);
-
   s_layers.clear();
   s_callbacks.clear();
 }
 
 void ClearCurrentRunLayer()
 {
-  WriteLock lock(s_layers_rw_lock);
-
-  s_layers.insert_or_assign(LayerType::CurrentRun, std::make_shared<Layer>(LayerType::CurrentRun));
+  s_layers[LayerType::CurrentRun] = std::make_unique<Layer>(LayerType::CurrentRun);
 }
 
 static const std::map<System, std::string> system_to_name = {
-    {System::Main, "Dolphin"},
-    {System::GCPad, "GCPad"},
-    {System::WiiPad, "Wiimote"},
-    {System::GCKeyboard, "GCKeyboard"},
-    {System::GFX, "Graphics"},
-    {System::Logger, "Logger"},
-    {System::Debugger, "Debugger"},
-    {System::SYSCONF, "SYSCONF"},
-    {System::DualShockUDPClient, "DualShockUDPClient"},
-    {System::FreeLook, "FreeLook"},
-    {System::Session, "Session"}};
+    {System::Main, "Dolphin"},          {System::GCPad, "GCPad"},    {System::WiiPad, "Wiimote"},
+    {System::GCKeyboard, "GCKeyboard"}, {System::GFX, "Graphics"},   {System::Logger, "Logger"},
+    {System::Debugger, "Debugger"},     {System::SYSCONF, "SYSCONF"}};
 
 const std::string& GetSystemName(System system)
 {
@@ -173,41 +127,19 @@ const std::string& GetLayerName(LayerType layer)
   return layer_to_name.at(layer);
 }
 
-LayerType GetActiveLayerForConfig(const Location& config)
+LayerType GetActiveLayerForConfig(const ConfigLocation& config)
 {
-  ReadLock lock(s_layers_rw_lock);
-
   for (auto layer : SEARCH_ORDER)
   {
-    const auto it = s_layers.find(layer);
-    if (it != s_layers.end())
-    {
-      if (it->second->Exists(config))
-        return layer;
-    }
+    if (!LayerExists(layer))
+      continue;
+
+    if (GetLayer(layer)->Exists(config))
+      return layer;
   }
 
   // If config is not present in any layer, base layer is considered active.
   return LayerType::Base;
-}
-
-std::optional<std::string> GetAsString(const Location& config)
-{
-  std::optional<std::string> result;
-  ReadLock lock(s_layers_rw_lock);
-
-  for (auto layer : SEARCH_ORDER)
-  {
-    const auto it = s_layers.find(layer);
-    if (it != s_layers.end())
-    {
-      result = it->second->Get<std::string>(config);
-      if (result.has_value())
-        break;
-    }
-  }
-
-  return result;
 }
 
 ConfigChangeCallbackGuard::ConfigChangeCallbackGuard()
@@ -220,7 +152,7 @@ ConfigChangeCallbackGuard::~ConfigChangeCallbackGuard()
   if (--s_callback_guards)
     return;
 
-  OnConfigChanged();
+  InvokeConfigChangedCallbacks();
 }
 
 }  // namespace Config

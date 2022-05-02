@@ -1,5 +1,6 @@
 // Copyright 2008 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "Core/Debugger/Debugger_SymbolMap.h"
 
@@ -7,13 +8,12 @@
 #include <functional>
 #include <string>
 
-#include <fmt/format.h>
-
 #include "Common/CommonTypes.h"
 #include "Common/StringUtil.h"
 
 #include "Core/Core.h"
 #include "Core/PowerPC/MMU.h"
+#include "Core/PowerPC/PPCAnalyst.h"
 #include "Core/PowerPC/PPCSymbolDB.h"
 #include "Core/PowerPC/PowerPC.h"
 
@@ -81,7 +81,8 @@ bool GetCallstack(std::vector<CallstackEntry>& output)
   }
 
   CallstackEntry entry;
-  entry.Name = fmt::format(" * {} [ LR = {:08x} ]\n", g_symbolDB.GetDescription(LR), LR - 4);
+  entry.Name =
+      StringFromFormat(" * %s [ LR = %08x ]\n", g_symbolDB.GetDescription(LR).c_str(), LR - 4);
   entry.vAddress = LR - 4;
   output.push_back(entry);
 
@@ -89,7 +90,7 @@ bool GetCallstack(std::vector<CallstackEntry>& output)
     std::string func_desc = g_symbolDB.GetDescription(func_addr);
     if (func_desc.empty() || func_desc == "Invalid")
       func_desc = "(unknown)";
-    entry.Name = fmt::format(" * {} [ addr = {:08x} ]\n", func_desc, func_addr - 4);
+    entry.Name = StringFromFormat(" * %s [ addr = %08x ]\n", func_desc.c_str(), func_addr - 4);
     entry.vAddress = func_addr - 4;
     output.push_back(entry);
   });
@@ -97,42 +98,64 @@ bool GetCallstack(std::vector<CallstackEntry>& output)
   return true;
 }
 
-void PrintCallstack(Common::Log::LogType type, Common::Log::LogLevel level)
+void PrintCallstack()
 {
-  GENERIC_LOG_FMT(type, level, "== STACK TRACE - SP = {:08x} ==", PowerPC::ppcState.gpr[1]);
+  printf("== STACK TRACE - SP = %08x ==", PowerPC::ppcState.gpr[1]);
 
   if (LR == 0)
   {
-    GENERIC_LOG_FMT(type, level, " LR = 0 - this is bad");
+    printf(" LR = 0 - this is bad");
   }
 
   if (g_symbolDB.GetDescription(PC) != g_symbolDB.GetDescription(LR))
   {
-    GENERIC_LOG_FMT(type, level, " * {}  [ LR = {:08x} ]", g_symbolDB.GetDescription(LR), LR);
+    printf(" * %s  [ LR = %08x ]", g_symbolDB.GetDescription(LR).c_str(), LR);
+  }
+
+  WalkTheStack([](u32 func_addr) {
+    std::string func_desc = g_symbolDB.GetDescription(func_addr);
+    if (func_desc.empty() || func_desc == "Invalid")
+      func_desc = "(unknown)";
+    printf(" * %s [ addr = %08x ]", func_desc.c_str(), func_addr);
+  });
+}
+
+void PrintCallstack(LogTypes::LOG_TYPE type, LogTypes::LOG_LEVELS level)
+{
+  GENERIC_LOG(type, level, "== STACK TRACE - SP = %08x ==", PowerPC::ppcState.gpr[1]);
+
+  if (LR == 0)
+  {
+    GENERIC_LOG(type, level, " LR = 0 - this is bad");
+  }
+
+  if (g_symbolDB.GetDescription(PC) != g_symbolDB.GetDescription(LR))
+  {
+    GENERIC_LOG(type, level, " * %s  [ LR = %08x ]", g_symbolDB.GetDescription(LR).c_str(), LR);
   }
 
   WalkTheStack([type, level](u32 func_addr) {
     std::string func_desc = g_symbolDB.GetDescription(func_addr);
     if (func_desc.empty() || func_desc == "Invalid")
       func_desc = "(unknown)";
-    GENERIC_LOG_FMT(type, level, " * {} [ addr = {:08x} ]", func_desc, func_addr);
+    GENERIC_LOG(type, level, " * %s [ addr = %08x ]", func_desc.c_str(), func_addr);
   });
 }
 
-void PrintDataBuffer(Common::Log::LogType type, const u8* data, size_t size, std::string_view title)
+void PrintDataBuffer(LogTypes::LOG_TYPE type, const u8* data, size_t size, const std::string& title)
 {
-  GENERIC_LOG_FMT(type, Common::Log::LogLevel::LDEBUG, "{}", title);
+  GENERIC_LOG(type, LogTypes::LDEBUG, "%s", title.c_str());
   for (u32 j = 0; j < size;)
   {
     std::string hex_line;
     for (int i = 0; i < 16; i++)
     {
-      hex_line += fmt::format("{:02x} ", data[j++]);
+      hex_line += StringFromFormat("%02x ", data[j++]);
 
       if (j >= size)
         break;
     }
-    GENERIC_LOG_FMT(type, Common::Log::LogLevel::LDEBUG, "   Data: {}", hex_line);
+    GENERIC_LOG(type, LogTypes::LDEBUG, "   Data: %s", hex_line.c_str());
   }
 }
 

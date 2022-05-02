@@ -1,5 +1,6 @@
 // Copyright 2008 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include <cstring>
 #include <string>
@@ -117,9 +118,6 @@ void CPUInfo::Detect()
         (model == 0x1C || model == 0x26 || model == 0x27 || model == 0x35 || model == 0x36 ||
          model == 0x37 || model == 0x4A || model == 0x4D || model == 0x5A || model == 0x5D))
       bAtom = true;
-    // Detect AMD Zen1, Zen1+ and Zen2
-    if (family == 23)
-      bZen1p2 = true;
     logical_cpu_count = (cpu_id[1] >> 16) & 0xFF;
     ht = (cpu_id[3] >> 28) & 1;
 
@@ -174,7 +172,6 @@ void CPUInfo::Detect()
   }
 
   bFlushToZero = bSSE;
-  bFastBMI2 = bBMI2 && !bZen1p2;
 
   if (max_ex_fn >= 0x80000004)
   {

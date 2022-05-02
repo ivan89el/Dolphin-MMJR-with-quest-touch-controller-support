@@ -1,5 +1,6 @@
 // Copyright 2016 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "InputCommon/ControllerInterface/Quartz/QuartzKeyboardAndMouse.h"
 
@@ -7,8 +8,6 @@
 
 #include <Carbon/Carbon.h>
 #include <Cocoa/Cocoa.h>
-
-#include "InputCommon/ControllerInterface/ControllerInterface.h"
 
 namespace ciface::Quartz
 {
@@ -135,32 +134,14 @@ std::string KeyboardAndMouse::Key::GetName() const
   return m_name;
 }
 
-KeyboardAndMouse::KeyboardAndMouse(void* view)
+KeyboardAndMouse::KeyboardAndMouse(void* window)
 {
   // All keycodes in <HIToolbox/Events.h> are 0x7e or lower. If you notice
   // keys that aren't being recognized, bump this number up!
   for (int keycode = 0; keycode < 0x80; ++keycode)
     AddInput(new Key(keycode));
 
-  // Add combined left/right modifiers with consistent naming across platforms.
-  AddCombinedInput("Alt", {"Left Alt", "Right Alt"});
-  AddCombinedInput("Shift", {"Left Shift", "Right Shift"});
-  AddCombinedInput("Ctrl", {"Left Control", "Right Control"});
-
-  NSView* cocoa_view = reinterpret_cast<NSView*>(view);
-
-  // PopulateDevices may be called on the Emuthread, so we need to ensure that
-  // these UI APIs are only ever called on the main thread.
-  if ([NSThread isMainThread])
-  {
-    m_windowid = [[cocoa_view window] windowNumber];
-  }
-  else
-  {
-    dispatch_sync(dispatch_get_main_queue(), ^{
-      m_windowid = [[cocoa_view window] windowNumber];
-    });
-  }
+  m_windowid = [[reinterpret_cast<NSView*>(window) window] windowNumber];
 
   // cursor, with a hax for-loop
   for (unsigned int i = 0; i < 4; ++i)
@@ -196,12 +177,10 @@ void KeyboardAndMouse::UpdateInput()
   CGPoint loc = CGEventGetLocation(event);
   CFRelease(event);
 
-  const auto window_scale = g_controller_interface.GetWindowInputScale();
-
   loc.x -= bounds.origin.x;
   loc.y -= bounds.origin.y;
-  m_cursor.x = (loc.x / std::max(bounds.size.width, 1.0) * 2 - 1.0) * window_scale.x;
-  m_cursor.y = (loc.y / std::max(bounds.size.height, 1.0) * 2 - 1.0) * window_scale.y;
+  m_cursor.x = loc.x / bounds.size.width * 2 - 1.0;
+  m_cursor.y = loc.y / bounds.size.height * 2 - 1.0;
 }
 
 std::string KeyboardAndMouse::GetName() const

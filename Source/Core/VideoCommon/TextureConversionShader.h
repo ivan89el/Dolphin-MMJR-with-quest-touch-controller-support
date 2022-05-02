@@ -1,5 +1,6 @@
 // Copyright 2008 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
@@ -19,7 +20,7 @@ namespace TextureConversionShaderTiled
 {
 u16 GetEncodedSampleCount(EFBCopyFormat format);
 
-std::string GenerateEncodingShader(const EFBCopyParams& params, APIType api_type);
+const char* GenerateEncodingShader(const EFBCopyParams& params, APIType ApiType);
 
 // Information required to compile and dispatch a texture decoding shader.
 struct DecodingShaderInfo

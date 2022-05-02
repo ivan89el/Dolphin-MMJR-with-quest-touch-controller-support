@@ -1,11 +1,10 @@
 // Copyright 2017 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
-#include <QWidget>
-
-#include "Core/Core.h"
+#include <QDialog>
 
 class QCheckBox;
 class QDialogButtonBox;
@@ -14,7 +13,7 @@ class QPushButton;
 class QSpinBox;
 class FIFOAnalyzer;
 
-class FIFOPlayerWindow : public QWidget
+class FIFOPlayerWindow : public QDialog
 {
   Q_OBJECT
 public:
@@ -44,8 +43,6 @@ private:
   void UpdateInfo();
   void UpdateLimits();
 
-  bool eventFilter(QObject* object, QEvent* event) final override;
-
   QLabel* m_info_label;
   QPushButton* m_load;
   QPushButton* m_save;
@@ -65,5 +62,4 @@ private:
   QDialogButtonBox* m_button_box;
 
   FIFOAnalyzer* m_analyzer;
-  Core::State m_emu_state = Core::State::Uninitialized;
 };

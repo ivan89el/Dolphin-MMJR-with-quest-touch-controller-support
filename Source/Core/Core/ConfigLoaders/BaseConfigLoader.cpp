@@ -1,11 +1,10 @@
 // Copyright 2016 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "Core/ConfigLoaders/BaseConfigLoader.h"
 
-#include <algorithm>
 #include <cstring>
-#include <functional>
 #include <list>
 #include <map>
 #include <memory>
@@ -29,7 +28,7 @@
 
 namespace ConfigLoaders
 {
-void SaveToSYSCONF(Config::LayerType layer, std::function<bool(const Config::Location&)> predicate)
+void SaveToSYSCONF(Config::LayerType layer)
 {
   if (Core::IsRunning())
     return;
@@ -40,34 +39,19 @@ void SaveToSYSCONF(Config::LayerType layer, std::function<bool(const Config::Loc
   for (const Config::SYSCONFSetting& setting : Config::SYSCONF_SETTINGS)
   {
     std::visit(
-        [&](auto* info) {
-          if (predicate && !predicate(info->GetLocation()))
-            return;
-
-          const std::string key = info->GetLocation().section + "." + info->GetLocation().key;
+        [layer, &setting, &sysconf](auto& info) {
+          const std::string key = info.location.section + "." + info.location.key;
 
           if (setting.type == SysConf::Entry::Type::Long)
-          {
-            sysconf.SetData<u32>(key, setting.type, Config::Get(layer, *info));
-          }
+            sysconf.SetData<u32>(key, setting.type, Config::Get(layer, info));
           else if (setting.type == SysConf::Entry::Type::Byte)
-          {
-            sysconf.SetData<u8>(key, setting.type, static_cast<u8>(Config::Get(layer, *info)));
-          }
-          else if (setting.type == SysConf::Entry::Type::BigArray)
-          {
-            // Somewhat hacky support for IPL.SADR. The setting only stores the
-            // first 4 bytes even thought the SYSCONF entry is much bigger.
-            SysConf::Entry* entry = sysconf.GetOrAddEntry(key, setting.type);
-            if (entry->bytes.size() < 0x1007 + 1)
-              entry->bytes.resize(0x1007 + 1);
-            *reinterpret_cast<u32*>(entry->bytes.data()) = Config::Get(layer, *info);
-          }
+            sysconf.SetData<u8>(key, setting.type, static_cast<u8>(Config::Get(layer, info)));
         },
         setting.config_info);
   }
 
-  sysconf.SetData<u32>("IPL.CB", SysConf::Entry::Type::Long, 0);
+  if (SConfig::GetInstance().bEnableCustomRTC)
+    sysconf.SetData<u32>("IPL.CB", SysConf::Entry::Type::Long, 0);
 
   // Disable WiiConnect24's standby mode. If it is enabled, it prevents us from receiving
   // shutdown commands in the State Transition Manager (STM).
@@ -77,7 +61,7 @@ void SaveToSYSCONF(Config::LayerType layer, std::function<bool(const Config::Loc
     idle_entry->bytes = std::vector<u8>(2);
   else
     idle_entry->bytes[0] = 0;
-  NOTICE_LOG_FMT(CORE, "Disabling WC24 'standby' (shutdown to idle) to avoid hanging on shutdown");
+  NOTICE_LOG(CORE, "Disabling WC24 'standby' (shutdown to idle) to avoid hanging on shutdown");
 
   IOS::HLE::RestoreBTInfoSection(&sysconf);
   sysconf.Save();
@@ -91,9 +75,7 @@ const std::map<Config::System, int> system_to_ini = {
     {Config::System::GFX, F_GFXCONFIG_IDX},
     {Config::System::Logger, F_LOGGERCONFIG_IDX},
     {Config::System::Debugger, F_DEBUGGERCONFIG_IDX},
-    {Config::System::DualShockUDPClient, F_DUALSHOCKUDPCLIENTCONFIG_IDX},
-    {Config::System::FreeLook, F_FREELOOKCONFIG_IDX},
-    // Config::System::Session should not be added to this list
+    {Config::System::SYSCONF, F_DOLPHINCONFIG_IDX},
 };
 
 // INI layer configuration loader
@@ -117,7 +99,7 @@ public:
 
         for (const auto& value : section_map)
         {
-          const Config::Location location{system.first, section_name, value.first};
+          const Config::ConfigLocation location{system.first, section_name, value.first};
           layer->Set(location, value.second);
         }
       }
@@ -137,21 +119,18 @@ public:
 
     for (const auto& config : layer->GetLayerMap())
     {
-      const Config::Location& location = config.first;
+      const Config::ConfigLocation& location = config.first;
       const std::optional<std::string>& value = config.second;
 
       // Done by SaveToSYSCONF
       if (location.system == Config::System::SYSCONF)
         continue;
 
-      if (location.system == Config::System::Session)
-        continue;
-
       auto ini = inis.find(location.system);
       if (ini == inis.end())
       {
-        ERROR_LOG_FMT(COMMON, "Config can't map system '{}' to an INI file!",
-                      Config::GetSystemName(location.system));
+        ERROR_LOG(COMMON, "Config can't map system '%s' to an INI file!",
+                  Config::GetSystemName(location.system).c_str());
         continue;
       }
 
@@ -186,30 +165,12 @@ private:
     for (const Config::SYSCONFSetting& setting : Config::SYSCONF_SETTINGS)
     {
       std::visit(
-          [&](auto* info) {
-            const Config::Location location = info->GetLocation();
-            const std::string key = location.section + "." + location.key;
+          [&](auto& info) {
+            const std::string key = info.location.section + "." + info.location.key;
             if (setting.type == SysConf::Entry::Type::Long)
-            {
-              layer->Set(location, sysconf.GetData<u32>(key, info->GetDefaultValue()));
-            }
+              layer->Set(info.location, sysconf.GetData<u32>(key, info.default_value));
             else if (setting.type == SysConf::Entry::Type::Byte)
-            {
-              layer->Set(location, sysconf.GetData<u8>(key, info->GetDefaultValue()));
-            }
-            else if (setting.type == SysConf::Entry::Type::BigArray)
-            {
-              // Somewhat hacky support for IPL.SADR. The setting only stores the
-              // first 4 bytes even thought the SYSCONF entry is much bigger.
-              u32 value = info->GetDefaultValue();
-              SysConf::Entry* entry = sysconf.GetEntry(key);
-              if (entry)
-              {
-                std::memcpy(&value, entry->bytes.data(),
-                            std::min(entry->bytes.size(), sizeof(u32)));
-              }
-              layer->Set(location, value);
-            }
+              layer->Set(info.location, sysconf.GetData<u8>(key, info.default_value));
           },
           setting.config_info);
     }

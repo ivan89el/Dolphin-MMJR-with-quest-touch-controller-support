@@ -1,10 +1,10 @@
 // Copyright 2017 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "DolphinQt/Debugger/WatchWidget.h"
 
 #include <QHeaderView>
-#include <QInputDialog>
 #include <QMenu>
 #include <QTableWidget>
 #include <QToolBar>
@@ -17,7 +17,6 @@
 #include "Core/PowerPC/MMU.h"
 #include "Core/PowerPC/PowerPC.h"
 
-#include "DolphinQt/Host.h"
 #include "DolphinQt/QtUtils/ModalMessageBox.h"
 #include "DolphinQt/Resources.h"
 #include "DolphinQt/Settings.h"
@@ -33,8 +32,6 @@ WatchWidget::WatchWidget(QWidget* parent) : QDockWidget(parent)
 
   setAllowedAreas(Qt::AllDockWidgetAreas);
 
-  CreateWidgets();
-
   auto& settings = Settings::GetQSettings();
 
   restoreGeometry(settings.value(QStringLiteral("watchwidget/geometry")).toByteArray());
@@ -42,20 +39,19 @@ WatchWidget::WatchWidget(QWidget* parent) : QDockWidget(parent)
   // according to Settings
   setFloating(settings.value(QStringLiteral("watchwidget/floating")).toBool());
 
+  CreateWidgets();
   ConnectWidgets();
 
-  connect(&Settings::Instance(), &Settings::EmulationStateChanged, this, [this](Core::State state) {
+  connect(&Settings::Instance(), &Settings::EmulationStateChanged, [this](Core::State state) {
     UpdateButtonsEnabled();
     if (state != Core::State::Starting)
       Update();
   });
 
-  connect(Host::GetInstance(), &Host::UpdateDisasmDialog, this, &WatchWidget::Update);
-
-  connect(&Settings::Instance(), &Settings::WatchVisibilityChanged, this,
+  connect(&Settings::Instance(), &Settings::WatchVisibilityChanged,
           [this](bool visible) { setHidden(!visible); });
 
-  connect(&Settings::Instance(), &Settings::DebugModeToggled, this,
+  connect(&Settings::Instance(), &Settings::DebugModeToggled,
           [this](bool enabled) { setHidden(!enabled || !Settings::Instance().IsWatchVisible()); });
 
   connect(&Settings::Instance(), &Settings::ThemeChanged, this, &WatchWidget::UpdateIcons);
@@ -77,7 +73,6 @@ void WatchWidget::CreateWidgets()
   m_toolbar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
 
   m_table = new QTableWidget;
-  m_table->setTabKeyNavigation(false);
 
   m_table->setContentsMargins(0, 0, 0, 0);
   m_table->setColumnCount(NUM_COLUMNS);
@@ -85,15 +80,9 @@ void WatchWidget::CreateWidgets()
   m_table->setContextMenuPolicy(Qt::CustomContextMenu);
   m_table->setSelectionMode(QAbstractItemView::SingleSelection);
 
-  m_new = m_toolbar->addAction(tr("New"), this, &WatchWidget::OnNewWatch);
-  m_delete = m_toolbar->addAction(tr("Delete"), this, &WatchWidget::OnDelete);
-  m_clear = m_toolbar->addAction(tr("Clear"), this, &WatchWidget::OnClear);
   m_load = m_toolbar->addAction(tr("Load"), this, &WatchWidget::OnLoad);
   m_save = m_toolbar->addAction(tr("Save"), this, &WatchWidget::OnSave);
 
-  m_new->setEnabled(false);
-  m_delete->setEnabled(false);
-  m_clear->setEnabled(false);
   m_load->setEnabled(false);
   m_save->setEnabled(false);
 
@@ -117,10 +106,6 @@ void WatchWidget::ConnectWidgets()
 
 void WatchWidget::UpdateIcons()
 {
-  // TODO: Create a "debugger_add_watch" icon
-  m_new->setIcon(Resources::GetScaledThemeIcon("debugger_add_breakpoint"));
-  m_delete->setIcon(Resources::GetScaledThemeIcon("debugger_delete"));
-  m_clear->setIcon(Resources::GetScaledThemeIcon("debugger_clear"));
   m_load->setIcon(Resources::GetScaledThemeIcon("debugger_load"));
   m_save->setIcon(Resources::GetScaledThemeIcon("debugger_save"));
 }
@@ -130,12 +115,8 @@ void WatchWidget::UpdateButtonsEnabled()
   if (!isVisible())
     return;
 
-  const bool is_enabled = Core::IsRunning();
-  m_new->setEnabled(is_enabled);
-  m_delete->setEnabled(is_enabled);
-  m_clear->setEnabled(is_enabled);
-  m_load->setEnabled(is_enabled);
-  m_save->setEnabled(is_enabled);
+  m_load->setEnabled(Core::IsRunning());
+  m_save->setEnabled(Core::IsRunning());
 }
 
 void WatchWidget::Update()
@@ -228,42 +209,6 @@ void WatchWidget::showEvent(QShowEvent* event)
 {
   UpdateButtonsEnabled();
   Update();
-}
-
-void WatchWidget::OnDelete()
-{
-  if (m_table->selectedItems().empty())
-    return;
-
-  auto row_variant = m_table->selectedItems()[0]->data(Qt::UserRole);
-  if (row_variant.isNull())
-    return;
-
-  DeleteWatch(row_variant.toInt());
-}
-
-void WatchWidget::OnClear()
-{
-  PowerPC::debug_interface.ClearWatches();
-  Update();
-}
-
-void WatchWidget::OnNewWatch()
-{
-  const QString text =
-      QInputDialog::getText(this, tr("Input"), tr("Enter address to watch:"), QLineEdit::Normal,
-                            QString{}, nullptr, Qt::WindowCloseButtonHint);
-  bool good;
-  const uint address = text.toUInt(&good, 16);
-
-  if (!good)
-  {
-    ModalMessageBox::warning(this, tr("Error"), tr("Invalid watch address: %1").arg(text));
-    return;
-  }
-
-  const QString name = QStringLiteral("mem_%1").arg(address, 8, 16, QLatin1Char('0'));
-  AddWatch(name, address);
 }
 
 void WatchWidget::OnLoad()
@@ -398,5 +343,4 @@ void WatchWidget::AddWatchBreakpoint(int row)
 void WatchWidget::AddWatch(QString name, u32 addr)
 {
   PowerPC::debug_interface.SetWatch(addr, name.toStdString());
-  Update();
 }

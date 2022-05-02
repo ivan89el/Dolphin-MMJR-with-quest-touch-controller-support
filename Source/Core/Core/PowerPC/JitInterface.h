@@ -1,5 +1,6 @@
 // Copyright 2008 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
@@ -62,8 +63,6 @@ void ClearSafe();
 
 // If "forced" is true, a recompile is being requested on code that hasn't been modified.
 void InvalidateICache(u32 address, u32 size, bool forced);
-void InvalidateICacheLine(u32 address);
-void InvalidateICacheLines(u32 address, u32 count);
 
 void CompileExceptionCheck(ExceptionType type);
 

@@ -1,5 +1,6 @@
 // Copyright 2010 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
@@ -13,6 +14,12 @@
 #include "Common/Common.h"
 #include "Common/CommonTypes.h"
 #include "Common/MsgHandler.h"
+
+#define CHECK(cond, Message, ...)                                                                  \
+  if (!(cond))                                                                                     \
+  {                                                                                                \
+    PanicAlert("%s failed in %s at line %d: " Message, __func__, __FILE__, __LINE__, __VA_ARGS__); \
+  }
 
 namespace DX11
 {
@@ -35,9 +42,6 @@ std::vector<u32> GetAAModes(u32 adapter_index);
 
 // Checks for support of the given texture format.
 bool SupportsTextureFormat(DXGI_FORMAT format);
-
-// Checks for logic op support.
-bool SupportsLogicOp(u32 adapter_index);
 
 }  // namespace D3D
 

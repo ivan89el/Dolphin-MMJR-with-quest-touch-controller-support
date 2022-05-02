@@ -1,5 +1,6 @@
 // Copyright 2009 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "VideoBackends/Software/TransformUnit.h"
 
@@ -79,7 +80,7 @@ void TransformPosition(const InputVertexData* src, OutputVertexData* dst)
   const float* mat = &xfmem.posMatrices[src->posMtx * 4];
   MultiplyVec3Mat34(src->position, mat, dst->mvPosition);
 
-  if (xfmem.projection.type == ProjectionType::Perspective)
+  if (xfmem.projection.type == GX_PERSPECTIVE)
   {
     MultipleVec3Perspective(dst->mvPosition, xfmem.projection.rawProjection,
                             dst->projectedPosition);
@@ -108,57 +109,47 @@ void TransformNormal(const InputVertexData* src, bool nbt, OutputVertexData* dst
   }
 }
 
-static void TransformTexCoordRegular(const TexMtxInfo& texinfo, int coordNum,
+static void TransformTexCoordRegular(const TexMtxInfo& texinfo, int coordNum, bool specialCase,
                                      const InputVertexData* srcVertex, OutputVertexData* dstVertex)
 {
   Vec3 src;
   switch (texinfo.sourcerow)
   {
-  case SourceRow::Geom:
+  case XF_SRCGEOM_INROW:
     src = srcVertex->position;
     break;
-  case SourceRow::Normal:
+  case XF_SRCNORMAL_INROW:
     src = srcVertex->normal[0];
     break;
-  case SourceRow::BinormalT:
+  case XF_SRCBINORMAL_T_INROW:
     src = srcVertex->normal[1];
     break;
-  case SourceRow::BinormalB:
+  case XF_SRCBINORMAL_B_INROW:
     src = srcVertex->normal[2];
     break;
   default:
-  {
-    ASSERT(texinfo.sourcerow >= SourceRow::Tex0 && texinfo.sourcerow <= SourceRow::Tex7);
-    u32 texnum = static_cast<u32>(texinfo.sourcerow.Value()) - static_cast<u32>(SourceRow::Tex0);
-    src.x = srcVertex->texCoords[texnum][0];
-    src.y = srcVertex->texCoords[texnum][1];
+    ASSERT(texinfo.sourcerow >= XF_SRCTEX0_INROW && texinfo.sourcerow <= XF_SRCTEX7_INROW);
+    src.x = srcVertex->texCoords[texinfo.sourcerow - XF_SRCTEX0_INROW][0];
+    src.y = srcVertex->texCoords[texinfo.sourcerow - XF_SRCTEX0_INROW][1];
     src.z = 1.0f;
     break;
   }
-  }
-
-  // Convert NaNs to 1 - needed to fix eyelids in Shadow the Hedgehog during cutscenes
-  // See https://bugs.dolphin-emu.org/issues/11458
-  if (std::isnan(src.x))
-    src.x = 1;
-  if (std::isnan(src.y))
-    src.y = 1;
-  if (std::isnan(src.z))
-    src.z = 1;
 
   const float* mat = &xfmem.posMatrices[srcVertex->texMtx[coordNum] * 4];
   Vec3* dst = &dstVertex->texCoords[coordNum];
 
-  if (texinfo.projection == TexSize::ST)
+  if (texinfo.projection == XF_TEXPROJ_ST)
   {
-    if (texinfo.inputform == TexInputForm::AB11)
+    if (texinfo.inputform == XF_TEXINPUT_AB11 || specialCase)
       MultiplyVec2Mat24(src, mat, *dst);
     else
       MultiplyVec3Mat24(src, mat, *dst);
   }
-  else  // texinfo.projection == TexSize::STQ
+  else  // texinfo.projection == XF_TEXPROJ_STQ
   {
-    if (texinfo.inputform == TexInputForm::AB11)
+    ASSERT(!specialCase);
+
+    if (texinfo.inputform == XF_TEXINPUT_AB11)
       MultiplyVec2Mat34(src, mat, *dst);
     else
       MultiplyVec3Mat34(src, mat, *dst);
@@ -172,12 +163,27 @@ static void TransformTexCoordRegular(const TexMtxInfo& texinfo, int coordNum,
     const PostMtxInfo& postInfo = xfmem.postMtxInfo[coordNum];
     const float* postMat = &xfmem.postMatrices[postInfo.index * 4];
 
-    if (postInfo.normalize)
-      tempCoord = dst->Normalized();
-    else
-      tempCoord = *dst;
+    if (specialCase)
+    {
+      // no normalization
+      // q of input is 1
+      // q of output is unknown
+      tempCoord.x = dst->x;
+      tempCoord.y = dst->y;
 
-    MultiplyVec3Mat34(tempCoord, postMat, *dst);
+      dst->x = postMat[0] * tempCoord.x + postMat[1] * tempCoord.y + postMat[2] + postMat[3];
+      dst->y = postMat[4] * tempCoord.x + postMat[5] * tempCoord.y + postMat[6] + postMat[7];
+      dst->z = 1.0f;
+    }
+    else
+    {
+      if (postInfo.normalize)
+        tempCoord = dst->Normalized();
+      else
+        tempCoord = *dst;
+
+      MultiplyVec3Mat34(tempCoord, postMat, *dst);
+    }
   }
 
   // When q is 0, the GameCube appears to have a special case
@@ -220,28 +226,28 @@ static float CalculateLightAttn(const LightPointer* light, Vec3* _ldir, const Ve
 
   switch (chan.attnfunc)
   {
-  case AttenuationFunc::None:
-  case AttenuationFunc::Dir:
+  case LIGHTATTN_NONE:
+  case LIGHTATTN_DIR:
   {
     ldir = ldir.Normalized();
     if (ldir == Vec3(0.0f, 0.0f, 0.0f))
       ldir = normal;
     break;
   }
-  case AttenuationFunc::Spec:
+  case LIGHTATTN_SPEC:
   {
     ldir = ldir.Normalized();
     attn = (ldir * normal) >= 0.0 ? std::max(0.0f, light->dir * normal) : 0;
     Vec3 attLen = Vec3(1.0, attn, attn * attn);
     Vec3 cosAttn = light->cosatt;
     Vec3 distAttn = light->distatt;
-    if (chan.diffusefunc != DiffuseFunc::None)
+    if (chan.diffusefunc != LIGHTDIF_NONE)
       distAttn = distAttn.Normalized();
 
     attn = SafeDivide(std::max(0.0f, attLen * cosAttn), attLen * distAttn);
     break;
   }
-  case AttenuationFunc::Spot:
+  case LIGHTATTN_SPOT:
   {
     float dist2 = ldir.Length2();
     float dist = sqrtf(dist2);
@@ -254,7 +260,7 @@ static float CalculateLightAttn(const LightPointer* light, Vec3* _ldir, const Ve
     break;
   }
   default:
-    PanicAlertFmt("Invalid attnfunc: {}", chan.attnfunc);
+    PanicAlert("LightColor");
   }
 
   return attn;
@@ -271,18 +277,18 @@ static void LightColor(const Vec3& pos, const Vec3& normal, u8 lightNum, const L
   float difAttn = ldir * normal;
   switch (chan.diffusefunc)
   {
-  case DiffuseFunc::None:
+  case LIGHTDIF_NONE:
     AddScaledIntegerColor(light->color, attn, lightCol);
     break;
-  case DiffuseFunc::Sign:
+  case LIGHTDIF_SIGN:
     AddScaledIntegerColor(light->color, attn * difAttn, lightCol);
     break;
-  case DiffuseFunc::Clamp:
+  case LIGHTDIF_CLAMP:
     difAttn = std::max(0.0f, difAttn);
     AddScaledIntegerColor(light->color, attn * difAttn, lightCol);
     break;
   default:
-    PanicAlertFmt("Invalid diffusefunc: {}", chan.attnfunc);
+    ASSERT(0);
   }
 }
 
@@ -297,18 +303,18 @@ static void LightAlpha(const Vec3& pos, const Vec3& normal, u8 lightNum, const L
   float difAttn = ldir * normal;
   switch (chan.diffusefunc)
   {
-  case DiffuseFunc::None:
+  case LIGHTDIF_NONE:
     lightCol += light->color[0] * attn;
     break;
-  case DiffuseFunc::Sign:
+  case LIGHTDIF_SIGN:
     lightCol += light->color[0] * attn * difAttn;
     break;
-  case DiffuseFunc::Clamp:
+  case LIGHTDIF_CLAMP:
     difAttn = std::max(0.0f, difAttn);
     lightCol += light->color[0] * attn * difAttn;
     break;
   default:
-    PanicAlertFmt("Invalid diffusefunc: {}", chan.attnfunc);
+    ASSERT(0);
   }
 }
 
@@ -322,16 +328,17 @@ void TransformColor(const InputVertexData* src, OutputVertexData* dst)
 
     // color
     const LitChannel& colorchan = xfmem.color[chan];
-    if (colorchan.matsource == MatSource::Vertex)
-      matcolor = src->color[chan];
+    if (colorchan.matsource)
+      matcolor = src->color[chan];  // vertex
     else
       std::memcpy(matcolor.data(), &xfmem.matColor[chan], sizeof(u32));
 
     if (colorchan.enablelighting)
     {
       Vec3 lightCol;
-      if (colorchan.ambsource == AmbSource::Vertex)
+      if (colorchan.ambsource)
       {
+        // vertex
         lightCol.x = src->color[chan][1];
         lightCol.y = src->color[chan][2];
         lightCol.z = src->color[chan][3];
@@ -365,16 +372,16 @@ void TransformColor(const InputVertexData* src, OutputVertexData* dst)
 
     // alpha
     const LitChannel& alphachan = xfmem.alpha[chan];
-    if (alphachan.matsource == MatSource::Vertex)
-      matcolor[0] = src->color[chan][0];
+    if (alphachan.matsource)
+      matcolor[0] = src->color[chan][0];  // vertex
     else
       matcolor[0] = xfmem.matColor[chan] & 0xff;
 
     if (xfmem.alpha[chan].enablelighting)
     {
       float lightCol;
-      if (alphachan.ambsource == AmbSource::Vertex)
-        lightCol = src->color[chan][0];
+      if (alphachan.ambsource)
+        lightCol = src->color[chan][0];  // vertex
       else
         lightCol = static_cast<float>(xfmem.ambColor[chan] & 0xff);
 
@@ -399,7 +406,7 @@ void TransformColor(const InputVertexData* src, OutputVertexData* dst)
   }
 }
 
-void TransformTexCoord(const InputVertexData* src, OutputVertexData* dst)
+void TransformTexCoord(const InputVertexData* src, OutputVertexData* dst, bool specialCase)
 {
   for (u32 coordNum = 0; coordNum < xfmem.numTexGen.numTexGens; coordNum++)
   {
@@ -407,10 +414,10 @@ void TransformTexCoord(const InputVertexData* src, OutputVertexData* dst)
 
     switch (texinfo.texgentype)
     {
-    case TexGenType::Regular:
-      TransformTexCoordRegular(texinfo, coordNum, src, dst);
+    case XF_TEXGEN_REGULAR:
+      TransformTexCoordRegular(texinfo, coordNum, specialCase, src, dst);
       break;
-    case TexGenType::EmbossMap:
+    case XF_TEXGEN_EMBOSS_MAP:
     {
       const LightPointer* light = (const LightPointer*)&xfmem.lights[texinfo.embosslightshift];
 
@@ -423,21 +430,22 @@ void TransformTexCoord(const InputVertexData* src, OutputVertexData* dst)
       dst->texCoords[coordNum].z = dst->texCoords[texinfo.embosssourceshift].z;
     }
     break;
-    case TexGenType::Color0:
-      ASSERT(texinfo.inputform == TexInputForm::AB11);
+    case XF_TEXGEN_COLOR_STRGBC0:
+      ASSERT(texinfo.sourcerow == XF_SRCCOLORS_INROW);
+      ASSERT(texinfo.inputform == XF_TEXINPUT_AB11);
       dst->texCoords[coordNum].x = (float)dst->color[0][0] / 255.0f;
       dst->texCoords[coordNum].y = (float)dst->color[0][1] / 255.0f;
       dst->texCoords[coordNum].z = 1.0f;
       break;
-    case TexGenType::Color1:
-      ASSERT(texinfo.inputform == TexInputForm::AB11);
+    case XF_TEXGEN_COLOR_STRGBC1:
+      ASSERT(texinfo.sourcerow == XF_SRCCOLORS_INROW);
+      ASSERT(texinfo.inputform == XF_TEXINPUT_AB11);
       dst->texCoords[coordNum].x = (float)dst->color[1][0] / 255.0f;
       dst->texCoords[coordNum].y = (float)dst->color[1][1] / 255.0f;
       dst->texCoords[coordNum].z = 1.0f;
       break;
     default:
-      ERROR_LOG_FMT(VIDEO, "Bad tex gen type {}", texinfo.texgentype);
-      break;
+      ERROR_LOG(VIDEO, "Bad tex gen type %i", texinfo.texgentype.Value());
     }
   }
 

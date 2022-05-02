@@ -1,10 +1,10 @@
 // Copyright 2011 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
 #include <memory>
-#include <optional>
 #include <string>
 #include <vector>
 
@@ -42,39 +42,40 @@ public:
   virtual std::string GetName() const = 0;
   virtual std::string GetDisplayName() const { return GetName(); }
   virtual void InitBackendInfo() = 0;
-  virtual std::optional<std::string> GetWarningMessage() const { return {}; }
 
   // Prepares a native window for rendering. This is called on the main thread, or the
   // thread which owns the window.
-  virtual void PrepareWindow(WindowSystemInfo& wsi) {}
-
-  static std::string BadShaderFilename(const char* shader_stage, int counter);
+  virtual void PrepareWindow(const WindowSystemInfo& wsi) {}
 
   void Video_ExitLoop();
 
-  void Video_OutputXFB(u32 xfb_addr, u32 fb_width, u32 fb_stride, u32 fb_height, u64 ticks);
+  void Video_BeginField(u32 xfb_addr, u32 fb_width, u32 fb_stride, u32 fb_height, u64 ticks);
 
   u32 Video_AccessEFB(EFBAccessType type, u32 x, u32 y, u32 data);
   u32 Video_GetQueryResult(PerfQueryType type);
   u16 Video_GetBoundingBox(int index);
 
-  static std::string GetDefaultBackendName();
-  static const std::vector<std::unique_ptr<VideoBackendBase>>& GetAvailableBackends();
+  static void PopulateList();
+  static void ClearList();
   static void ActivateBackend(const std::string& name);
 
   // Fills the backend_info fields with the capabilities of the selected backend/device.
-  static void PopulateBackendInfo();
   // Called by the UI thread when the graphics config is opened.
-  static void PopulateBackendInfoFromUI();
+  static void PopulateBackendInfo();
 
-  // Wrapper function which pushes the event to the GPU thread.
+  // the implementation needs not do synchronization logic, because calls to it are surrounded by
+  // PauseAndLock now
   void DoState(PointerWrap& p);
+
+  void CheckInvalidState();
 
 protected:
   void InitializeShared();
   void ShutdownShared();
 
   bool m_initialized = false;
+  bool m_invalid = false;
 };
 
+extern std::vector<std::unique_ptr<VideoBackendBase>> g_available_video_backends;
 extern VideoBackendBase* g_video_backend;

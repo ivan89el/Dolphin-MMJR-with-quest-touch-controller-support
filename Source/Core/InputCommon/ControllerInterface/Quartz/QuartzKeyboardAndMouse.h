@@ -1,12 +1,12 @@
 // Copyright 2016 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
 #include <QuartzCore/QuartzCore.h>
 
-#include "Common/Matrix.h"
-#include "InputCommon/ControllerInterface/CoreDevice.h"
+#include "InputCommon/ControllerInterface/Device.h"
 
 namespace ciface::Quartz
 {
@@ -35,7 +35,7 @@ private:
     {
     }
     std::string GetName() const override;
-    bool IsDetectable() const override { return false; }
+    bool IsDetectable() override { return false; }
     ControlState GetState() const override;
 
   private:
@@ -58,13 +58,16 @@ private:
 public:
   void UpdateInput() override;
 
-  explicit KeyboardAndMouse(void* view);
+  explicit KeyboardAndMouse(void* window);
 
   std::string GetName() const override;
   std::string GetSource() const override;
 
 private:
-  Common::Vec2 m_cursor;
+  struct
+  {
+    float x, y;
+  } m_cursor;
 
   uint32_t m_windowid;
 };

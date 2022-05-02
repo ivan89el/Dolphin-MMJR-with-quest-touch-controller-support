@@ -1,5 +1,6 @@
 // Copyright 2016 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
@@ -15,18 +16,19 @@
 
 namespace Config
 {
+using Layers = std::map<LayerType, std::unique_ptr<Layer>>;
 using ConfigChangedCallback = std::function<void()>;
 
 // Layer management
+Layers* GetLayers();
+void AddLayer(std::unique_ptr<Layer> layer);
 void AddLayer(std::unique_ptr<ConfigLayerLoader> loader);
-std::shared_ptr<Layer> GetLayer(LayerType layer);
+Layer* GetLayer(LayerType layer);
 void RemoveLayer(LayerType layer);
+bool LayerExists(LayerType layer);
 
 void AddConfigChangedCallback(ConfigChangedCallback func);
-void OnConfigChanged();
-
-// Returns the number of times the config has changed in the current execution of the program
-u64 GetConfigVersion();
+void InvokeConfigChangedCallbacks();
 
 // Explicit load and save of layers
 void Load();
@@ -39,12 +41,10 @@ void ClearCurrentRunLayer();
 const std::string& GetSystemName(System system);
 std::optional<System> GetSystemFromName(const std::string& system);
 const std::string& GetLayerName(LayerType layer);
-LayerType GetActiveLayerForConfig(const Location&);
-
-std::optional<std::string> GetAsString(const Location&);
+LayerType GetActiveLayerForConfig(const ConfigLocation&);
 
 template <typename T>
-T Get(LayerType layer, const Info<T>& info)
+T Get(LayerType layer, const ConfigInfo<T>& info)
 {
   if (layer == LayerType::Meta)
     return Get(info);
@@ -52,65 +52,44 @@ T Get(LayerType layer, const Info<T>& info)
 }
 
 template <typename T>
-T Get(const Info<T>& info)
+T Get(const ConfigInfo<T>& info)
 {
-  CachedValue<T> cached = info.GetCachedValue();
-  const u64 config_version = GetConfigVersion();
-
-  if (cached.config_version < config_version)
-  {
-    cached.value = GetUncached(info);
-    cached.config_version = config_version;
-
-    info.SetCachedValue(cached);
-  }
-
-  return cached.value;
+  return GetLayer(GetActiveLayerForConfig(info.location))->Get(info);
 }
 
 template <typename T>
-T GetUncached(const Info<T>& info)
-{
-  const std::optional<std::string> str = GetAsString(info.GetLocation());
-  if (!str)
-    return info.GetDefaultValue();
-
-  return detail::TryParse<T>(*str).value_or(info.GetDefaultValue());
-}
-
-template <typename T>
-T GetBase(const Info<T>& info)
+T GetBase(const ConfigInfo<T>& info)
 {
   return Get(LayerType::Base, info);
 }
 
 template <typename T>
-LayerType GetActiveLayerForConfig(const Info<T>& info)
+LayerType GetActiveLayerForConfig(const ConfigInfo<T>& info)
 {
-  return GetActiveLayerForConfig(info.GetLocation());
+  return GetActiveLayerForConfig(info.location);
 }
 
 template <typename T>
-void Set(LayerType layer, const Info<T>& info, const std::common_type_t<T>& value)
+void Set(LayerType layer, const ConfigInfo<T>& info, const std::common_type_t<T>& value)
 {
-  if (GetLayer(layer)->Set(info, value))
-    OnConfigChanged();
+  GetLayer(layer)->Set(info, value);
+  InvokeConfigChangedCallbacks();
 }
 
 template <typename T>
-void SetBase(const Info<T>& info, const std::common_type_t<T>& value)
+void SetBase(const ConfigInfo<T>& info, const std::common_type_t<T>& value)
 {
   Set<T>(LayerType::Base, info, value);
 }
 
 template <typename T>
-void SetCurrent(const Info<T>& info, const std::common_type_t<T>& value)
+void SetCurrent(const ConfigInfo<T>& info, const std::common_type_t<T>& value)
 {
   Set<T>(LayerType::CurrentRun, info, value);
 }
 
 template <typename T>
-void SetBaseOrCurrent(const Info<T>& info, const std::common_type_t<T>& value)
+void SetBaseOrCurrent(const ConfigInfo<T>& info, const std::common_type_t<T>& value)
 {
   if (GetActiveLayerForConfig(info) == LayerType::Base)
     Set<T>(LayerType::Base, info, value);
@@ -118,7 +97,7 @@ void SetBaseOrCurrent(const Info<T>& info, const std::common_type_t<T>& value)
     Set<T>(LayerType::CurrentRun, info, value);
 }
 
-// Used to defer OnConfigChanged until after the completion of many config changes.
+// Used to defer InvokeConfigChangedCallbacks until after the completion of many config changes.
 class ConfigChangeCallbackGuard
 {
 public:

@@ -1,5 +1,6 @@
 // Copyright 2008 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
@@ -236,8 +237,8 @@ struct AXPB
   u16 coef_select;
   u16 mixer_control;
 
-  u16 running;    // 1 = playing, anything else = stopped
-  u16 is_stream;  // 1 = stream, anything else = one shot
+  u16 running;    // 1=RUN 0=STOP
+  u16 is_stream;  // 1 = stream, 0 = one shot
 
   PBMixer mixer;
   PBInitialTimeDelay initial_time_delay;

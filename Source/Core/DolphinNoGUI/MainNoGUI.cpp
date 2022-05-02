@@ -1,5 +1,6 @@
 // Copyright 2008 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "DolphinNoGUI/Platform.h"
 
@@ -9,19 +10,14 @@
 #include <cstring>
 #include <signal.h>
 #include <string>
-#include <vector>
-
 #ifndef _WIN32
 #include <unistd.h>
-#else
-#include <Windows.h>
 #endif
 
-#include "Common/StringUtil.h"
+#include "Core/Analytics.h"
 #include "Core/Boot/Boot.h"
 #include "Core/BootManager.h"
 #include "Core/Core.h"
-#include "Core/DolphinAnalytics.h"
 #include "Core/Host.h"
 
 #include "UICommon/CommandLineParse.h"
@@ -49,22 +45,11 @@ static void signal_handler(int)
   s_platform->RequestShutdown();
 }
 
-std::vector<std::string> Host_GetPreferredLocales()
-{
-  return {};
-}
-
 void Host_NotifyMapLoaded()
 {
 }
-
 void Host_RefreshDSPDebuggerWindow()
 {
-}
-
-bool Host_UIBlocksControllerState()
-{
-  return false;
 }
 
 static Common::Event s_update_main_frame_event;
@@ -92,15 +77,14 @@ void Host_RequestRenderWindowSize(int width, int height)
 {
 }
 
+bool Host_UINeedsControllerState()
+{
+  return false;
+}
+
 bool Host_RendererHasFocus()
 {
   return s_platform->IsWindowFocused();
-}
-
-bool Host_RendererHasFullFocus()
-{
-  // Mouse capturing isn't implemented
-  return Host_RendererHasFocus();
 }
 
 bool Host_RendererIsFullscreen()
@@ -112,16 +96,15 @@ void Host_YieldToUI()
 {
 }
 
+void Host_UpdateProgressDialog(const char* caption, int position, int total)
+{
+}
+
 void Host_TitleChanged()
 {
 #ifdef USE_DISCORD_PRESENCE
   Discord::UpdateDiscordPresence();
 #endif
-}
-
-std::unique_ptr<GBAHostInterface> Host_CreateGBAHost(std::weak_ptr<HW::GBA::Core> core)
-{
-  return nullptr;
 }
 
 static std::unique_ptr<Platform> GetPlatform(const optparse::Values& options)
@@ -131,16 +114,6 @@ static std::unique_ptr<Platform> GetPlatform(const optparse::Values& options)
 #if HAVE_X11
   if (platform_name == "x11" || platform_name.empty())
     return Platform::CreateX11Platform();
-#endif
-
-#ifdef __linux__
-  if (platform_name == "fbdev" || platform_name.empty())
-    return Platform::CreateFBDevPlatform();
-#endif
-
-#ifdef _WIN32
-  if (platform_name == "win32" || platform_name.empty())
-    return Platform::CreateWin32Platform();
 #endif
 
   if (platform_name == "headless" || platform_name.empty())
@@ -157,39 +130,22 @@ int main(int argc, char* argv[])
       .help("Window platform to use [%choices]")
       .choices({
         "headless"
-#ifdef __linux__
-            ,
-            "fbdev"
-#endif
 #if HAVE_X11
             ,
             "x11"
-#endif
-#ifdef _WIN32
-            ,
-            "win32"
 #endif
       });
 
   optparse::Values& options = CommandLineParse::ParseArguments(parser.get(), argc, argv);
   std::vector<std::string> args = parser->args();
 
-  std::optional<std::string> save_state_path;
-  if (options.is_set("save_state"))
-  {
-    save_state_path = static_cast<const char*>(options.get("save_state"));
-  }
-
   std::unique_ptr<BootParameters> boot;
-  bool game_specified = false;
   if (options.is_set("exec"))
   {
     const std::list<std::string> paths_list = options.all("exec");
     const std::vector<std::string> paths{std::make_move_iterator(std::begin(paths_list)),
                                          std::make_move_iterator(std::end(paths_list))};
-    boot = BootParameters::GenerateFromFile(
-        paths, BootSessionData(save_state_path, DeleteSavestateAfterBoot::No));
-    game_specified = true;
+    boot = BootParameters::GenerateFromFile(paths);
   }
   else if (options.is_set("nand_title"))
   {
@@ -205,10 +161,8 @@ int main(int argc, char* argv[])
   }
   else if (args.size())
   {
-    boot = BootParameters::GenerateFromFile(
-        args.front(), BootSessionData(save_state_path, DeleteSavestateAfterBoot::No));
+    boot = BootParameters::GenerateFromFile(args.front());
     args.erase(args.begin());
-    game_specified = true;
   }
   else
   {
@@ -224,27 +178,17 @@ int main(int argc, char* argv[])
   UICommon::Init();
 
   s_platform = GetPlatform(options);
-  if (!s_platform)
+  if (!s_platform || !s_platform->Init())
   {
     fprintf(stderr, "No platform found, or failed to initialize.\n");
     return 1;
   }
 
-  if (save_state_path && !game_specified)
-  {
-    fprintf(stderr, "A save state cannot be loaded without specifying a game to launch.\n");
-    return 1;
-  }
-
-  Core::AddOnStateChangedCallback([](Core::State state) {
+  Core::SetOnStateChangedCallback([](Core::State state) {
     if (state == Core::State::Uninitialized)
       s_platform->Stop();
   });
 
-#ifdef _WIN32
-  signal(SIGINT, signal_handler);
-  signal(SIGTERM, signal_handler);
-#else
   // Shut down cleanly on SIGINT and SIGTERM
   struct sigaction sa;
   sa.sa_handler = signal_handler;
@@ -252,7 +196,6 @@ int main(int argc, char* argv[])
   sa.sa_flags = SA_RESETHAND;
   sigaction(SIGINT, &sa, nullptr);
   sigaction(SIGTERM, &sa, nullptr);
-#endif
 
   DolphinAnalytics::Instance().ReportDolphinStart("nogui");
 

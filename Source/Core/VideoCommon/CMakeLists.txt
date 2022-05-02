@@ -27,14 +27,10 @@ add_library(videocommon
   DriverDetails.h
   Fifo.cpp
   Fifo.h
-  FPSCounter.cpp
-  FPSCounter.h
   FramebufferManager.cpp
   FramebufferManager.h
   FramebufferShaderGen.cpp
   FramebufferShaderGen.h
-  FreeLookCamera.cpp
-  FreeLookCamera.h
   GeometryShaderGen.cpp
   GeometryShaderGen.h
   GeometryShaderManager.cpp
@@ -42,16 +38,14 @@ add_library(videocommon
   HiresTextures.cpp
   HiresTextures.h
   HiresTextures_DDSLoader.cpp
+  ImageWrite.cpp
+  ImageWrite.h
   IndexGenerator.cpp
   IndexGenerator.h
   LightingShaderGen.cpp
   LightingShaderGen.h
   LookUpTables.h
   NativeVertexFormat.h
-  NetPlayChatUI.cpp
-  NetPlayChatUI.h
-  NetPlayGolfUI.cpp
-  NetPlayGolfUI.h
   OnScreenDisplay.cpp
   OnScreenDisplay.h
   OpcodeDecoding.cpp
@@ -65,11 +59,13 @@ add_library(videocommon
   PixelShaderManager.cpp
   PixelShaderManager.h
   PostProcessing.cpp
+  RasterFont.cpp
   PostProcessing.h
   RenderBase.cpp
   RenderBase.h
   RenderState.cpp
   RenderState.h
+  SamplerCommon.h
   ShaderCache.cpp
   ShaderCache.h
   ShaderGenCommon.cpp
@@ -87,16 +83,6 @@ add_library(videocommon
   TextureDecoder.h
   TextureDecoder_Common.cpp
   TextureDecoder_Util.h
-  TextureInfo.cpp
-  TextureInfo.h
-  TMEM.cpp
-  TMEM.h
-  UberShaderCommon.cpp
-  UberShaderCommon.h
-  UberShaderPixel.cpp
-  UberShaderPixel.h
-  UberShaderVertex.cpp
-  UberShaderVertex.h
   VertexLoader.cpp
   VertexLoader.h
   VertexLoaderBase.cpp
@@ -135,10 +121,8 @@ target_link_libraries(videocommon
 PUBLIC
   core
 PRIVATE
-  fmt::fmt
   png
   xxhash
-  imgui
 )
 
 if(_M_X86)
@@ -168,15 +152,6 @@ if(FFmpeg_FOUND)
     FFmpeg::avcodec
     FFmpeg::avformat
     FFmpeg::avutil
-    FFmpeg::swresample
     FFmpeg::swscale
   )
-  if(APPLE)
-    target_link_libraries(videocommon PRIVATE
-      ${COREMEDIA_LIBRARY}
-      ${VIDEOTOOLBOX_LIBRARY}
-      ${COREVIDEO_LIBRARY}
-      ${AUDIOTOOLBOX_LIBRARY}
-    )
-  endif()
 endif()

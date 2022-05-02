@@ -1,7 +1,6 @@
-// SPDX-License-Identifier: GPL-2.0-or-later
-
 package org.dolphinemu.dolphinemu.utils;
 
+import android.app.Activity;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
@@ -12,13 +11,9 @@ import android.hardware.usb.UsbDeviceConnection;
 import android.hardware.usb.UsbEndpoint;
 import android.hardware.usb.UsbInterface;
 import android.hardware.usb.UsbManager;
-import android.os.Build;
 import android.widget.Toast;
 
-import androidx.annotation.Keep;
-
-import org.dolphinemu.dolphinemu.DolphinApplication;
-import org.dolphinemu.dolphinemu.R;
+import org.dolphinemu.dolphinemu.activities.EmulationActivity;
 import org.dolphinemu.dolphinemu.services.USBPermService;
 
 import java.util.HashMap;
@@ -27,8 +22,6 @@ import java.util.Map;
 public class Java_GCAdapter
 {
   public static UsbManager manager;
-
-  @Keep
   static byte[] controller_payload = new byte[37];
 
   static UsbDeviceConnection usb_con;
@@ -38,25 +31,31 @@ public class Java_GCAdapter
 
   private static void RequestPermission()
   {
-    HashMap<String, UsbDevice> devices = manager.getDeviceList();
-    for (Map.Entry<String, UsbDevice> pair : devices.entrySet())
+    Context context = EmulationActivity.get();
+    if (context != null)
     {
-      UsbDevice dev = pair.getValue();
-      if (dev.getProductId() == 0x0337 && dev.getVendorId() == 0x057e)
+      HashMap<String, UsbDevice> devices = manager.getDeviceList();
+      for (Map.Entry<String, UsbDevice> pair : devices.entrySet())
       {
-        if (!manager.hasPermission(dev))
+        UsbDevice dev = pair.getValue();
+        if (dev.getProductId() == 0x0337 && dev.getVendorId() == 0x057e)
         {
-          Context context = DolphinApplication.getAppContext();
-          Intent intent = new Intent(context, USBPermService.class);
-
-          int flags = Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ?
-                  PendingIntent.FLAG_IMMUTABLE : 0;
-          PendingIntent pendingIntent = PendingIntent.getService(context, 0, intent, flags);
-
-          manager.requestPermission(dev, pendingIntent);
+          if (!manager.hasPermission(dev))
+          {
+            Intent intent = new Intent();
+            PendingIntent pend_intent;
+            intent.setClass(context, USBPermService.class);
+            pend_intent = PendingIntent.getService(context, 0, intent, 0);
+            manager.requestPermission(dev, pend_intent);
+          }
         }
       }
     }
+    else
+    {
+      Log.warning("Cannot request GameCube Adapter permission as EmulationActivity is null.");
+    }
+
   }
 
   public static void Shutdown()
@@ -64,13 +63,11 @@ public class Java_GCAdapter
     usb_con.close();
   }
 
-  @Keep
   public static int GetFD()
   {
     return usb_con.getFileDescriptor();
   }
 
-  @Keep
   public static boolean QueryAdapter()
   {
     HashMap<String, UsbDevice> devices = manager.getDeviceList();
@@ -94,19 +91,16 @@ public class Java_GCAdapter
     usb_con.bulkTransfer(usb_out, init, init.length, 0);
   }
 
-  @Keep
   public static int Input()
   {
     return usb_con.bulkTransfer(usb_in, controller_payload, controller_payload.length, 16);
   }
 
-  @Keep
   public static int Output(byte[] rumble)
   {
     return usb_con.bulkTransfer(usb_out, rumble, 5, 16);
   }
 
-  @Keep
   public static boolean OpenAdapter()
   {
     HashMap<String, UsbDevice> devices = manager.getDeviceList();
@@ -147,8 +141,17 @@ public class Java_GCAdapter
             }
           }
 
-          Toast.makeText(DolphinApplication.getAppContext(), R.string.replug_gc_adapter,
-                  Toast.LENGTH_LONG).show();
+          final Activity emulationActivity = EmulationActivity.get();
+          if (emulationActivity != null)
+          {
+            emulationActivity.runOnUiThread(() -> Toast.makeText(emulationActivity,
+              "GameCube Adapter couldn't be opened. Please re-plug the device.",
+              Toast.LENGTH_LONG).show());
+          }
+          else
+          {
+            Log.warning("Cannot show toast for GameCube Adapter failure.");
+          }
           usb_con.close();
         }
       }

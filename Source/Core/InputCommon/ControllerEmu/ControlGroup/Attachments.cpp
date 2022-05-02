@@ -1,5 +1,6 @@
 // Copyright 2017 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "InputCommon/ControllerEmu/ControlGroup/Attachments.h"
 
@@ -16,23 +17,12 @@ void Attachments::AddAttachment(std::unique_ptr<EmulatedController> att)
 
 u32 Attachments::GetSelectedAttachment() const
 {
-  // This is originally an int, treat it as such
-  const int value = m_selection_value.GetValue();
-
-  if (value > 0 && static_cast<size_t>(value) < m_attachments.size())
-    return u32(value);
-
-  return 0;
+  return m_selected_attachment;
 }
 
 void Attachments::SetSelectedAttachment(u32 val)
 {
-  m_selection_setting.SetValue(val);
-}
-
-NumericSetting<int>& Attachments::GetSelectionSetting()
-{
-  return m_selection_setting;
+  m_selected_attachment = val;
 }
 
 const std::vector<std::unique_ptr<EmulatedController>>& Attachments::GetAttachmentList() const

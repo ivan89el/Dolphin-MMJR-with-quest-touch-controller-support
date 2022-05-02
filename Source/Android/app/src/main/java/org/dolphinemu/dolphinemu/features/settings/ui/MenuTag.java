@@ -1,28 +1,21 @@
-// SPDX-License-Identifier: GPL-2.0-or-later
-
 package org.dolphinemu.dolphinemu.features.settings.ui;
 
-import androidx.annotation.NonNull;
+import android.support.annotation.Nullable;
 
 public enum MenuTag
 {
-  SETTINGS("settings"),
+  CONFIG("config"),
   CONFIG_GENERAL("config_general"),
   CONFIG_INTERFACE("config_interface"),
-  CONFIG_AUDIO("config_audio"),
-  CONFIG_PATHS("config_paths"),
   CONFIG_GAME_CUBE("config_gamecube"),
   CONFIG_WII("config_wii"),
-  CONFIG_ADVANCED("config_advanced"),
-  CONFIG_LOG("config_log"),
-  DEBUG("debug"),
-  GRAPHICS("graphics"),
-  ENHANCEMENTS("enhancements"),
-  HACKS("hacks"),
-  ADVANCED_GRAPHICS("advanced_graphics"),
-  GCPAD_TYPE("gc_pad_type"),
   WIIMOTE("wiimote"),
   WIIMOTE_EXTENSION("wiimote_extension"),
+  GCPAD_TYPE("gc_pad_type"),
+  GRAPHICS("graphics"),
+  HACKS("hacks"),
+  DEBUG("debug"),
+  ENHANCEMENTS("enhancements"),
   GCPAD_1("gcpad", 0),
   GCPAD_2("gcpad", 1),
   GCPAD_3("gcpad", 2),
@@ -50,13 +43,12 @@ public enum MenuTag
     this.subType = subtype;
   }
 
-  @NonNull
   @Override
   public String toString()
   {
     if (subType != -1)
     {
-      return tag + subType;
+      return tag + "|" + subType;
     }
 
     return tag;
@@ -85,7 +77,7 @@ public enum MenuTag
   public boolean isWiimoteExtensionMenu()
   {
     return this == WIIMOTE_EXTENSION_1 || this == WIIMOTE_EXTENSION_2
-            || this == WIIMOTE_EXTENSION_3 || this == WIIMOTE_EXTENSION_4;
+      || this == WIIMOTE_EXTENSION_3 || this == WIIMOTE_EXTENSION_4;
   }
 
   public static MenuTag getGCPadMenuTag(int subtype)
@@ -103,6 +95,24 @@ public enum MenuTag
     return getMenuTag("wiimote_extension", subtype);
   }
 
+  @Nullable
+  public static MenuTag getMenuTag(String menuTagStr)
+  {
+    if (menuTagStr == null || menuTagStr.isEmpty())
+    {
+      return null;
+    }
+    String tag = menuTagStr;
+    int subtype = -1;
+    int sep = menuTagStr.indexOf('|');
+    if (sep != -1)
+    {
+      tag = menuTagStr.substring(0, sep);
+      subtype = Integer.parseInt(menuTagStr.substring(sep + 1));
+    }
+    return getMenuTag(tag, subtype);
+  }
+
   private static MenuTag getMenuTag(String tag, int subtype)
   {
     for (MenuTag menuTag : MenuTag.values())
@@ -111,6 +121,6 @@ public enum MenuTag
     }
 
     throw new IllegalArgumentException("You are asking for a menu that is not available or " +
-            "passing a wrong subtype");
+      "passing a wrong subtype");
   }
 }

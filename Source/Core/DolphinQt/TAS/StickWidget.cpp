@@ -1,5 +1,6 @@
 // Copyright 2018 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "DolphinQt/TAS/StickWidget.h"
 
@@ -11,17 +12,12 @@
 
 #include "Common/CommonTypes.h"
 
-constexpr int PADDING = 1;
-
 StickWidget::StickWidget(QWidget* parent, u16 max_x, u16 max_y)
     : QWidget(parent), m_max_x(max_x), m_max_y(max_y)
 {
   setMouseTracking(false);
   setToolTip(tr("Left click to set the stick value.\n"
                 "Right click to re-center it."));
-
-  // If the widget gets too small, it will get deformed.
-  setMinimumSize(QSize(64, 64));
 }
 
 void StickWidget::SetX(u16 x)
@@ -45,27 +41,22 @@ void StickWidget::paintEvent(QPaintEvent* event)
   painter.setRenderHint(QPainter::Antialiasing, true);
   painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
 
-  const int diameter = std::min(width(), height()) - PADDING * 2;
-
-  // inscribe the StickWidget inside a square
-  painter.fillRect(PADDING, PADDING, diameter, diameter, Qt::lightGray);
-
   painter.setBrush(Qt::white);
-  painter.drawEllipse(PADDING, PADDING, diameter, diameter);
+  painter.drawEllipse(0, 0, width() - 1, height() - 1);
 
-  painter.drawLine(PADDING, PADDING + diameter / 2, PADDING + diameter, PADDING + diameter / 2);
-  painter.drawLine(PADDING + diameter / 2, PADDING, PADDING + diameter / 2, PADDING + diameter);
+  painter.drawLine(0, height() / 2, width(), height() / 2);
+  painter.drawLine(width() / 2, 0, width() / 2, height());
 
   // convert from value space to widget space
-  u16 x = PADDING + ((m_x * diameter) / m_max_x);
-  u16 y = PADDING + (diameter - (m_y * diameter) / m_max_y);
+  u16 x = (m_x * width()) / m_max_x;
+  u16 y = height() - (m_y * height()) / m_max_y;
 
-  painter.drawLine(PADDING + diameter / 2, PADDING + diameter / 2, x, y);
+  painter.drawLine(width() / 2, height() / 2, x, y);
 
   painter.setBrush(Qt::blue);
-  int neutral_radius = diameter / 30;
-  painter.drawEllipse(x - neutral_radius, y - neutral_radius, neutral_radius * 2,
-                      neutral_radius * 2);
+  int wh_avg = (width() + height()) / 2;
+  int radius = wh_avg / 30;
+  painter.drawEllipse(x - radius, y - radius, radius * 2, radius * 2);
 }
 
 void StickWidget::mousePressEvent(QMouseEvent* event)

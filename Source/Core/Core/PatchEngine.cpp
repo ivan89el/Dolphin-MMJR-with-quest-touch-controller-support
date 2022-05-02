@@ -1,5 +1,6 @@
 // Copyright 2008 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 // PatchEngine
 // Supports simple memory patches, and has a partial Action Replay implementation
@@ -11,19 +12,16 @@
 #include <array>
 #include <iterator>
 #include <map>
-#include <optional>
+#include <set>
 #include <string>
 #include <vector>
-
-#include <fmt/format.h>
 
 #include "Common/Assert.h"
 #include "Common/IniFile.h"
 #include "Common/StringUtil.h"
 
 #include "Core/ActionReplay.h"
-#include "Core/CheatCodes.h"
-#include "Core/Config/SessionSettings.h"
+#include "Core/Config/MainSettings.h"
 #include "Core/ConfigManager.h"
 #include "Core/GeckoCode.h"
 #include "Core/GeckoCodeConfig.h"
@@ -46,55 +44,23 @@ const char* PatchTypeAsString(PatchType type)
   return s_patch_type_strings.at(static_cast<int>(type));
 }
 
-std::optional<PatchEntry> DeserializeLine(std::string line)
+void LoadPatchSection(const std::string& section, std::vector<Patch>& patches, IniFile& globalIni,
+                      IniFile& localIni)
 {
-  std::string::size_type loc = line.find('=');
-  if (loc != std::string::npos)
-    line[loc] = ':';
-
-  const std::vector<std::string> items = SplitString(line, ':');
-  PatchEntry entry;
-
-  if (items.size() < 3)
-    return std::nullopt;
-
-  if (!TryParse(items[0], &entry.address))
-    return std::nullopt;
-  if (!TryParse(items[2], &entry.value))
-    return std::nullopt;
-
-  if (items.size() >= 4)
+  // Load the name of all enabled patches
+  std::string enabledSectionName = section + "_Enabled";
+  std::vector<std::string> enabledLines;
+  std::set<std::string> enabledNames;
+  localIni.GetLines(enabledSectionName, &enabledLines);
+  for (const std::string& line : enabledLines)
   {
-    if (!TryParse(items[3], &entry.comparand))
-      return std::nullopt;
-    entry.conditional = true;
+    if (!line.empty() && line[0] == '$')
+    {
+      std::string name = line.substr(1, line.size() - 1);
+      enabledNames.insert(name);
+    }
   }
 
-  const auto iter = std::find(s_patch_type_strings.begin(), s_patch_type_strings.end(), items[1]);
-  if (iter == s_patch_type_strings.end())
-    return std::nullopt;
-  entry.type = static_cast<PatchType>(std::distance(s_patch_type_strings.begin(), iter));
-
-  return entry;
-}
-
-std::string SerializeLine(const PatchEntry& entry)
-{
-  if (entry.conditional)
-  {
-    return fmt::format("0x{:08X}:{}:0x{:08X}:0x{:08X}", entry.address,
-                       PatchEngine::PatchTypeAsString(entry.type), entry.value, entry.comparand);
-  }
-  else
-  {
-    return fmt::format("0x{:08X}:{}:0x{:08X}", entry.address,
-                       PatchEngine::PatchTypeAsString(entry.type), entry.value);
-  }
-}
-
-void LoadPatchSection(const std::string& section, std::vector<Patch>* patches,
-                      const IniFile& globalIni, const IniFile& localIni)
-{
   const IniFile* inis[2] = {&globalIni, &localIni};
 
   for (const IniFile* ini : inis)
@@ -113,59 +79,51 @@ void LoadPatchSection(const std::string& section, std::vector<Patch>* patches,
         // Take care of the previous code
         if (!currentPatch.name.empty())
         {
-          patches->push_back(currentPatch);
+          patches.push_back(currentPatch);
         }
         currentPatch.entries.clear();
 
-        // Set name and whether the patch is user defined
+        // Set active and name
         currentPatch.name = line.substr(1, line.size() - 1);
+        currentPatch.active = enabledNames.find(currentPatch.name) != enabledNames.end();
         currentPatch.user_defined = (ini == &localIni);
       }
       else
       {
-        if (std::optional<PatchEntry> entry = DeserializeLine(line))
-          currentPatch.entries.push_back(*entry);
+        std::string::size_type loc = line.find('=');
+
+        if (loc != std::string::npos)
+        {
+          line[loc] = ':';
+        }
+
+        const std::vector<std::string> items = SplitString(line, ':');
+
+        if (items.size() >= 3)
+        {
+          PatchEntry pE;
+          bool success = true;
+          success &= TryParse(items[0], &pE.address);
+          success &= TryParse(items[2], &pE.value);
+
+          const auto iter =
+              std::find(s_patch_type_strings.begin(), s_patch_type_strings.end(), items[1]);
+          pE.type = PatchType(std::distance(s_patch_type_strings.begin(), iter));
+
+          success &= (pE.type != (PatchType)3);
+          if (success)
+          {
+            currentPatch.entries.push_back(pE);
+          }
+        }
       }
     }
 
     if (!currentPatch.name.empty() && !currentPatch.entries.empty())
     {
-      patches->push_back(currentPatch);
-    }
-
-    ReadEnabledAndDisabled(*ini, section, patches);
-
-    if (ini == &globalIni)
-    {
-      for (Patch& patch : *patches)
-        patch.default_enabled = patch.enabled;
+      patches.push_back(currentPatch);
     }
   }
-}
-
-void SavePatchSection(IniFile* local_ini, const std::vector<Patch>& patches)
-{
-  std::vector<std::string> lines;
-  std::vector<std::string> lines_enabled;
-  std::vector<std::string> lines_disabled;
-
-  for (const auto& patch : patches)
-  {
-    if (patch.enabled != patch.default_enabled)
-      (patch.enabled ? lines_enabled : lines_disabled).emplace_back('$' + patch.name);
-
-    if (!patch.user_defined)
-      continue;
-
-    lines.emplace_back('$' + patch.name);
-
-    for (const PatchEntry& entry : patch.entries)
-      lines.emplace_back(SerializeLine(entry));
-  }
-
-  local_ini->SetLines("OnFrame_Enabled", lines_enabled);
-  local_ini->SetLines("OnFrame_Disabled", lines_disabled);
-  local_ini->SetLines("OnFrame", lines);
 }
 
 static void LoadSpeedhacks(const std::string& section, IniFile& ini)
@@ -206,18 +164,18 @@ void LoadPatches()
   IniFile globalIni = SConfig::GetInstance().LoadDefaultGameIni();
   IniFile localIni = SConfig::GetInstance().LoadLocalGameIni();
 
-  LoadPatchSection("OnFrame", &s_on_frame, globalIni, localIni);
+  LoadPatchSection("OnFrame", s_on_frame, globalIni, localIni);
 
   // Check if I'm syncing Codes
-  if (Config::Get(Config::SESSION_CODE_SYNC_OVERRIDE))
+  if (Config::Get(Config::MAIN_CODE_SYNC_OVERRIDE))
   {
     Gecko::SetSyncedCodesAsActive();
     ActionReplay::SetSyncedCodesAsActive();
   }
   else
   {
-    Gecko::SetActiveCodes(Gecko::LoadCodes(globalIni, localIni));
     ActionReplay::LoadAndApplyCodes(globalIni, localIni);
+    Gecko::SetActiveCodes(Gecko::LoadCodes(globalIni, localIni));
   }
 
   LoadSpeedhacks("Speedhacks", merged);
@@ -227,26 +185,22 @@ static void ApplyPatches(const std::vector<Patch>& patches)
 {
   for (const Patch& patch : patches)
   {
-    if (patch.enabled)
+    if (patch.active)
     {
       for (const PatchEntry& entry : patch.entries)
       {
         u32 addr = entry.address;
         u32 value = entry.value;
-        u32 comparand = entry.comparand;
         switch (entry.type)
         {
         case PatchType::Patch8Bit:
-          if (!entry.conditional || PowerPC::HostRead_U8(addr) == static_cast<u8>(comparand))
-            PowerPC::HostWrite_U8(static_cast<u8>(value), addr);
+          PowerPC::HostWrite_U8(static_cast<u8>(value), addr);
           break;
         case PatchType::Patch16Bit:
-          if (!entry.conditional || PowerPC::HostRead_U16(addr) == static_cast<u16>(comparand))
-            PowerPC::HostWrite_U16(static_cast<u16>(value), addr);
+          PowerPC::HostWrite_U16(static_cast<u16>(value), addr);
           break;
         case PatchType::Patch32Bit:
-          if (!entry.conditional || PowerPC::HostRead_U32(addr) == comparand)
-            PowerPC::HostWrite_U32(value, addr);
+          PowerPC::HostWrite_U32(value, addr);
           break;
         default:
           // unknown patchtype
@@ -277,8 +231,7 @@ static bool IsStackSane()
 
   // Check the link register makes sense (that it points to a valid IBAT address)
   const u32 address = PowerPC::HostRead_U32(next_SP + 4);
-  return PowerPC::HostIsInstructionRAMAddress(address) &&
-         0 != PowerPC::HostRead_Instruction(address);
+  return PowerPC::HostIsInstructionRAMAddress(address) && 0 != PowerPC::HostRead_U32(address);
 }
 
 bool ApplyFramePatches()
@@ -289,10 +242,10 @@ bool ApplyFramePatches()
   // where we can try again after the CPU hopefully returns back to the normal instruction flow.
   if (!MSR.DR || !MSR.IR || !IsStackSane())
   {
-    DEBUG_LOG_FMT(ACTIONREPLAY,
-                  "Need to retry later. CPU configuration is currently incorrect. PC = {:#010x}, "
-                  "MSR = {:#010x}",
-                  PC, MSR.Hex);
+    DEBUG_LOG(
+        ACTIONREPLAY,
+        "Need to retry later. CPU configuration is currently incorrect. PC = 0x%08X, MSR = 0x%08X",
+        PC, MSR.Hex);
     return false;
   }
 

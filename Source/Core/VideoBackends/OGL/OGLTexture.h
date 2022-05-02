@@ -1,11 +1,10 @@
 // Copyright 2017 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
 #include <memory>
-#include <string>
-#include <string_view>
 #include <vector>
 
 #include "Common/GL/GLUtil.h"
@@ -19,7 +18,7 @@ namespace OGL
 class OGLTexture final : public AbstractTexture
 {
 public:
-  explicit OGLTexture(const TextureConfig& tex_config, std::string_view name);
+  explicit OGLTexture(const TextureConfig& tex_config);
   ~OGLTexture();
 
   void CopyRectangleFromTexture(const AbstractTexture* src,
@@ -44,7 +43,6 @@ private:
                        u32 dst_layer, u32 dst_level);
 
   GLuint m_texId;
-  std::string m_name;
 };
 
 class OGLStagingTexture final : public AbstractStagingTexture

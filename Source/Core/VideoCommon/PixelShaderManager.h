@@ -1,5 +1,6 @@
 // Copyright 2008 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
@@ -30,7 +31,6 @@ public:
   static void SetAlphaTestChanged();
   static void SetDestAlphaChanged();
   static void SetTexDims(int texmapid, u32 width, u32 height);
-  static void SetSamplerState(int texmapid, u32 tm0, u32 tm1);
   static void SetZTextureBias();
   static void SetViewportChanged();
   static void SetEfbScaleChanged(float scalex, float scaley);
@@ -51,9 +51,4 @@ public:
 
   static PixelShaderConstants constants;
   static bool dirty;
-
-  static bool s_bFogRangeAdjustChanged;
-  static bool s_bViewPortChanged;
-  static bool s_bIndirectDirty;
-  static bool s_bDestAlphaDirty;
 };

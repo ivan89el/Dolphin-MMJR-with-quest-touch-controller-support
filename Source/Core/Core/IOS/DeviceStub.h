@@ -1,5 +1,6 @@
 // Copyright 2016 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
@@ -9,15 +10,15 @@
 #include "Core/IOS/Device.h"
 #include "Core/IOS/IOS.h"
 
-namespace IOS::HLE
+namespace IOS::HLE::Device
 {
-class DeviceStub final : public Device
+class Stub final : public Device
 {
 public:
   // Inherit the constructor from the Device class, since we don't need to do anything special.
   using Device::Device;
-  std::optional<IPCReply> Open(const OpenRequest& request) override;
-  std::optional<IPCReply> IOCtl(const IOCtlRequest& request) override;
-  std::optional<IPCReply> IOCtlV(const IOCtlVRequest& request) override;
+  IPCCommandResult Open(const OpenRequest& request) override;
+  IPCCommandResult IOCtl(const IOCtlRequest& request) override;
+  IPCCommandResult IOCtlV(const IOCtlVRequest& request) override;
 };
-}  // namespace IOS::HLE
+}  // namespace IOS::HLE::Device

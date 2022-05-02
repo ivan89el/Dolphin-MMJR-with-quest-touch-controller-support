@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CC0-1.0
+// This file is under the public domain.
 
 #pragma once
 
@@ -102,6 +102,8 @@ inline int LeastSignificantSetBit(u64 val)
 //   (This uses the appropriate CPU instruction to find the next set bit in one
 //   operation.)
 // - Counting set bits using .Count() - see comment on that method.
+
+// TODO: use constexpr when MSVC gets out of the Dark Ages
 
 template <typename IntTy>
 class BitSet

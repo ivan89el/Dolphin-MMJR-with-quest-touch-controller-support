@@ -1,11 +1,12 @@
 // Copyright 2018 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include <algorithm>
 #include <memory>
 
+#include "Common/File.h"
 #include "Common/FileUtil.h"
-#include "Common/IOFile.h"
 #include "Common/Logging/Log.h"
 #include "Common/MsgHandler.h"
 
@@ -46,15 +47,15 @@ std::shared_ptr<File::IOFile> HostFileSystem::OpenHostFile(const std::string& ho
   while (!file.Open(host_path, "r+b"))
   {
     const bool try_again =
-        PanicYesNoFmt("File \"{}\" could not be opened!\n"
-                      "This may happen with improper permissions or use by another process.\n"
-                      "Press \"Yes\" to make another attempt.",
-                      host_path);
+        PanicYesNo("File \"%s\" could not be opened!\n"
+                   "This may happen with improper permissions or use by another process.\n"
+                   "Press \"Yes\" to make another attempt.",
+                   host_path.c_str());
 
     if (!try_again)
     {
       // We've failed to open the file:
-      ERROR_LOG_FMT(IOS_FS, "OpenHostFile {}", host_path);
+      ERROR_LOG(IOS_FS, "OpenHostFile %s", host_path.c_str());
       return nullptr;
     }
   }
@@ -80,7 +81,7 @@ Result<FileHandle> HostFileSystem::OpenFile(Uid, Gid, const std::string& path, M
   if (!handle)
     return ResultCode::NoFreeHandle;
 
-  const std::string host_path = BuildFilename(path).host_path;
+  const std::string host_path = BuildFilename(path);
   if (!File::IsFile(host_path))
   {
     *handle = Handle{};

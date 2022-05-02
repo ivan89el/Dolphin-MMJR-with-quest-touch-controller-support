@@ -1,25 +1,16 @@
 // Copyright 2017 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
-#include <queue>
 #include <string>
 
 #include "Common/CommonTypes.h"
-#include "Common/SocketContext.h"
-#include "Common/WorkQueueThread.h"
 #include "Core/IOS/Device.h"
 
 #ifdef _WIN32
 #include <ws2tcpip.h>
-#endif
-
-// WSAPoll doesn't support POLLPRI and POLLWRBAND flags
-#ifdef _WIN32
-constexpr int UNSUPPORTED_WSAPOLL = POLLPRI | POLLWRBAND;
-#else
-constexpr int UNSUPPORTED_WSAPOLL = 0;
 #endif
 
 namespace IOS::HLE
@@ -45,83 +36,66 @@ enum NET_IOCTL
   IOCTL_SO_GETHOSTBYNAME,
   IOCTL_SO_GETHOSTBYADDR,
   IOCTLV_SO_GETNAMEINFO,
-  IOCTL_SO_GETLASTERROR,
+  IOCTL_SO_UNK14,
   IOCTL_SO_INETATON,
   IOCTL_SO_INETPTON,
   IOCTL_SO_INETNTOP,
   IOCTLV_SO_GETADDRINFO,
   IOCTL_SO_SOCKATMARK,
-  IOCTLV_SO_STARTUP,
-  IOCTLV_SO_CLEANUP,
+  IOCTLV_SO_UNK1A,
+  IOCTLV_SO_UNK1B,
   IOCTLV_SO_GETINTERFACEOPT,
   IOCTLV_SO_SETINTERFACEOPT,
   IOCTL_SO_SETINTERFACE,
-  IOCTL_SO_INITINTERFACE,
+  IOCTL_SO_STARTUP,
   IOCTL_SO_ICMPSOCKET = 0x30,
   IOCTLV_SO_ICMPPING,
   IOCTL_SO_ICMPCANCEL,
   IOCTL_SO_ICMPCLOSE
 };
 
-class NetIPTopDevice : public Device
+namespace Device
+{
+class NetIPTop : public Device
 {
 public:
-  NetIPTopDevice(Kernel& ios, const std::string& device_name);
+  NetIPTop(Kernel& ios, const std::string& device_name);
+  virtual ~NetIPTop();
 
-  void DoState(PointerWrap& p) override;
-  std::optional<IPCReply> IOCtl(const IOCtlRequest& request) override;
-  std::optional<IPCReply> IOCtlV(const IOCtlVRequest& request) override;
+  IPCCommandResult IOCtl(const IOCtlRequest& request) override;
+  IPCCommandResult IOCtlV(const IOCtlVRequest& request) override;
 
   void Update() override;
 
 private:
-  struct AsyncTask
-  {
-    IOS::HLE::Request request;
-    std::function<IPCReply()> handler;
-  };
+  IPCCommandResult HandleStartUpRequest(const IOCtlRequest& request);
+  IPCCommandResult HandleSocketRequest(const IOCtlRequest& request);
+  IPCCommandResult HandleICMPSocketRequest(const IOCtlRequest& request);
+  IPCCommandResult HandleCloseRequest(const IOCtlRequest& request);
+  IPCCommandResult HandleDoSockRequest(const IOCtlRequest& request);
+  IPCCommandResult HandleShutdownRequest(const IOCtlRequest& request);
+  IPCCommandResult HandleListenRequest(const IOCtlRequest& request);
+  IPCCommandResult HandleGetSockOptRequest(const IOCtlRequest& request);
+  IPCCommandResult HandleSetSockOptRequest(const IOCtlRequest& request);
+  IPCCommandResult HandleGetSockNameRequest(const IOCtlRequest& request);
+  IPCCommandResult HandleGetPeerNameRequest(const IOCtlRequest& request);
+  IPCCommandResult HandleGetHostIDRequest(const IOCtlRequest& request);
+  IPCCommandResult HandleInetAToNRequest(const IOCtlRequest& request);
+  IPCCommandResult HandleInetPToNRequest(const IOCtlRequest& request);
+  IPCCommandResult HandleInetNToPRequest(const IOCtlRequest& request);
+  IPCCommandResult HandlePollRequest(const IOCtlRequest& request);
+  IPCCommandResult HandleGetHostByNameRequest(const IOCtlRequest& request);
+  IPCCommandResult HandleICMPCancelRequest(const IOCtlRequest& request);
 
-  struct AsyncReply
-  {
-    IOS::HLE::Request request;
-    s32 return_value;
-  };
+  IPCCommandResult HandleGetInterfaceOptRequest(const IOCtlVRequest& request);
+  IPCCommandResult HandleSendToRequest(const IOCtlVRequest& request);
+  IPCCommandResult HandleRecvFromRequest(const IOCtlVRequest& request);
+  IPCCommandResult HandleGetAddressInfoRequest(const IOCtlVRequest& request);
+  IPCCommandResult HandleICMPPingRequest(const IOCtlVRequest& request);
 
-  template <typename Method, typename Request>
-  std::optional<IPCReply> LaunchAsyncTask(Method method, const Request& request)
-  {
-    m_work_queue.EmplaceItem(AsyncTask{request, std::bind(method, this, request)});
-    return std::nullopt;
-  }
-
-  IPCReply HandleInitInterfaceRequest(const IOCtlRequest& request);
-  IPCReply HandleSocketRequest(const IOCtlRequest& request);
-  IPCReply HandleICMPSocketRequest(const IOCtlRequest& request);
-  IPCReply HandleCloseRequest(const IOCtlRequest& request);
-  std::optional<IPCReply> HandleDoSockRequest(const IOCtlRequest& request);
-  IPCReply HandleShutdownRequest(const IOCtlRequest& request);
-  IPCReply HandleListenRequest(const IOCtlRequest& request);
-  IPCReply HandleGetSockOptRequest(const IOCtlRequest& request);
-  IPCReply HandleSetSockOptRequest(const IOCtlRequest& request);
-  IPCReply HandleGetSockNameRequest(const IOCtlRequest& request);
-  IPCReply HandleGetPeerNameRequest(const IOCtlRequest& request);
-  IPCReply HandleGetHostIDRequest(const IOCtlRequest& request);
-  IPCReply HandleInetAToNRequest(const IOCtlRequest& request);
-  IPCReply HandleInetPToNRequest(const IOCtlRequest& request);
-  IPCReply HandleInetNToPRequest(const IOCtlRequest& request);
-  std::optional<IPCReply> HandlePollRequest(const IOCtlRequest& request);
-  IPCReply HandleGetHostByNameRequest(const IOCtlRequest& request);
-  IPCReply HandleICMPCancelRequest(const IOCtlRequest& request);
-
-  IPCReply HandleGetInterfaceOptRequest(const IOCtlVRequest& request);
-  std::optional<IPCReply> HandleSendToRequest(const IOCtlVRequest& request);
-  std::optional<IPCReply> HandleRecvFromRequest(const IOCtlVRequest& request);
-  IPCReply HandleGetAddressInfoRequest(const IOCtlVRequest& request);
-  IPCReply HandleICMPPingRequest(const IOCtlVRequest& request);
-
-  Common::SocketContext m_socket_context;
-  Common::WorkQueueThread<AsyncTask> m_work_queue;
-  std::mutex m_async_reply_lock;
-  std::queue<AsyncReply> m_async_replies;
+#ifdef _WIN32
+  WSADATA InitData;
+#endif
 };
+}  // namespace Device
 }  // namespace IOS::HLE

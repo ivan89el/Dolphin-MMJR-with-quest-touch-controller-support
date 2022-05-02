@@ -1,5 +1,6 @@
 // Copyright 2017 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
@@ -17,14 +18,14 @@ public:
 
   void AddInput(std::string button_name, bool toggle = false);
 
-  void UpdateState();
+  void GetState();
 
-  const std::vector<bool>& IsSettingToggled() const;
-  const std::vector<bool>& GetSettingsModifier() const;
+  const std::vector<bool>& isSettingToggled() const;
+  const std::vector<bool>& getSettingsModifier() const;
 
 private:
-  std::vector<bool> m_threshold_exceeded;  // internal calculation (if "state" was above threshold)
-  std::vector<bool> m_associated_settings_toggle;  // is setting toggled or hold?
-  std::vector<bool> m_associated_settings;         // result
+  std::vector<bool> threshold_exceeded;  // internal calculation (if "state" was above threshold)
+  std::vector<bool> associated_settings_toggle;  // is setting toggled or hold?
+  std::vector<bool> associated_settings;         // result
 };
 }  // namespace ControllerEmu

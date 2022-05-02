@@ -1,5 +1,6 @@
 // Copyright 2017 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
@@ -7,7 +8,7 @@
 #include <string>
 
 #include "InputCommon/ControllerEmu/StickGate.h"
-#include "InputCommon/ControllerInterface/CoreDevice.h"
+#include "InputCommon/ControllerInterface/Device.h"
 
 namespace ControllerEmu
 {
@@ -24,10 +25,9 @@ public:
 
   Cursor(std::string name, std::string ui_name);
 
-  ReshapeData GetReshapableState(bool adjusted) const final override;
+  ReshapeData GetReshapableState(bool adjusted) final override;
   ControlState GetGateRadiusAtAngle(double ang) const override;
 
-  // Modifies the state
   StateData GetState(bool adjusted);
 
   // Yaw movement in radians.
@@ -46,6 +46,8 @@ private:
 
   static constexpr int AUTO_HIDE_MS = 2500;
   static constexpr double AUTO_HIDE_DEADZONE = 0.001;
+
+  static constexpr double BUTTON_THRESHOLD = 0.5;
 
   // Not adjusted by width/height/center:
   StateData m_state;

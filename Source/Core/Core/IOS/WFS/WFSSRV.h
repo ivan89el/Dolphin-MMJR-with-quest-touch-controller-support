@@ -1,5 +1,6 @@
 // Copyright 2016 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
@@ -7,7 +8,7 @@
 #include <vector>
 
 #include "Common/CommonTypes.h"
-#include "Common/IOFile.h"
+#include "Common/File.h"
 #include "Core/IOS/Device.h"
 #include "Core/IOS/IOS.h"
 #include "DiscIO/Volume.h"
@@ -28,12 +29,14 @@ enum
   WFS_FILE_IS_OPENED = -10032,  // Cannot perform operation on an opened file.
 };
 
-class WFSSRVDevice : public Device
+namespace Device
+{
+class WFSSRV : public Device
 {
 public:
-  WFSSRVDevice(Kernel& ios, const std::string& device_name);
+  WFSSRV(Kernel& ios, const std::string& device_name);
 
-  std::optional<IPCReply> IOCtl(const IOCtlRequest& request) override;
+  IPCCommandResult IOCtl(const IOCtlRequest& request) override;
 
   s32 Rename(std::string source, std::string dest) const;
   void SetHomeDir(const std::string& home_dir);
@@ -84,10 +87,10 @@ private:
 
   struct FileDescriptor
   {
-    bool in_use = false;
+    bool in_use;
     std::string path;
-    int mode = 0;
-    size_t position = 0;
+    int mode;
+    size_t position;
     File::IOFile file;
 
     bool Open();
@@ -102,4 +105,5 @@ private:
   // shutdown time.
   std::vector<u32> m_hanging;
 };
+}  // namespace Device
 }  // namespace IOS::HLE

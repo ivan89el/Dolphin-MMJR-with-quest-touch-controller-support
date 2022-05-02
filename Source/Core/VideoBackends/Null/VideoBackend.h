@@ -1,22 +1,25 @@
 // Copyright 2015 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
+#include "Common/Common.h"
 #include "VideoCommon/VideoBackendBase.h"
 
 namespace Null
 {
-class VideoBackend final : public VideoBackendBase
+class VideoBackend : public VideoBackendBase
 {
-public:
   bool Initialize(const WindowSystemInfo& wsi) override;
   void Shutdown() override;
 
-  std::string GetName() const override { return NAME; }
-  std::string GetDisplayName() const override;
+  std::string GetName() const override { return "Null"; }
+  std::string GetDisplayName() const override
+  {
+    // i18n: Null is referring to the null video backend, which renders nothing
+    return _trans("Null");
+  }
   void InitBackendInfo() override;
-
-  static constexpr const char* NAME = "Null";
 };
 }  // namespace Null

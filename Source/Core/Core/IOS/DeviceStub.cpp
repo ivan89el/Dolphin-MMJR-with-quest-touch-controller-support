@@ -1,28 +1,29 @@
 // Copyright 2016 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "Core/IOS/DeviceStub.h"
 
 #include "Common/Logging/Log.h"
 
-namespace IOS::HLE
+namespace IOS::HLE::Device
 {
-std::optional<IPCReply> DeviceStub::Open(const OpenRequest& request)
+IPCCommandResult Stub::Open(const OpenRequest& request)
 {
-  WARN_LOG_FMT(IOS, "{} faking Open()", m_name);
+  WARN_LOG(IOS, "%s faking Open()", m_name.c_str());
   m_is_active = true;
-  return IPCReply(IPC_SUCCESS);
+  return GetDefaultReply(IPC_SUCCESS);
 }
 
-std::optional<IPCReply> DeviceStub::IOCtl(const IOCtlRequest& request)
+IPCCommandResult Stub::IOCtl(const IOCtlRequest& request)
 {
-  WARN_LOG_FMT(IOS, "{} faking IOCtl()", m_name);
-  return IPCReply(IPC_SUCCESS);
+  WARN_LOG(IOS, "%s faking IOCtl()", m_name.c_str());
+  return GetDefaultReply(IPC_SUCCESS);
 }
 
-std::optional<IPCReply> DeviceStub::IOCtlV(const IOCtlVRequest& request)
+IPCCommandResult Stub::IOCtlV(const IOCtlVRequest& request)
 {
-  WARN_LOG_FMT(IOS, "{} faking IOCtlV()", m_name);
-  return IPCReply(IPC_SUCCESS);
+  WARN_LOG(IOS, "%s faking IOCtlV()", m_name.c_str());
+  return GetDefaultReply(IPC_SUCCESS);
 }
-}  // namespace IOS::HLE
+}  // namespace IOS::HLE::Device

@@ -1,5 +1,6 @@
 // Copyright 2018 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include <cstdio>
 #include <thread>
@@ -37,7 +38,6 @@ WindowSystemInfo PlatformHeadless::GetWindowSystemInfo() const
   WindowSystemInfo wsi;
   wsi.type = WindowSystemType::Headless;
   wsi.display_connection = nullptr;
-  wsi.render_window = nullptr;
   wsi.render_surface = nullptr;
   return wsi;
 }

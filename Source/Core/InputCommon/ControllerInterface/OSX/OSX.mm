@@ -1,5 +1,6 @@
 // Copyright 2013 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include <thread>
 
@@ -134,11 +135,13 @@ static void DeviceDebugPrint(IOHIDDeviceRef device)
 #endif
 }
 
+static void* g_window;
+
 static std::string GetDeviceRefName(IOHIDDeviceRef inIOHIDDeviceRef)
 {
   const NSString* name = reinterpret_cast<const NSString*>(
       IOHIDDeviceGetProperty(inIOHIDDeviceRef, CFSTR(kIOHIDProductKey)));
-  return (name != nullptr) ? std::string(StripSpaces([name UTF8String])) : "Unknown device";
+  return (name != nullptr) ? StripSpaces([name UTF8String]) : "Unknown device";
 }
 
 static void DeviceRemovalCallback(void* inContext, IOReturn inResult, void* inSender,
@@ -169,15 +172,17 @@ static void DeviceMatchingCallback(void* inContext, IOReturn inResult, void* inS
   }
 }
 
-void Init()
+void Init(void* window)
 {
+  g_window = window;
+
   HIDManager = IOHIDManagerCreate(kCFAllocatorDefault, kIOHIDOptionsTypeNone);
   if (!HIDManager)
-    ERROR_LOG_FMT(CONTROLLERINTERFACE, "Failed to create HID Manager reference");
+    ERROR_LOG(SERIALINTERFACE, "Failed to create HID Manager reference");
 
   IOHIDManagerSetDeviceMatching(HIDManager, nullptr);
   if (IOHIDManagerOpen(HIDManager, kIOHIDOptionsTypeNone) != kIOReturnSuccess)
-    ERROR_LOG_FMT(CONTROLLERINTERFACE, "Failed to open HID Manager");
+    ERROR_LOG(SERIALINTERFACE, "Failed to open HID Manager");
 
   // Callbacks for acquisition or loss of a matching device
   IOHIDManagerRegisterDeviceMatchingCallback(HIDManager, DeviceMatchingCallback, nullptr);
@@ -193,7 +198,7 @@ void Init()
   // Enable hotplugging
   s_hotplug_thread = std::thread([] {
     Common::SetCurrentThreadName("IOHIDManager Hotplug Thread");
-    NOTICE_LOG_FMT(CONTROLLERINTERFACE, "IOHIDManager hotplug thread started");
+    NOTICE_LOG(SERIALINTERFACE, "IOHIDManager hotplug thread started");
 
     IOHIDManagerScheduleWithRunLoop(HIDManager, CFRunLoopGetCurrent(), OurRunLoop);
     s_stopper.AddToRunLoop(CFRunLoopGetCurrent(), OurRunLoop);
@@ -201,21 +206,23 @@ void Init()
     s_stopper.RemoveFromRunLoop(CFRunLoopGetCurrent(), OurRunLoop);
     IOHIDManagerUnscheduleFromRunLoop(HIDManager, CFRunLoopGetCurrent(), OurRunLoop);
 
-    NOTICE_LOG_FMT(CONTROLLERINTERFACE, "IOHIDManager hotplug thread stopped");
+    NOTICE_LOG(SERIALINTERFACE, "IOHIDManager hotplug thread stopped");
   });
+}
+
+void PopulateDevices(void* window)
+{
+  DeInit();
+  Init(window);
 }
 
 void DeInit()
 {
-  if (HIDManager)
-  {
-    s_stopper.Signal();
-    s_hotplug_thread.join();
+  s_stopper.Signal();
+  s_hotplug_thread.join();
 
-    // This closes all devices as well
-    IOHIDManagerClose(HIDManager, kIOHIDOptionsTypeNone);
-    CFRelease(HIDManager);
-    HIDManager = nullptr;
-  }
+  // This closes all devices as well
+  IOHIDManagerClose(HIDManager, kIOHIDOptionsTypeNone);
+  CFRelease(HIDManager);
 }
 }  // namespace ciface::OSX

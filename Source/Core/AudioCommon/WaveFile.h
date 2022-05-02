@@ -1,5 +1,6 @@
 // Copyright 2008 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 // ---------------------------------------------------------------------------------
 // Class: WaveFileWriter
@@ -17,7 +18,7 @@
 #include <string>
 
 #include "Common/CommonTypes.h"
-#include "Common/IOFile.h"
+#include "Common/File.h"
 
 class WaveFileWriter
 {

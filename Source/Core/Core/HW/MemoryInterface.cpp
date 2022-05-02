@@ -1,11 +1,9 @@
 // Copyright 2008 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "Core/HW/MemoryInterface.h"
 
-#include <array>
-
-#include "Common/BitField.h"
 #include "Common/ChunkFile.h"
 #include "Common/CommonTypes.h"
 #include "Core/HW/MMIO.h"
@@ -54,7 +52,7 @@ enum
 
 union MIRegion
 {
-  u32 hex = 0;
+  u32 hex;
   struct
   {
     u16 first_page;
@@ -64,55 +62,64 @@ union MIRegion
 
 union MIProtType
 {
-  u16 hex = 0;
-
-  BitField<0, 2, u16> reg0;
-  BitField<2, 2, u16> reg1;
-  BitField<4, 2, u16> reg2;
-  BitField<6, 2, u16> reg3;
-  BitField<8, 8, u16> reserved;
+  u16 hex;
+  struct
+  {
+    u16 reg0 : 2;
+    u16 reg1 : 2;
+    u16 reg2 : 2;
+    u16 reg3 : 2;
+    u16 : 8;
+  };
 };
 
 union MIIRQMask
 {
-  u16 hex = 0;
-
-  BitField<0, 1, u16> reg0;
-  BitField<1, 1, u16> reg1;
-  BitField<2, 1, u16> reg2;
-  BitField<3, 1, u16> reg3;
-  BitField<4, 1, u16> all_regs;
-  BitField<5, 11, u16> reserved;
+  u16 hex;
+  struct
+  {
+    u16 reg0 : 1;
+    u16 reg1 : 1;
+    u16 reg2 : 1;
+    u16 reg3 : 1;
+    u16 all_regs : 1;
+    u16 : 11;
+  };
 };
 
 union MIIRQFlag
 {
-  u16 hex = 0;
-
-  BitField<0, 1, u16> reg0;
-  BitField<1, 1, u16> reg1;
-  BitField<2, 1, u16> reg2;
-  BitField<3, 1, u16> reg3;
-  BitField<4, 1, u16> all_regs;
-  BitField<5, 11, u16> reserved;
+  u16 hex;
+  struct
+  {
+    u16 reg0 : 1;
+    u16 reg1 : 1;
+    u16 reg2 : 1;
+    u16 reg3 : 1;
+    u16 all_regs : 1;
+    u16 : 11;
+  };
 };
 
 union MIProtAddr
 {
-  u32 hex = 0;
+  u32 hex;
   struct
   {
     u16 lo;
     u16 hi;
   };
-  BitField<0, 5, u32> reserved_1;
-  BitField<5, 25, u32> addr;
-  BitField<30, 2, u32> reserved_2;
+  struct
+  {
+    u32 : 5;
+    u32 addr : 25;
+    u32 : 2;
+  };
 };
 
 union MITimer
 {
-  u32 hex = 0;
+  u32 hex;
   struct
   {
     u16 lo;
@@ -122,14 +129,14 @@ union MITimer
 
 struct MIMemStruct
 {
-  std::array<MIRegion, 4> regions;
+  MIRegion regions[4];
   MIProtType prot_type;
   MIIRQMask irq_mask;
   MIIRQFlag irq_flag;
-  u16 unknown1 = 0;
+  u16 unknown1;
   MIProtAddr prot_addr;
-  std::array<MITimer, 10> timers;
-  u16 unknown2 = 0;
+  MITimer timers[10];
+  u16 unknown2;
 };
 
 // STATE_TO_SAVE
@@ -142,7 +149,7 @@ void DoState(PointerWrap& p)
 
 void RegisterMMIO(MMIO::Mapping* mmio, u32 base)
 {
-  for (u32 i = MI_REGION0_FIRST; i <= MI_REGION3_LAST; i += 4)
+  for (int i = MI_REGION0_FIRST; i <= MI_REGION3_LAST; i += 4)
   {
     auto& region = g_mi_mem.regions[i / 4];
     mmio->Register(base | i, MMIO::DirectRead<u16>(&region.first_page),
@@ -163,7 +170,7 @@ void RegisterMMIO(MMIO::Mapping* mmio, u32 base)
   mmio->Register(base | MI_UNKNOWN1, MMIO::DirectRead<u16>(&g_mi_mem.unknown1),
                  MMIO::DirectWrite<u16>(&g_mi_mem.unknown1));
 
-  // The naming is confusing here: the register contains the lower part of
+  // The naming is confusing here: the registed contains the lower part of
   // the address (hence MI_..._LO but this is still the high part of the
   // overall register.
   mmio->Register(base | MI_PROT_ADDR_LO, MMIO::DirectRead<u16>(&g_mi_mem.prot_addr.hi),
@@ -171,7 +178,7 @@ void RegisterMMIO(MMIO::Mapping* mmio, u32 base)
   mmio->Register(base | MI_PROT_ADDR_HI, MMIO::DirectRead<u16>(&g_mi_mem.prot_addr.lo),
                  MMIO::DirectWrite<u16>(&g_mi_mem.prot_addr.lo));
 
-  for (u32 i = 0; i < g_mi_mem.timers.size(); ++i)
+  for (int i = 0; i < 10; ++i)
   {
     auto& timer = g_mi_mem.timers[i];
     mmio->Register(base | (MI_TIMER0_HI + 4 * i), MMIO::DirectRead<u16>(&timer.hi),
@@ -183,11 +190,11 @@ void RegisterMMIO(MMIO::Mapping* mmio, u32 base)
   mmio->Register(base | MI_UNKNOWN2, MMIO::DirectRead<u16>(&g_mi_mem.unknown2),
                  MMIO::DirectWrite<u16>(&g_mi_mem.unknown2));
 
-  for (u32 i = 0; i < 0x1000; i += 4)
+  for (int i = 0; i < 0x1000; i += 4)
   {
     mmio->Register(base | i, MMIO::ReadToSmaller<u32>(mmio, base | i, base | (i + 2)),
                    MMIO::WriteToSmaller<u32>(mmio, base | i, base | (i + 2)));
   }
 }
 
-}  // namespace MemoryInterface
+}  // end of namespace MemoryInterface

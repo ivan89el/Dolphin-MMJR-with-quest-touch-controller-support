@@ -50,8 +50,12 @@ namespace spv {
         // Include C-based headers that don't have a namespace
         #include "GLSL.ext.KHR.h"
         #include "GLSL.ext.EXT.h"
+#ifdef AMD_EXTENSIONS
         #include "GLSL.ext.AMD.h"
+#endif
+#ifdef NV_EXTENSIONS
         #include "GLSL.ext.NV.h"
+#endif
     }
 }
 
@@ -94,17 +98,22 @@ const char* ExecutionModelString(int model)
     case 4:  return "Fragment";
     case 5:  return "GLCompute";
     case 6:  return "Kernel";
+#ifdef NV_EXTENSIONS
     case ExecutionModelTaskNV: return "TaskNV";
     case ExecutionModelMeshNV: return "MeshNV";
+#endif
 
     default: return "Bad";
 
+#ifdef NV_EXTENSIONS
     case ExecutionModelRayGenerationNV: return "RayGenerationNV";
     case ExecutionModelIntersectionNV:  return "IntersectionNV";
     case ExecutionModelAnyHitNV:        return "AnyHitNV";
     case ExecutionModelClosestHitNV:    return "ClosestHitNV";
     case ExecutionModelMissNV:          return "MissNV";
     case ExecutionModelCallableNV:      return "CallableNV";
+#endif
+
     }
 }
 
@@ -174,11 +183,13 @@ const char* ExecutionModeString(int mode)
 
     case 4446:  return "PostDepthCoverage";
 
+#ifdef NV_EXTENSIONS
     case ExecutionModeOutputLinesNV:            return "OutputLinesNV";
     case ExecutionModeOutputPrimitivesNV:       return "OutputPrimitivesNV";
     case ExecutionModeOutputTrianglesNV:        return "OutputTrianglesNV";
     case ExecutionModeDerivativeGroupQuadsNV:   return "DerivativeGroupQuadsNV";
     case ExecutionModeDerivativeGroupLinearNV:  return "DerivativeGroupLinearNV";
+#endif
 
     case ExecutionModePixelInterlockOrderedEXT:         return "PixelInterlockOrderedEXT";
     case ExecutionModePixelInterlockUnorderedEXT:       return "PixelInterlockUnorderedEXT";
@@ -209,12 +220,14 @@ const char* StorageClassString(int StorageClass)
     case 11: return "Image";
     case 12: return "StorageBuffer";
 
+#ifdef NV_EXTENSIONS
     case StorageClassRayPayloadNV:            return "RayPayloadNV";
     case StorageClassHitAttributeNV:          return "HitAttributeNV";
     case StorageClassIncomingRayPayloadNV:    return "IncomingRayPayloadNV";
     case StorageClassShaderRecordBufferNV:    return "ShaderRecordBufferNV";
     case StorageClassCallableDataNV:          return "CallableDataNV";
     case StorageClassIncomingCallableDataNV:  return "IncomingCallableDataNV";
+#endif
 
     case StorageClassPhysicalStorageBufferEXT: return "PhysicalStorageBufferEXT";
 
@@ -276,7 +289,10 @@ const char* DecorationString(int decoration)
     case DecorationCeiling:
     default:  return "Bad";
 
+#ifdef AMD_EXTENSIONS
     case DecorationExplicitInterpAMD: return "ExplicitInterpAMD";
+#endif
+#ifdef NV_EXTENSIONS
     case DecorationOverrideCoverageNV:          return "OverrideCoverageNV";
     case DecorationPassthroughNV:               return "PassthroughNV";
     case DecorationViewportRelativeNV:          return "ViewportRelativeNV";
@@ -285,6 +301,7 @@ const char* DecorationString(int decoration)
     case DecorationPerViewNV:                   return "PerViewNV";
     case DecorationPerTaskNV:                   return "PerTaskNV";
     case DecorationPerVertexNV:                 return "PerVertexNV";
+#endif
 
     case DecorationNonUniformEXT:           return "DecorationNonUniformEXT";
     case DecorationHlslCounterBufferGOOGLE: return "DecorationHlslCounterBufferGOOGLE";
@@ -354,6 +371,7 @@ const char* BuiltInString(int builtIn)
     case 4426: return "DrawIndex";
     case 5014: return "FragStencilRefEXT";
 
+#ifdef AMD_EXTENSIONS
     case 4992: return "BaryCoordNoPerspAMD";
     case 4993: return "BaryCoordNoPerspCentroidAMD";
     case 4994: return "BaryCoordNoPerspSampleAMD";
@@ -361,6 +379,9 @@ const char* BuiltInString(int builtIn)
     case 4996: return "BaryCoordSmoothCentroidAMD";
     case 4997: return "BaryCoordSmoothSampleAMD";
     case 4998: return "BaryCoordPullModelAMD";
+#endif
+
+#ifdef NV_EXTENSIONS
     case BuiltInLaunchIdNV:                 return "LaunchIdNV";
     case BuiltInLaunchSizeNV:               return "LaunchSizeNV";
     case BuiltInWorldRayOriginNV:           return "WorldRayOriginNV";
@@ -384,12 +405,15 @@ const char* BuiltInString(int builtIn)
 //    case BuiltInInvocationsPerPixelNV:      return "InvocationsPerPixelNV"; // superseded by BuiltInFragInvocationCountEXT
     case BuiltInBaryCoordNV:                return "BaryCoordNV";
     case BuiltInBaryCoordNoPerspNV:         return "BaryCoordNoPerspNV";
+#endif
 
     case BuiltInFragSizeEXT:                return "FragSizeEXT";
     case BuiltInFragInvocationCountEXT:     return "FragInvocationCountEXT";
 
     case 5264: return "FullyCoveredEXT";
 
+
+#ifdef NV_EXTENSIONS
     case BuiltInTaskCountNV:           return "TaskCountNV";
     case BuiltInPrimitiveCountNV:      return "PrimitiveCountNV";
     case BuiltInPrimitiveIndicesNV:    return "PrimitiveIndicesNV";
@@ -398,6 +422,7 @@ const char* BuiltInString(int builtIn)
     case BuiltInLayerPerViewNV:        return "LayerPerViewNV";
     case BuiltInMeshViewCountNV:       return "MeshViewCountNV";
     case BuiltInMeshViewIndicesNV:     return "MeshViewIndicesNV";
+#endif
     case BuiltInWarpsPerSMNV:           return "WarpsPerSMNV";
     case BuiltInSMCountNV:              return "SMCountNV";
     case BuiltInWarpIDNV:               return "WarpIDNV";
@@ -756,9 +781,11 @@ const char* GroupOperationString(int gop)
     case GroupOperationInclusiveScan:  return "InclusiveScan";
     case GroupOperationExclusiveScan:  return "ExclusiveScan";
     case GroupOperationClusteredReduce:  return "ClusteredReduce";
+#ifdef NV_EXTENSIONS
     case GroupOperationPartitionedReduceNV:  return "PartitionedReduceNV";
     case GroupOperationPartitionedInclusiveScanNV:  return "PartitionedInclusiveScanNV";
     case GroupOperationPartitionedExclusiveScanNV:  return "PartitionedExclusiveScanNV";
+#endif
 
     default: return "Bad";
     }
@@ -875,14 +902,17 @@ const char* CapabilityString(int info)
 
     case CapabilityStencilExportEXT: return "StencilExportEXT";
 
+#ifdef AMD_EXTENSIONS
     case CapabilityFloat16ImageAMD:       return "Float16ImageAMD";
     case CapabilityImageGatherBiasLodAMD: return "ImageGatherBiasLodAMD";
     case CapabilityFragmentMaskAMD:       return "FragmentMaskAMD";
     case CapabilityImageReadWriteLodAMD:  return "ImageReadWriteLodAMD";
+#endif
 
     case CapabilityAtomicStorageOps:             return "AtomicStorageOps";
 
     case CapabilitySampleMaskPostDepthCoverage:  return "SampleMaskPostDepthCoverage";
+#ifdef NV_EXTENSIONS
     case CapabilityGeometryShaderPassthroughNV:     return "GeometryShaderPassthroughNV";
     case CapabilityShaderViewportIndexLayerNV:      return "ShaderViewportIndexLayerNV";
     case CapabilityShaderViewportMaskNV:            return "ShaderViewportMaskNV";
@@ -896,7 +926,7 @@ const char* CapabilityString(int info)
     case CapabilityMeshShadingNV:                   return "MeshShadingNV";
     case CapabilityImageFootprintNV:                return "ImageFootprintNV";
 //    case CapabilityShadingRateNV:                   return "ShadingRateNV";  // superseded by FragmentDensityEXT
-    case CapabilitySampleMaskOverrideCoverageNV:    return "SampleMaskOverrideCoverageNV";
+#endif
     case CapabilityFragmentDensityEXT:              return "FragmentDensityEXT";
 
     case CapabilityFragmentFullyCoveredEXT: return "FragmentFullyCoveredEXT";
@@ -927,11 +957,6 @@ const char* CapabilityString(int info)
     case CapabilityFragmentShaderSampleInterlockEXT:        return "CapabilityFragmentShaderSampleInterlockEXT";
     case CapabilityFragmentShaderPixelInterlockEXT:         return "CapabilityFragmentShaderPixelInterlockEXT";
     case CapabilityFragmentShaderShadingRateInterlockEXT:   return "CapabilityFragmentShaderShadingRateInterlockEXT";
-
-    case CapabilityDemoteToHelperInvocationEXT:             return "DemoteToHelperInvocationEXT";
-    case CapabilityShaderClockKHR:                          return "ShaderClockKHR";
-
-    case CapabilityIntegerFunctions2INTEL:              return "CapabilityIntegerFunctions2INTEL";
 
     default: return "Bad";
     }
@@ -1308,6 +1333,7 @@ const char* OpcodeString(int op)
     case 4430: return "OpSubgroupAllEqualKHR";
     case 4432: return "OpSubgroupReadInvocationKHR";
 
+#ifdef AMD_EXTENSIONS
     case 5000: return "OpGroupIAddNonUniformAMD";
     case 5001: return "OpGroupFAddNonUniformAMD";
     case 5002: return "OpGroupFMinNonUniformAMD";
@@ -1319,12 +1345,12 @@ const char* OpcodeString(int op)
 
     case 5011: return "OpFragmentMaskFetchAMD";
     case 5012: return "OpFragmentFetchAMD";
-
-    case OpReadClockKHR:               return "OpReadClockKHR";
+#endif
 
     case OpDecorateStringGOOGLE:       return "OpDecorateStringGOOGLE";
     case OpMemberDecorateStringGOOGLE: return "OpMemberDecorateStringGOOGLE";
 
+#ifdef NV_EXTENSIONS
     case OpGroupNonUniformPartitionNV:       return "OpGroupNonUniformPartitionNV";
     case OpReportIntersectionNV:             return "OpReportIntersectionNV";
     case OpIgnoreIntersectionNV:             return "OpIgnoreIntersectionNV";
@@ -1334,14 +1360,13 @@ const char* OpcodeString(int op)
     case OpExecuteCallableNV:                return "OpExecuteCallableNV";
     case OpImageSampleFootprintNV:           return "OpImageSampleFootprintNV";
     case OpWritePackedPrimitiveIndices4x8NV: return "OpWritePackedPrimitiveIndices4x8NV";
+#endif
 
     case OpTypeCooperativeMatrixNV:         return "OpTypeCooperativeMatrixNV";
     case OpCooperativeMatrixLoadNV:         return "OpCooperativeMatrixLoadNV";
     case OpCooperativeMatrixStoreNV:        return "OpCooperativeMatrixStoreNV";
     case OpCooperativeMatrixMulAddNV:       return "OpCooperativeMatrixMulAddNV";
     case OpCooperativeMatrixLengthNV:       return "OpCooperativeMatrixLengthNV";
-    case OpDemoteToHelperInvocationEXT:     return "OpDemoteToHelperInvocationEXT";
-    case OpIsHelperInvocationEXT:           return "OpIsHelperInvocationEXT";
 
     case OpBeginInvocationInterlockEXT:     return "OpBeginInvocationInterlockEXT";
     case OpEndInvocationInterlockEXT:       return "OpEndInvocationInterlockEXT";
@@ -2653,6 +2678,7 @@ void Parameterize()
 
     InstructionDesc[OpModuleProcessed].operands.push(OperandLiteralString, "'process'");
 
+#ifdef AMD_EXTENSIONS
     InstructionDesc[OpGroupIAddNonUniformAMD].operands.push(OperandScope, "'Execution'");
     InstructionDesc[OpGroupIAddNonUniformAMD].operands.push(OperandGroupOperation, "'Operation'");
     InstructionDesc[OpGroupIAddNonUniformAMD].operands.push(OperandId, "'X'");
@@ -2691,7 +2717,9 @@ void Parameterize()
     InstructionDesc[OpFragmentFetchAMD].operands.push(OperandId, "'Image'");
     InstructionDesc[OpFragmentFetchAMD].operands.push(OperandId, "'Coordinate'");
     InstructionDesc[OpFragmentFetchAMD].operands.push(OperandId, "'Fragment Index'");
+#endif
 
+#ifdef NV_EXTENSIONS
     InstructionDesc[OpGroupNonUniformPartitionNV].operands.push(OperandId, "X");
 
     InstructionDesc[OpTypeAccelerationStructureNV].setResultAndType(true, false);
@@ -2729,6 +2757,7 @@ void Parameterize()
     
     InstructionDesc[OpWritePackedPrimitiveIndices4x8NV].operands.push(OperandId, "'Index Offset'");
     InstructionDesc[OpWritePackedPrimitiveIndices4x8NV].operands.push(OperandId, "'Packed Indices'");
+#endif
 
     InstructionDesc[OpTypeCooperativeMatrixNV].operands.push(OperandId, "'Component Type'");
     InstructionDesc[OpTypeCooperativeMatrixNV].operands.push(OperandId, "'Scope'");
@@ -2755,10 +2784,6 @@ void Parameterize()
     InstructionDesc[OpCooperativeMatrixMulAddNV].operands.push(OperandId, "'C'");
 
     InstructionDesc[OpCooperativeMatrixLengthNV].operands.push(OperandId, "'Type'");
-
-    InstructionDesc[OpDemoteToHelperInvocationEXT].setResultAndType(false, false);
-
-    InstructionDesc[OpReadClockKHR].operands.push(OperandScope, "'Scope'");
 }
 
 }; // end spv namespace

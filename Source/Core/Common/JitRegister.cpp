@@ -1,5 +1,6 @@
 // Copyright 2014 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "Common/JitRegister.h"
 
@@ -12,7 +13,7 @@
 #include <fmt/format.h>
 
 #include "Common/CommonTypes.h"
-#include "Common/IOFile.h"
+#include "Common/File.h"
 #include "Common/StringUtil.h"
 
 #ifdef _WIN32

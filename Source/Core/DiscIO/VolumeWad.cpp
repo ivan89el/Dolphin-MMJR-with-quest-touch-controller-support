@@ -1,9 +1,11 @@
 // Copyright 2009 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include <algorithm>
 #include <cstddef>
 #include <cstring>
+#include <locale>
 #include <map>
 #include <memory>
 #include <optional>
@@ -39,7 +41,6 @@ VolumeWAD::VolumeWAD(std::unique_ptr<BlobReader> reader) : m_reader(std::move(re
   m_ticket_size = m_reader->ReadSwapped<u32>(0x10).value_or(0);
   m_tmd_size = m_reader->ReadSwapped<u32>(0x14).value_or(0);
   m_data_size = m_reader->ReadSwapped<u32>(0x18).value_or(0);
-  m_opening_bnr_size = m_reader->ReadSwapped<u32>(0x1C).value_or(0);
 
   m_cert_chain_offset = Common::AlignUp(m_hdr_size, 0x40);
   m_ticket_offset = m_cert_chain_offset + Common::AlignUp(m_cert_chain_size, 0x40);
@@ -53,7 +54,7 @@ VolumeWAD::VolumeWAD(std::unique_ptr<BlobReader> reader) : m_reader(std::move(re
 
   if (!IOS::ES::IsValidTMDSize(m_tmd_size))
   {
-    ERROR_LOG_FMT(DISCIO, "TMD is too large: {} bytes", m_tmd_size);
+    ERROR_LOG(DISCIO, "TMD is too large: %u bytes", m_tmd_size);
     return;
   }
 
@@ -155,9 +156,6 @@ bool VolumeWAD::CheckContentIntegrity(const IOS::ES::Content& content,
                                       const std::vector<u8>& encrypted_data,
                                       const IOS::ES::TicketReader& ticket) const
 {
-  if (encrypted_data.size() != Common::AlignUp(content.size, 0x40))
-    return false;
-
   mbedtls_aes_context context;
   const std::array<u8, 16> key = ticket.GetTitleKey();
   mbedtls_aes_setkey_dec(&context, key.data(), 128);
@@ -239,8 +237,7 @@ IOS::ES::TicketReader VolumeWAD::GetTicketWithFixedCommonKey() const
     }
   }
 
-  ERROR_LOG_FMT(DISCIO, "Couldn't find valid common key for WAD file ({} specified)",
-                specified_index);
+  ERROR_LOG(DISCIO, "Couldn't find valid common key for WAD file (%u specified)", specified_index);
   return m_ticket;
 }
 
@@ -261,7 +258,8 @@ std::string VolumeWAD::GetMakerID(const Partition& partition) const
     return "00";
 
   // Some weird channels use 0x0000 in place of the MakerID, so we need a check here
-  if (!IsPrintableCharacter(temp[0]) || !IsPrintableCharacter(temp[1]))
+  const std::locale& c_locale = std::locale::classic();
+  if (!std::isprint(temp[0], c_locale) || !std::isprint(temp[1], c_locale))
     return "00";
 
   return DecodeString(temp);
@@ -283,16 +281,6 @@ std::optional<u16> VolumeWAD::GetRevision(const Partition& partition) const
 Platform VolumeWAD::GetVolumeType() const
 {
   return Platform::WiiWAD;
-}
-
-bool VolumeWAD::IsDatelDisc() const
-{
-  return false;
-}
-
-bool VolumeWAD::IsNKit() const
-{
-  return false;
 }
 
 std::map<Language, std::string> VolumeWAD::GetLongNames() const
@@ -336,29 +324,6 @@ bool VolumeWAD::IsSizeAccurate() const
 u64 VolumeWAD::GetRawSize() const
 {
   return m_reader->GetRawSize();
-}
-
-const BlobReader& VolumeWAD::GetBlobReader() const
-{
-  return *m_reader;
-}
-
-std::array<u8, 20> VolumeWAD::GetSyncHash() const
-{
-  // We can skip hashing the contents since the TMD contains hashes of the contents.
-  // We specifically don't hash the ticket, since its console ID can differ without any problems.
-
-  mbedtls_sha1_context context;
-  mbedtls_sha1_init(&context);
-  mbedtls_sha1_starts_ret(&context);
-
-  AddTMDToSyncHash(&context, PARTITION_NONE);
-
-  ReadAndAddToSyncHash(&context, m_opening_bnr_offset, m_opening_bnr_size, PARTITION_NONE);
-
-  std::array<u8, 20> hash;
-  mbedtls_sha1_finish_ret(&context, hash.data());
-  return hash;
 }
 
 }  // namespace DiscIO

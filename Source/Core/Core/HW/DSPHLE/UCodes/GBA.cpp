@@ -1,5 +1,6 @@
 // Copyright 2010 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "Core/HW/DSPHLE/UCodes/GBA.h"
 
@@ -63,10 +64,10 @@ void ProcessGBACrypto(u32 address)
   HLEMemory_Write_U32(dest_addr + 4, t3);
 
   // Done!
-  DEBUG_LOG_FMT(DSPHLE,
-                "\n{:08x} -> challenge: {:08x}, len: {:08x}, dest_addr: {:08x}, "
-                "palette: {:08x}, speed: {:08x} key: {:08x}, auth_code: {:08x}",
-                address, challenge, length, dest_addr, logo_palette, logo_speed_32, key, t3);
+  DEBUG_LOG(DSPHLE,
+            "\n%08x -> challenge: %08x, len: %08x, dest_addr: %08x, "
+            "palette: %08x, speed: %08x key: %08x, auth_code: %08x",
+            address, challenge, length, dest_addr, logo_palette, logo_speed_32, key, t3);
 }
 
 GBAUCode::GBAUCode(DSPHLE* dsphle, u32 crc) : UCodeInterface(dsphle, crc)
@@ -125,13 +126,13 @@ void GBAUCode::HandleMail(u32 mail)
       m_dsphle->SetUCode(UCODE_ROM);
       break;
     default:
-      WARN_LOG_FMT(DSPHLE, "GBAUCode - unknown 0xcdd1 command: {:08x}", mail);
+      WARN_LOG(DSPHLE, "GBAUCode - unknown 0xcdd1 command: %08x", mail);
       break;
     }
   }
   else
   {
-    WARN_LOG_FMT(DSPHLE, "GBAUCode - unknown command: {:08x}", mail);
+    WARN_LOG(DSPHLE, "GBAUCode - unknown command: %08x", mail);
   }
 }
 }  // namespace DSP::HLE

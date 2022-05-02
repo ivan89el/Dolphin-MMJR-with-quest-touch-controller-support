@@ -61,7 +61,11 @@ enum TBasicType {
     EbtSampler,
     EbtStruct,
     EbtBlock,
+
+#ifdef NV_EXTENSIONS
     EbtAccStructNV,
+#endif
+
     EbtReference,
 
     // HLSL types that live only temporarily.
@@ -90,11 +94,13 @@ enum TStorageQualifier {
     EvqBuffer,        // read/write, shared with app
     EvqShared,        // compute shader's read/write 'shared' qualifier
 
+#ifdef NV_EXTENSIONS
     EvqPayloadNV,
     EvqPayloadInNV,
     EvqHitAttrNV,
     EvqCallableDataNV,
     EvqCallableDataInNV,
+#endif
 
     // parameters
     EvqIn,            // also, for 'in' in the grammar before we know if it's a pipeline input or an 'in' parameter
@@ -215,6 +221,7 @@ enum TBuiltInVariable {
     EbvSampleMask,
     EbvHelperInvocation,
 
+#ifdef AMD_EXTENSIONS
     EbvBaryCoordNoPersp,
     EbvBaryCoordNoPerspCentroid,
     EbvBaryCoordNoPerspSample,
@@ -222,6 +229,7 @@ enum TBuiltInVariable {
     EbvBaryCoordSmoothCentroid,
     EbvBaryCoordSmoothSample,
     EbvBaryCoordPullModel,
+#endif
 
     EbvViewIndex,
     EbvDeviceIndex,
@@ -229,6 +237,7 @@ enum TBuiltInVariable {
     EbvFragSizeEXT,
     EbvFragInvocationCountEXT,
 
+#ifdef NV_EXTENSIONS
     EbvViewportMaskNV,
     EbvSecondaryPositionNV,
     EbvSecondaryViewportMaskNV,
@@ -264,6 +273,7 @@ enum TBuiltInVariable {
     EbvLayerPerViewNV,
     EbvMeshViewCountNV,
     EbvMeshViewIndicesNV,
+#endif
 
     // sm builtins
     EbvWarpsPerSM,
@@ -289,19 +299,6 @@ enum TBuiltInVariable {
     EbvLast
 };
 
-// In this enum, order matters; users can assume higher precision is a bigger value
-// and EpqNone is 0.
-enum TPrecisionQualifier {
-    EpqNone = 0,
-    EpqLow,
-    EpqMedium,
-    EpqHigh
-};
-
-#ifdef GLSLANG_WEB
-__inline const char* GetStorageQualifierString(TStorageQualifier q) { return ""; }
-__inline const char* GetPrecisionQualifierString(TPrecisionQualifier p) { return ""; }
-#else
 // These will show up in error messages
 __inline const char* GetStorageQualifierString(TStorageQualifier q)
 {
@@ -328,11 +325,13 @@ __inline const char* GetStorageQualifierString(TStorageQualifier q)
     case EvqPointCoord:     return "gl_PointCoord";  break;
     case EvqFragColor:      return "fragColor";      break;
     case EvqFragDepth:      return "gl_FragDepth";   break;
+#ifdef NV_EXTENSIONS
     case EvqPayloadNV:        return "rayPayloadNV";     break;
     case EvqPayloadInNV:      return "rayPayloadInNV";   break;
     case EvqHitAttrNV:        return "hitAttributeNV";   break;
     case EvqCallableDataNV:   return "callableDataNV";   break;
     case EvqCallableDataInNV: return "callableDataInNV"; break;
+#endif
     default:                return "unknown qualifier";
     }
 }
@@ -414,6 +413,7 @@ __inline const char* GetBuiltInVariableString(TBuiltInVariable v)
     case EbvSampleMask:           return "SampleMaskIn";
     case EbvHelperInvocation:     return "HelperInvocation";
 
+#ifdef AMD_EXTENSIONS
     case EbvBaryCoordNoPersp:           return "BaryCoordNoPersp";
     case EbvBaryCoordNoPerspCentroid:   return "BaryCoordNoPerspCentroid";
     case EbvBaryCoordNoPerspSample:     return "BaryCoordNoPerspSample";
@@ -421,6 +421,7 @@ __inline const char* GetBuiltInVariableString(TBuiltInVariable v)
     case EbvBaryCoordSmoothCentroid:    return "BaryCoordSmoothCentroid";
     case EbvBaryCoordSmoothSample:      return "BaryCoordSmoothSample";
     case EbvBaryCoordPullModel:         return "BaryCoordPullModel";
+#endif
 
     case EbvViewIndex:                  return "ViewIndex";
     case EbvDeviceIndex:                return "DeviceIndex";
@@ -428,6 +429,7 @@ __inline const char* GetBuiltInVariableString(TBuiltInVariable v)
     case EbvFragSizeEXT:                return "FragSizeEXT";
     case EbvFragInvocationCountEXT:     return "FragInvocationCountEXT";
 
+#ifdef NV_EXTENSIONS
     case EbvViewportMaskNV:             return "ViewportMaskNV";
     case EbvSecondaryPositionNV:        return "SecondaryPositionNV";
     case EbvSecondaryViewportMaskNV:    return "SecondaryViewportMaskNV";
@@ -462,6 +464,7 @@ __inline const char* GetBuiltInVariableString(TBuiltInVariable v)
     case EbvLayerPerViewNV:             return "LayerPerViewNV";
     case EbvMeshViewCountNV:            return "MeshViewCountNV";
     case EbvMeshViewIndicesNV:          return "MeshViewIndicesNV";
+#endif
 
     case EbvWarpsPerSM:                 return "WarpsPerSMNV";
     case EbvSMCount:                    return "SMCountNV";
@@ -471,6 +474,15 @@ __inline const char* GetBuiltInVariableString(TBuiltInVariable v)
     default:                      return "unknown built-in variable";
     }
 }
+
+// In this enum, order matters; users can assume higher precision is a bigger value
+// and EpqNone is 0.
+enum TPrecisionQualifier {
+    EpqNone = 0,
+    EpqLow,
+    EpqMedium,
+    EpqHigh
+};
 
 __inline const char* GetPrecisionQualifierString(TPrecisionQualifier p)
 {
@@ -482,7 +494,6 @@ __inline const char* GetPrecisionQualifierString(TPrecisionQualifier p)
     default:        return "unknown precision qualifier";
     }
 }
-#endif
 
 __inline bool isTypeSignedInt(TBasicType type)
 {
@@ -527,8 +538,7 @@ __inline bool isTypeFloat(TBasicType type)
     }
 }
 
-__inline int getTypeRank(TBasicType type)
-{
+__inline int getTypeRank(TBasicType type) {
     int res = -1;
     switch(type) {
     case EbtInt8:

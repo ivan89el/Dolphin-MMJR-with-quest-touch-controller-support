@@ -1,5 +1,6 @@
 // Copyright 2008 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 // High-level emulation for the AX GameCube UCode.
 //
@@ -11,12 +12,7 @@
 
 #pragma once
 
-#include <array>
-#include <optional>
-
-#include "Common/BitUtils.h"
 #include "Common/CommonTypes.h"
-#include "Common/Swap.h"
 #include "Core/HW/DSPHLE/UCodes/UCodes.h"
 
 namespace DSP::HLE
@@ -82,28 +78,26 @@ protected:
   };
 
   // 32 * 5 because 32 samples per millisecond, for max 5 milliseconds.
-  int m_samples_left[32 * 5]{};
-  int m_samples_right[32 * 5]{};
-  int m_samples_surround[32 * 5]{};
-  int m_samples_auxA_left[32 * 5]{};
-  int m_samples_auxA_right[32 * 5]{};
-  int m_samples_auxA_surround[32 * 5]{};
-  int m_samples_auxB_left[32 * 5]{};
-  int m_samples_auxB_right[32 * 5]{};
-  int m_samples_auxB_surround[32 * 5]{};
+  int m_samples_left[32 * 5];
+  int m_samples_right[32 * 5];
+  int m_samples_surround[32 * 5];
+  int m_samples_auxA_left[32 * 5];
+  int m_samples_auxA_right[32 * 5];
+  int m_samples_auxA_surround[32 * 5];
+  int m_samples_auxB_left[32 * 5];
+  int m_samples_auxB_right[32 * 5];
+  int m_samples_auxB_surround[32 * 5];
 
-  u16 m_cmdlist[512]{};
-  u32 m_cmdlist_size = 0;
+  u16 m_cmdlist[512];
+  u32 m_cmdlist_size;
 
   // Table of coefficients for polyphase sample rate conversion.
   // The coefficients aren't always available (they are part of the DSP DROM)
   // so we also need to know if they are valid or not.
-  std::optional<u32> m_coeffs_checksum = std::nullopt;
-  std::array<s16, 0x800> m_coeffs{};
+  bool m_coeffs_available;
+  s16 m_coeffs[0x800];
 
-  u16 m_compressor_pos = 0;
-
-  bool LoadResamplingCoefficients(bool require_same_checksum, u32 desired_checksum);
+  void LoadResamplingCoefficients();
 
   // Copy a command list from memory to our temp buffer
   void CopyCmdList(u32 addr, u16 size);
@@ -114,25 +108,7 @@ protected:
   AXMixControl ConvertMixerControl(u32 mixer_control);
 
   // Apply updates to a PB. Generic, used in AX GC and AX Wii.
-  template <typename PBType>
-  void ApplyUpdatesForMs(int curr_ms, PBType& pb, u16* num_updates, u16* updates)
-  {
-    auto pb_mem = Common::BitCastToArray<u16>(pb);
-
-    u32 start_idx = 0;
-    for (int i = 0; i < curr_ms; ++i)
-      start_idx += num_updates[i];
-
-    for (u32 i = start_idx; i < start_idx + num_updates[curr_ms]; ++i)
-    {
-      u16 update_off = Common::swap16(updates[2 * i]);
-      u16 update_val = Common::swap16(updates[2 * i + 1]);
-
-      pb_mem[update_off] = update_val;
-    }
-
-    Common::BitCastFromArray<u16>(pb_mem, pb);
-  }
+  void ApplyUpdatesForMs(int curr_ms, u16* pb, u16* num_updates, u16* updates);
 
   virtual void HandleCommandList();
   void SignalWorkEnd();
@@ -143,7 +119,6 @@ protected:
   void MixAUXSamples(int aux_id, u32 write_addr, u32 read_addr);
   void UploadLRS(u32 dst_addr);
   void SetMainLR(u32 src_addr);
-  void RunCompressor(u16 threshold, u16 release_stages, u32 table_addr, u32 millis);
   void OutputSamples(u32 out_addr, u32 surround_addr);
   void MixAUXBLR(u32 ul_addr, u32 dl_addr);
   void SetOppositeLR(u32 src_addr);
@@ -166,7 +141,7 @@ private:
     CMD_SET_LR = 0x07,
     CMD_UNK_08 = 0x08,
     CMD_MIX_AUXB_NOWRITE = 0x09,
-    CMD_UNK_0A = 0x0A,
+    CMD_COMPRESSOR_TABLE_ADDR = 0x0A,
     CMD_UNK_0B = 0x0B,
     CMD_UNK_0C = 0x0C,
     CMD_MORE = 0x0D,
@@ -174,7 +149,7 @@ private:
     CMD_END = 0x0F,
     CMD_MIX_AUXB_LR = 0x10,
     CMD_SET_OPPOSITE_LR = 0x11,
-    CMD_COMPRESSOR = 0x12,
+    CMD_UNK_12 = 0x12,
     CMD_SEND_AUX_AND_MIX = 0x13,
   };
 };

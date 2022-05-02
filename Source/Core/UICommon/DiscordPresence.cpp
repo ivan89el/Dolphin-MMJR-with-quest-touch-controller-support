@@ -1,7 +1,11 @@
 // Copyright 2018 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "UICommon/DiscordPresence.h"
+
+#include "Common/Hash.h"
+#include "Common/StringUtil.h"
 
 #include "Core/Config/NetplaySettings.h"
 #include "Core/Config/UISettings.h"
@@ -12,13 +16,8 @@
 #include <algorithm>
 #include <cctype>
 #include <ctime>
-#include <set>
+#include <discord-rpc/include/discord_rpc.h>
 #include <string>
-
-#include <discord_rpc.h>
-#include <fmt/format.h>
-
-#include "Common/Hash.h"
 
 #endif
 
@@ -40,7 +39,7 @@ void HandleDiscordJoinRequest(const DiscordUser* user)
   if (event_handler == nullptr)
     return;
 
-  const std::string discord_tag = fmt::format("{}#{}", user->username, user->discriminator);
+  const std::string discord_tag = StringFromFormat("%s#%s", user->username, user->discriminator);
   event_handler->DiscordJoinRequest(user->userId, discord_tag, user->avatar);
 }
 
@@ -49,7 +48,7 @@ void HandleDiscordJoin(const char* join_secret)
   if (event_handler == nullptr)
     return;
 
-  if (Config::Get(Config::NETPLAY_NICKNAME) == Config::NETPLAY_NICKNAME.GetDefaultValue())
+  if (Config::Get(Config::NETPLAY_NICKNAME) == Config::NETPLAY_NICKNAME.default_value)
     Config::SetCurrent(Config::NETPLAY_NICKNAME, username);
 
   std::string secret(join_secret);

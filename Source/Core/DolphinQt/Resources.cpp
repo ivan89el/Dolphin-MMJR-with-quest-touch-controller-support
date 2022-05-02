@@ -1,5 +1,6 @@
 // Copyright 2015 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include <QGuiApplication>
 #include <QIcon>
@@ -21,10 +22,9 @@ QList<QPixmap> Resources::m_platforms;
 QList<QPixmap> Resources::m_countries;
 QList<QPixmap> Resources::m_misc;
 
-QIcon Resources::GetIcon(std::string_view name, const QString& dir)
+QIcon Resources::GetIcon(const QString& name, const QString& dir)
 {
-  QString name_owned = QString::fromLatin1(name.data(), static_cast<int>(name.size()));
-  QString base_path = dir + QLatin1Char{'/'} + name_owned;
+  QString base_path = dir + QStringLiteral("/") + name;
 
   const auto dpr = QGuiApplication::primaryScreen()->devicePixelRatio();
 
@@ -43,7 +43,7 @@ QIcon Resources::GetIcon(std::string_view name, const QString& dir)
   return icon;
 }
 
-QPixmap Resources::GetPixmap(std::string_view name, const QString& dir)
+QPixmap Resources::GetPixmap(const QString& name, const QString& dir)
 {
   const auto icon = GetIcon(name, dir);
   return icon.pixmap(icon.availableSizes()[0]);
@@ -59,30 +59,30 @@ static QString GetResourcesDir()
   return QString::fromStdString(File::GetSysDirectory() + "Resources");
 }
 
-QIcon Resources::GetScaledIcon(std::string_view name)
+QIcon Resources::GetScaledIcon(const std::string& name)
 {
-  return GetIcon(name, GetResourcesDir());
+  return GetIcon(QString::fromStdString(name), GetResourcesDir());
 }
 
-QIcon Resources::GetScaledThemeIcon(std::string_view name)
+QIcon Resources::GetScaledThemeIcon(const std::string& name)
 {
-  return GetIcon(name, GetCurrentThemeDir());
+  return GetIcon(QString::fromStdString(name), GetCurrentThemeDir());
 }
 
-QPixmap Resources::GetScaledPixmap(std::string_view name)
+QPixmap Resources::GetScaledPixmap(const std::string& name)
 {
-  return GetPixmap(name, GetResourcesDir());
+  return GetPixmap(QString::fromStdString(name), GetResourcesDir());
 }
 
 void Resources::Init()
 {
-  for (std::string_view platform :
+  for (const std::string& platform :
        {"Platform_Gamecube", "Platform_Wii", "Platform_Wad", "Platform_File"})
   {
     m_platforms.append(GetScaledPixmap(platform));
   }
 
-  for (std::string_view country :
+  for (const std::string& country :
        {"Flag_Europe", "Flag_Japan", "Flag_USA", "Flag_Australia", "Flag_France", "Flag_Germany",
         "Flag_Italy", "Flag_Korea", "Flag_Netherlands", "Flag_Russia", "Flag_Spain", "Flag_Taiwan",
         "Flag_International", "Flag_Unknown"})

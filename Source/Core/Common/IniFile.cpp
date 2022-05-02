@@ -1,5 +1,6 @@
 // Copyright 2008 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "Common/IniFile.h"
 
@@ -8,14 +9,13 @@
 #include <fstream>
 #include <map>
 #include <string>
-#include <string_view>
 #include <utility>
 #include <vector>
 
 #include "Common/FileUtil.h"
 #include "Common/StringUtil.h"
 
-void IniFile::ParseLine(std::string_view line, std::string* keyOut, std::string* valueOut)
+void IniFile::ParseLine(const std::string& line, std::string* keyOut, std::string* valueOut)
 {
   if (line.empty() || line.front() == '#')
     return;
@@ -96,7 +96,7 @@ bool IniFile::Section::GetLines(std::vector<std::string>* lines, const bool remo
 {
   for (const std::string& line : m_lines)
   {
-    std::string_view stripped_line = StripSpaces(line);
+    std::string stripped_line = StripSpaces(line);
 
     if (remove_comments)
     {
@@ -112,7 +112,7 @@ bool IniFile::Section::GetLines(std::vector<std::string>* lines, const bool remo
       }
     }
 
-    lines->emplace_back(stripped_line);
+    lines->push_back(std::move(stripped_line));
   }
 
   return true;
@@ -175,11 +175,6 @@ bool IniFile::DeleteSection(std::string_view section_name)
   return false;
 }
 
-bool IniFile::Exists(std::string_view section_name) const
-{
-  return GetSection(section_name) != nullptr;
-}
-
 bool IniFile::Exists(std::string_view section_name, std::string_view key) const
 {
   const Section* section = GetSection(section_name);
@@ -189,7 +184,13 @@ bool IniFile::Exists(std::string_view section_name, std::string_view key) const
   return section->Exists(key);
 }
 
-void IniFile::SetLines(std::string_view section_name, std::vector<std::string> lines)
+void IniFile::SetLines(std::string_view section_name, const std::vector<std::string>& lines)
+{
+  Section* section = GetOrCreateSection(section_name);
+  section->SetLines(lines);
+}
+
+void IniFile::SetLines(std::string_view section_name, std::vector<std::string>&& lines)
 {
   Section* section = GetOrCreateSection(section_name);
   section->SetLines(std::move(lines));
@@ -250,8 +251,9 @@ bool IniFile::Load(const std::string& filename, bool keep_current_data)
   bool first_line = true;
   while (!in.eof())
   {
-    std::string line_str;
-    if (!std::getline(in, line_str))
+    std::string line;
+
+    if (!std::getline(in, line))
     {
       if (in.eof())
         return true;
@@ -259,17 +261,17 @@ bool IniFile::Load(const std::string& filename, bool keep_current_data)
         return false;
     }
 
-    std::string_view line = line_str;
-
     // Skips the UTF-8 BOM at the start of files. Notepad likes to add this.
     if (first_line && line.substr(0, 3) == "\xEF\xBB\xBF")
-      line.remove_prefix(3);
+      line = line.substr(3);
     first_line = false;
 
 #ifndef _WIN32
     // Check for CRLF eol and convert it to LF
     if (!line.empty() && line.back() == '\r')
-      line.remove_suffix(1);
+    {
+      line.pop_back();
+    }
 #endif
 
     if (!line.empty())
@@ -281,7 +283,7 @@ bool IniFile::Load(const std::string& filename, bool keep_current_data)
         if (endpos != std::string::npos)
         {
           // New section!
-          std::string_view sub = line.substr(1, endpos - 1);
+          std::string sub = line.substr(1, endpos - 1);
           current_section = GetOrCreateSection(sub);
         }
       }
@@ -297,13 +299,9 @@ bool IniFile::Load(const std::string& filename, bool keep_current_data)
           // INI is a hack anyway.
           if ((key.empty() && value.empty()) ||
               (!line.empty() && (line[0] == '$' || line[0] == '+' || line[0] == '*')))
-          {
-            current_section->m_lines.emplace_back(line);
-          }
+            current_section->m_lines.push_back(line);
           else
-          {
             current_section->Set(key, value);
-          }
         }
       }
     }

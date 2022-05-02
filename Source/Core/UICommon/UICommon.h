@@ -1,5 +1,6 @@
 // Copyright 2014 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
@@ -12,10 +13,10 @@ namespace UICommon
 void Init();
 void Shutdown();
 
-#ifdef HAVE_X11
-void InhibitScreenSaver(unsigned long win, bool enable);
+#if defined(HAVE_XRANDR) && HAVE_XRANDR
+void EnableScreenSaver(unsigned long win, bool enable);
 #else
-void InhibitScreenSaver(bool enable);
+void EnableScreenSaver(bool enable);
 #endif
 
 // Calls std::locale::global, selecting a fallback locale if the
@@ -31,5 +32,5 @@ void SaveWiimoteSources();
 
 // Return a pretty file size string from byte count.
 // e.g. 1134278 -> "1.08 MiB"
-std::string FormatSize(u64 bytes, int decimals = 2);
+std::string FormatSize(u64 bytes);
 }  // namespace UICommon

@@ -1,5 +1,6 @@
 // Copyright 2017 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
@@ -8,14 +9,12 @@
 
 #include "Common/CommonTypes.h"
 #include "Common/IniFile.h"
-#include "InputCommon/ControlReference/ControlReference.h"
-#include "InputCommon/ControllerInterface/CoreDevice.h"
+#include "InputCommon/ControllerInterface/Device.h"
 
 namespace ControllerEmu
 {
 enum class SettingType
 {
-  Int,
   Double,
   Bool,
 };
@@ -53,19 +52,9 @@ public:
   virtual void LoadFromIni(const IniFile::Section& section, const std::string& group_name) = 0;
   virtual void SaveToIni(IniFile::Section& section, const std::string& group_name) const = 0;
 
-  virtual InputReference& GetInputReference() = 0;
-  virtual const InputReference& GetInputReference() const = 0;
-
-  virtual bool IsSimpleValue() const = 0;
-
-  // Convert a literal expression e.g. "7.0" to a regular value. (disables expression parsing)
-  virtual void SimplifyIfPossible() = 0;
-
-  // Convert a regular value to an expression. (used before expression editing)
-  virtual void SetExpressionFromValue() = 0;
-
   virtual SettingType GetType() const = 0;
 
+  const char* GetIniName() const;
   const char* GetUIName() const;
   const char* GetUISuffix() const;
   const char* GetUIDescription() const;
@@ -78,14 +67,13 @@ template <typename T>
 class SettingValue;
 
 template <typename T>
-class NumericSetting final : public NumericSettingBase
+class NumericSetting : public NumericSettingBase
 {
 public:
   using ValueType = T;
 
-  static_assert(std::is_same<ValueType, int>() || std::is_same<ValueType, double>() ||
-                    std::is_same<ValueType, bool>(),
-                "NumericSetting is only implemented for int, double, and bool.");
+  static_assert(std::is_same<ValueType, double>() || std::is_same<ValueType, bool>(),
+                "NumericSetting is only implemented for double and bool.");
 
   NumericSetting(SettingValue<ValueType>* value, const NumericSettingDetails& details,
                  ValueType default_value, ValueType min_value, ValueType max_value)
@@ -97,45 +85,15 @@ public:
 
   void LoadFromIni(const IniFile::Section& section, const std::string& group_name) override
   {
-    std::string str_value;
-    if (section.Get(group_name + m_details.ini_name, &str_value))
-    {
-      m_value.m_input.SetExpression(std::move(str_value));
-      SimplifyIfPossible();
-    }
-    else
-    {
-      SetValue(m_default_value);
-    }
+    ValueType value;
+    section.Get(group_name + m_details.ini_name, &value, m_default_value);
+    SetValue(value);
   }
 
   void SaveToIni(IniFile::Section& section, const std::string& group_name) const override
   {
-    if (IsSimpleValue())
-    {
-      section.Set(group_name + m_details.ini_name, GetValue(), m_default_value);
-    }
-    else
-    {
-      // We can't save line breaks in a single line config. Restoring them is too complicated.
-      std::string expression = m_value.m_input.GetExpression();
-      ReplaceBreaksWithSpaces(expression);
-      section.Set(group_name + m_details.ini_name, expression, "");
-    }
+    section.Set(group_name + m_details.ini_name, GetValue(), m_default_value);
   }
-
-  bool IsSimpleValue() const override { return m_value.IsSimpleValue(); }
-
-  void SimplifyIfPossible() override
-  {
-    ValueType value;
-    if (TryParse(m_value.m_input.GetExpression(), &value))
-      m_value.SetValue(value);
-  }
-
-  void SetExpressionFromValue() override;
-  InputReference& GetInputReference() override { return m_value.m_input; }
-  const InputReference& GetInputReference() const override { return m_value.m_input; }
 
   ValueType GetValue() const { return m_value.GetValue(); }
   void SetValue(ValueType value) { m_value.SetValue(value); }
@@ -162,33 +120,13 @@ class SettingValue
   friend class NumericSetting<T>;
 
 public:
-  ValueType GetValue() const
-  {
-    // Only update dynamic values when the input gate is enabled.
-    // Otherwise settings will all change to 0 when window focus is lost.
-    // This is very undesirable for things like battery level or attached extension.
-    if (!IsSimpleValue() && ControlReference::GetInputGate())
-      m_value = m_input.GetState<ValueType>();
-
-    return m_value;
-  }
-
-  bool IsSimpleValue() const { return m_input.GetExpression().empty(); }
+  ValueType GetValue() const { return m_value; }
 
 private:
-  void SetValue(ValueType value)
-  {
-    m_value = value;
-
-    // Clear the expression to use our new "simple" value.
-    m_input.SetExpression("");
-  }
+  void SetValue(ValueType value) { m_value = value; }
 
   // Values are R/W by both UI and CPU threads.
-  mutable std::atomic<ValueType> m_value = {};
-
-  // Unfortunately InputReference's state grabbing is non-const requiring mutable here.
-  mutable InputReference m_input;
+  std::atomic<ValueType> m_value = {};
 };
 
 }  // namespace ControllerEmu

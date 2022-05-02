@@ -1,12 +1,15 @@
 // Copyright 2017 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "Core/IOS/ES/Formats.h"
 
 #include <algorithm>
 #include <array>
+#include <cinttypes>
 #include <cstddef>
 #include <cstring>
+#include <locale>
 #include <map>
 #include <optional>
 #include <string>
@@ -26,7 +29,6 @@
 #include "Core/CommonTitles.h"
 #include "Core/IOS/Device.h"
 #include "Core/IOS/FS/FileSystem.h"
-#include "Core/IOS/FS/FileSystemProxy.h"
 #include "Core/IOS/IOS.h"
 #include "Core/IOS/IOSC.h"
 #include "Core/IOS/Uids.h"
@@ -78,7 +80,11 @@ bool operator!=(const Content& lhs, const Content& rhs)
   return !operator==(lhs, rhs);
 }
 
-SignedBlobReader::SignedBlobReader(std::vector<u8> bytes) : m_bytes(std::move(bytes))
+SignedBlobReader::SignedBlobReader(const std::vector<u8>& bytes) : m_bytes(bytes)
+{
+}
+
+SignedBlobReader::SignedBlobReader(std::vector<u8>&& bytes) : m_bytes(std::move(bytes))
 {
 }
 
@@ -87,7 +93,12 @@ const std::vector<u8>& SignedBlobReader::GetBytes() const
   return m_bytes;
 }
 
-void SignedBlobReader::SetBytes(std::vector<u8> bytes)
+void SignedBlobReader::SetBytes(const std::vector<u8>& bytes)
+{
+  m_bytes = bytes;
+}
+
+void SignedBlobReader::SetBytes(std::vector<u8>&& bytes)
 {
   m_bytes = std::move(bytes);
 }
@@ -203,7 +214,11 @@ bool IsValidTMDSize(size_t size)
   return size <= 0x49e4;
 }
 
-TMDReader::TMDReader(std::vector<u8> bytes) : SignedBlobReader(std::move(bytes))
+TMDReader::TMDReader(const std::vector<u8>& bytes) : SignedBlobReader(bytes)
+{
+}
+
+TMDReader::TMDReader(std::vector<u8>&& bytes) : SignedBlobReader(std::move(bytes))
 {
 }
 
@@ -299,7 +314,11 @@ std::string TMDReader::GetGameID() const
   std::memcpy(game_id, m_bytes.data() + offsetof(TMDHeader, title_id) + 4, 4);
   std::memcpy(game_id + 4, m_bytes.data() + offsetof(TMDHeader, group_id), 2);
 
-  if (std::all_of(std::begin(game_id), std::end(game_id), IsPrintableCharacter))
+  const bool all_printable = std::all_of(std::begin(game_id), std::end(game_id), [](char c) {
+    return std::isprint(c, std::locale::classic());
+  });
+
+  if (all_printable)
     return std::string(game_id, sizeof(game_id));
 
   return fmt::format("{:016x}", GetTitleId());
@@ -310,7 +329,10 @@ std::string TMDReader::GetGameTDBID() const
   const u8* begin = m_bytes.data() + offsetof(TMDHeader, title_id) + 4;
   const u8* end = begin + 4;
 
-  if (std::all_of(begin, end, IsPrintableCharacter))
+  const bool all_printable =
+      std::all_of(begin, end, [](char c) { return std::isprint(c, std::locale::classic()); });
+
+  if (all_printable)
     return std::string(begin, end);
 
   return fmt::format("{:016x}", GetTitleId());
@@ -362,7 +384,11 @@ bool TMDReader::FindContentById(u32 id, Content* content) const
   return false;
 }
 
-TicketReader::TicketReader(std::vector<u8> bytes) : SignedBlobReader(std::move(bytes))
+TicketReader::TicketReader(const std::vector<u8>& bytes) : SignedBlobReader(bytes)
+{
+}
+
+TicketReader::TicketReader(std::vector<u8>&& bytes) : SignedBlobReader(std::move(bytes))
 {
 }
 
@@ -380,10 +406,10 @@ std::vector<u8> TicketReader::GetRawTicket(u64 ticket_id_to_find) const
 {
   for (size_t i = 0; i < GetNumberOfTickets(); ++i)
   {
-    const auto ticket_begin = m_bytes.begin() + sizeof(ES::Ticket) * i;
-    const u64 ticket_id = Common::swap64(&*ticket_begin + offsetof(ES::Ticket, ticket_id));
+    const auto ticket_begin = m_bytes.begin() + sizeof(IOS::ES::Ticket) * i;
+    const u64 ticket_id = Common::swap64(&*ticket_begin + offsetof(IOS::ES::Ticket, ticket_id));
     if (ticket_id == ticket_id_to_find)
-      return std::vector<u8>(ticket_begin, ticket_begin + sizeof(ES::Ticket));
+      return std::vector<u8>(ticket_begin, ticket_begin + sizeof(IOS::ES::Ticket));
   }
   return {};
 }
@@ -429,8 +455,8 @@ std::array<u8, 16> TicketReader::GetTitleKey(const HLE::IOSC& iosc) const
   u8 index = m_bytes.at(offsetof(Ticket, common_key_index));
   if (index >= HLE::IOSC::COMMON_KEY_HANDLES.size())
   {
-    PanicAlertFmt("Bad common key index for title {:016x}: {} -- using common key 0", GetTitleId(),
-                  index);
+    PanicAlert("Bad common key index for title %016" PRIx64 ": %u -- using common key 0",
+               GetTitleId(), index);
     index = 0;
   }
   auto common_key_handle = HLE::IOSC::COMMON_KEY_HANDLES[index];
@@ -521,17 +547,13 @@ struct SharedContentMap::Entry
 };
 
 constexpr char CONTENT_MAP_PATH[] = "/shared1/content.map";
-SharedContentMap::SharedContentMap(std::shared_ptr<HLE::FSDevice> fs)
-    : m_fs_device{fs}, m_fs{fs->GetFS()}
+SharedContentMap::SharedContentMap(std::shared_ptr<HLE::FS::FileSystem> fs) : m_fs{fs}
 {
   static_assert(sizeof(Entry) == 28, "SharedContentMap::Entry has the wrong size");
 
   Entry entry;
-  const auto fd =
-      fs->Open(PID_KERNEL, PID_KERNEL, CONTENT_MAP_PATH, HLE::FS::Mode::Read, {}, &m_ticks);
-  if (fd.Get() < 0)
-    return;
-  while (fs->Read(fd.Get(), &entry, 1, &m_ticks) == sizeof(entry))
+  const auto file = fs->OpenFile(PID_KERNEL, PID_KERNEL, CONTENT_MAP_PATH, HLE::FS::Mode::Read);
+  while (file && file->Read(&entry, 1))
   {
     m_entries.push_back(entry);
     m_last_id++;
@@ -604,29 +626,27 @@ bool SharedContentMap::WriteEntries() const
          HLE::FS::ResultCode::Success;
 }
 
-static std::pair<u32, u64> ReadUidSysEntry(HLE::FSDevice& fs, u64 fd, u64* ticks)
+static std::pair<u32, u64> ReadUidSysEntry(const HLE::FS::FileHandle& file)
 {
   u64 title_id = 0;
-  if (fs.Read(fd, &title_id, 1, ticks) != sizeof(title_id))
+  if (!file.Read(&title_id, 1))
     return {};
 
   u32 uid = 0;
-  if (fs.Read(fd, &uid, 1, ticks) != sizeof(uid))
+  if (!file.Read(&uid, 1))
     return {};
 
   return {Common::swap32(uid), Common::swap64(title_id)};
 }
 
 constexpr char UID_MAP_PATH[] = "/sys/uid.sys";
-UIDSys::UIDSys(std::shared_ptr<HLE::FSDevice> fs) : m_fs_device{fs}, m_fs{fs->GetFS()}
+UIDSys::UIDSys(std::shared_ptr<HLE::FS::FileSystem> fs) : m_fs{fs}
 {
-  if (const auto fd =
-          fs->Open(PID_KERNEL, PID_KERNEL, UID_MAP_PATH, HLE::FS::Mode::Read, {}, &m_ticks);
-      fd.Get() >= 0)
+  if (const auto file = fs->OpenFile(PID_KERNEL, PID_KERNEL, UID_MAP_PATH, HLE::FS::Mode::Read))
   {
     while (true)
     {
-      std::pair<u32, u64> entry = ReadUidSysEntry(*fs, fd.Get(), &m_ticks);
+      const std::pair<u32, u64> entry = ReadUidSysEntry(*file);
       if (!entry.first && !entry.second)
         break;
 
@@ -659,7 +679,7 @@ u32 UIDSys::GetOrInsertUIDForTitle(const u64 title_id)
   const u32 current_uid = GetUIDFromTitle(title_id);
   if (current_uid)
   {
-    INFO_LOG_FMT(IOS_ES, "Title {:016x} already exists in uid.sys", title_id);
+    INFO_LOG(IOS_ES, "Title %016" PRIx64 " already exists in uid.sys", title_id);
     return current_uid;
   }
 
@@ -676,7 +696,7 @@ u32 UIDSys::GetOrInsertUIDForTitle(const u64 title_id)
   if (!file || !file->Seek(0, HLE::FS::SeekMode::End) || !file->Write(&swapped_title_id, 1) ||
       !file->Write(&swapped_uid, 1))
   {
-    ERROR_LOG_FMT(IOS_ES, "Failed to write to /sys/uid.sys");
+    ERROR_LOG(IOS_ES, "Failed to write to /sys/uid.sys");
     return 0;
   }
 
@@ -771,7 +791,7 @@ std::map<std::string, CertReader> ParseCertChain(const std::vector<u8>& chain)
       return certs;
 
     processed += cert_reader.GetBytes().size();
-    std::string name = cert_reader.GetName();
+    const std::string name = cert_reader.GetName();
     certs.emplace(std::move(name), std::move(cert_reader));
   }
   return certs;

@@ -1,5 +1,6 @@
 // Copyright 2009 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "VideoBackends/Software/TextureSampler.h"
 
@@ -7,46 +8,37 @@
 #include <cmath>
 
 #include "Common/CommonTypes.h"
-#include "Common/MsgHandler.h"
 #include "Core/HW/Memmap.h"
 
 #include "VideoCommon/BPMemory.h"
+#include "VideoCommon/SamplerCommon.h"
 #include "VideoCommon/TextureDecoder.h"
 
 #define ALLOW_MIPMAP 1
 
 namespace TextureSampler
 {
-static inline void WrapCoord(int* coordp, WrapMode wrap_mode, int image_size)
+static inline void WrapCoord(int* coordp, int wrapMode, int imageSize)
 {
   int coord = *coordp;
-  switch (wrap_mode)
+  switch (wrapMode)
   {
-  case WrapMode::Clamp:
-    coord = std::clamp(coord, 0, image_size - 1);
+  case 0:  // clamp
+    coord = (coord > imageSize) ? imageSize : (coord < 0) ? 0 : coord;
     break;
-  case WrapMode::Repeat:
-    // Per YAGCD's info on TX_SETMODE1_I0 (et al.), mirror "requires the texture size to be a power
-    // of two. (wrapping is implemented by a logical AND (SIZE-1))".  So though this doesn't wrap
-    // nicely for non-power-of-2 sizes, that's how hardware does it.
-    coord = coord & (image_size - 1);
+  case 1:  // wrap
+    coord = coord % (imageSize + 1);
+    coord = (coord < 0) ? imageSize + coord : coord;
     break;
-  case WrapMode::Mirror:
+  case 2:  // mirror
   {
-    // YAGCD doesn't mention this, but this seems to be the check used to implement mirroring.
-    // With power-of-2 sizes, this correctly checks if it's an even-numbered repeat or an
-    // odd-numbered one, and thus can decide whether to reflect.  It fails in unusual ways
-    // with non-power-of-2 sizes, but seems to match what happens on actual hardware.
-    if ((coord & image_size) != 0)
-      coord = ~coord;
-    coord = coord & (image_size - 1);
-    break;
+    const int sizePlus1 = imageSize + 1;
+    const int div = coord / sizePlus1;
+    coord = coord - (div * sizePlus1);
+    coord = (coord < 0) ? -coord : coord;
+    coord = (div & 1) ? imageSize - coord : coord;
   }
-  default:
-    // Hardware testing indicates that wrap_mode set to 3 behaves the same as clamp.
-    PanicAlertFmt("Invalid wrap mode: {}", wrap_mode);
-    coord = std::clamp(coord, 0, image_size - 1);
-    break;
+  break;
   }
   *coordp = coord;
 }
@@ -73,20 +65,19 @@ void Sample(s32 s, s32 t, s32 lod, bool linear, u8 texmap, u8* sample)
   bool mipLinear = false;
 
 #if (ALLOW_MIPMAP)
-  auto texUnit = bpmem.tex.GetUnit(texmap);
-  const TexMode0& tm0 = texUnit.texMode0;
+  const FourTexUnits& texUnit = bpmem.tex[(texmap >> 2) & 1];
+  const TexMode0& tm0 = texUnit.texMode0[texmap & 3];
 
   const s32 lodFract = lod & 0xf;
 
-  if (lod > 0 && tm0.mipmap_filter != MipMode::None)
+  if (lod > 0 && SamplerCommon::AreBpTexMode0MipmapsEnabled(tm0))
   {
     // use mipmap
     baseMip = lod >> 4;
-    mipLinear = (lodFract && tm0.mipmap_filter == MipMode::Linear);
+    mipLinear = (lodFract && tm0.min_filter & TexMode0::TEXF_LINEAR);
 
     // if using nearest mip filter and lodFract >= 0.5 round up to next mip
-    if (tm0.mipmap_filter == MipMode::Point && lodFract >= 8)
-      baseMip++;
+    baseMip += (lodFract >> 3) & (tm0.min_filter & TexMode0::TEXF_POINT);
   }
 
   if (mipLinear)
@@ -114,30 +105,31 @@ void Sample(s32 s, s32 t, s32 lod, bool linear, u8 texmap, u8* sample)
 
 void SampleMip(s32 s, s32 t, s32 mip, bool linear, u8 texmap, u8* sample)
 {
-  auto texUnit = bpmem.tex.GetUnit(texmap);
+  const FourTexUnits& texUnit = bpmem.tex[(texmap >> 2) & 1];
+  const u8 subTexmap = texmap & 3;
 
-  const TexMode0& tm0 = texUnit.texMode0;
-  const TexImage0& ti0 = texUnit.texImage0;
-  const TexTLUT& texTlut = texUnit.texTlut;
-  const TextureFormat texfmt = ti0.format;
-  const TLUTFormat tlutfmt = texTlut.tlut_format;
+  const TexMode0& tm0 = texUnit.texMode0[subTexmap];
+  const TexImage0& ti0 = texUnit.texImage0[subTexmap];
+  const TexTLUT& texTlut = texUnit.texTlut[subTexmap];
+  const TextureFormat texfmt = static_cast<TextureFormat>(ti0.format);
+  const TLUTFormat tlutfmt = static_cast<TLUTFormat>(texTlut.tlut_format);
 
   const u8* imageSrc;
   const u8* imageSrcOdd = nullptr;
-  if (texUnit.texImage1.cache_manually_managed)
+  if (texUnit.texImage1[subTexmap].image_type)
   {
-    imageSrc = &texMem[texUnit.texImage1.tmem_even * TMEM_LINE_SIZE];
+    imageSrc = &texMem[texUnit.texImage1[subTexmap].tmem_even * TMEM_LINE_SIZE];
     if (texfmt == TextureFormat::RGBA8)
-      imageSrcOdd = &texMem[texUnit.texImage2.tmem_odd * TMEM_LINE_SIZE];
+      imageSrcOdd = &texMem[texUnit.texImage2[subTexmap].tmem_odd * TMEM_LINE_SIZE];
   }
   else
   {
-    const u32 imageBase = texUnit.texImage3.image_base << 5;
+    const u32 imageBase = texUnit.texImage3[subTexmap].image_base << 5;
     imageSrc = Memory::GetPointer(imageBase);
   }
 
-  int image_width_minus_1 = ti0.width;
-  int image_height_minus_1 = ti0.height;
+  int imageWidth = ti0.width;
+  int imageHeight = ti0.height;
 
   const int tlutAddress = texTlut.tmem_offset << 9;
   const u8* tlut = &texMem[tlutAddress];
@@ -146,15 +138,15 @@ void SampleMip(s32 s, s32 t, s32 mip, bool linear, u8 texmap, u8* sample)
   // move texture pointer to mip location
   if (mip)
   {
-    int mipWidth = image_width_minus_1 + 1;
-    int mipHeight = image_height_minus_1 + 1;
+    int mipWidth = imageWidth + 1;
+    int mipHeight = imageHeight + 1;
 
     const int fmtWidth = TexDecoder_GetBlockWidthInTexels(texfmt);
     const int fmtHeight = TexDecoder_GetBlockHeightInTexels(texfmt);
     const int fmtDepth = TexDecoder_GetTexelSizeInNibbles(texfmt);
 
-    image_width_minus_1 >>= mip;
-    image_height_minus_1 >>= mip;
+    imageWidth >>= mip;
+    imageHeight >>= mip;
     s >>= mip;
     t >>= mip;
 
@@ -191,45 +183,45 @@ void SampleMip(s32 s, s32 t, s32 mip, bool linear, u8 texmap, u8* sample)
     u8 sampledTex[4];
     u32 texel[4];
 
-    WrapCoord(&imageS, tm0.wrap_s, image_width_minus_1 + 1);
-    WrapCoord(&imageT, tm0.wrap_t, image_height_minus_1 + 1);
-    WrapCoord(&imageSPlus1, tm0.wrap_s, image_width_minus_1 + 1);
-    WrapCoord(&imageTPlus1, tm0.wrap_t, image_height_minus_1 + 1);
+    WrapCoord(&imageS, tm0.wrap_s, imageWidth);
+    WrapCoord(&imageT, tm0.wrap_t, imageHeight);
+    WrapCoord(&imageSPlus1, tm0.wrap_s, imageWidth);
+    WrapCoord(&imageTPlus1, tm0.wrap_t, imageHeight);
 
-    if (!(texfmt == TextureFormat::RGBA8 && texUnit.texImage1.cache_manually_managed))
+    if (!(texfmt == TextureFormat::RGBA8 && texUnit.texImage1[subTexmap].image_type))
     {
-      TexDecoder_DecodeTexel(sampledTex, imageSrc, imageS, imageT, image_width_minus_1, texfmt,
-                             tlut, tlutfmt);
+      TexDecoder_DecodeTexel(sampledTex, imageSrc, imageS, imageT, imageWidth, texfmt, tlut,
+                             tlutfmt);
       SetTexel(sampledTex, texel, (128 - fractS) * (128 - fractT));
 
-      TexDecoder_DecodeTexel(sampledTex, imageSrc, imageSPlus1, imageT, image_width_minus_1, texfmt,
-                             tlut, tlutfmt);
+      TexDecoder_DecodeTexel(sampledTex, imageSrc, imageSPlus1, imageT, imageWidth, texfmt, tlut,
+                             tlutfmt);
       AddTexel(sampledTex, texel, (fractS) * (128 - fractT));
 
-      TexDecoder_DecodeTexel(sampledTex, imageSrc, imageS, imageTPlus1, image_width_minus_1, texfmt,
-                             tlut, tlutfmt);
+      TexDecoder_DecodeTexel(sampledTex, imageSrc, imageS, imageTPlus1, imageWidth, texfmt, tlut,
+                             tlutfmt);
       AddTexel(sampledTex, texel, (128 - fractS) * (fractT));
 
-      TexDecoder_DecodeTexel(sampledTex, imageSrc, imageSPlus1, imageTPlus1, image_width_minus_1,
-                             texfmt, tlut, tlutfmt);
+      TexDecoder_DecodeTexel(sampledTex, imageSrc, imageSPlus1, imageTPlus1, imageWidth, texfmt,
+                             tlut, tlutfmt);
       AddTexel(sampledTex, texel, (fractS) * (fractT));
     }
     else
     {
       TexDecoder_DecodeTexelRGBA8FromTmem(sampledTex, imageSrc, imageSrcOdd, imageS, imageT,
-                                          image_width_minus_1);
+                                          imageWidth);
       SetTexel(sampledTex, texel, (128 - fractS) * (128 - fractT));
 
       TexDecoder_DecodeTexelRGBA8FromTmem(sampledTex, imageSrc, imageSrcOdd, imageSPlus1, imageT,
-                                          image_width_minus_1);
+                                          imageWidth);
       AddTexel(sampledTex, texel, (fractS) * (128 - fractT));
 
       TexDecoder_DecodeTexelRGBA8FromTmem(sampledTex, imageSrc, imageSrcOdd, imageS, imageTPlus1,
-                                          image_width_minus_1);
+                                          imageWidth);
       AddTexel(sampledTex, texel, (128 - fractS) * (fractT));
 
       TexDecoder_DecodeTexelRGBA8FromTmem(sampledTex, imageSrc, imageSrcOdd, imageSPlus1,
-                                          imageTPlus1, image_width_minus_1);
+                                          imageTPlus1, imageWidth);
       AddTexel(sampledTex, texel, (fractS) * (fractT));
     }
 
@@ -245,15 +237,14 @@ void SampleMip(s32 s, s32 t, s32 mip, bool linear, u8 texmap, u8* sample)
     int imageT = t >> 7;
 
     // nearest neighbor sampling
-    WrapCoord(&imageS, tm0.wrap_s, image_width_minus_1 + 1);
-    WrapCoord(&imageT, tm0.wrap_t, image_height_minus_1 + 1);
+    WrapCoord(&imageS, tm0.wrap_s, imageWidth);
+    WrapCoord(&imageT, tm0.wrap_t, imageHeight);
 
-    if (!(texfmt == TextureFormat::RGBA8 && texUnit.texImage1.cache_manually_managed))
-      TexDecoder_DecodeTexel(sample, imageSrc, imageS, imageT, image_width_minus_1, texfmt, tlut,
-                             tlutfmt);
+    if (!(texfmt == TextureFormat::RGBA8 && texUnit.texImage1[subTexmap].image_type))
+      TexDecoder_DecodeTexel(sample, imageSrc, imageS, imageT, imageWidth, texfmt, tlut, tlutfmt);
     else
       TexDecoder_DecodeTexelRGBA8FromTmem(sample, imageSrc, imageSrcOdd, imageS, imageT,
-                                          image_width_minus_1);
+                                          imageWidth);
   }
 }
 }  // namespace TextureSampler

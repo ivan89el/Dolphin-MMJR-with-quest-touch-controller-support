@@ -1,9 +1,11 @@
 // Copyright 2008 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include <cstring>
 
 #include "Common/CommonTypes.h"
+#include "Common/Compiler.h"
 #include "Common/Logging/Log.h"
 #include "VideoCommon/IndexGenerator.h"
 #include "VideoCommon/OpcodeDecoding.h"
@@ -11,83 +13,83 @@
 #include "VideoCommon/BPMemory.h"
 
 // Init
-u16* IndexGenerator::m_index_buffer_current;
-u16* IndexGenerator::m_base_index_ptr;
-u32 IndexGenerator::m_base_index;
+u16* IndexGenerator::index_buffer_current;
+u16* IndexGenerator::BASEIptr;
+u32 IndexGenerator::base_index;
 
-void IndexGenerator::Start(u16* index_ptr)
+void IndexGenerator::Start(u16* Indexptr)
 {
-  m_index_buffer_current = index_ptr;
-  m_base_index_ptr = index_ptr;
-  m_base_index = 0;
+  index_buffer_current = Indexptr;
+  BASEIptr = Indexptr;
+  base_index = 0;
 }
 
-void IndexGenerator::AddIndices(int primitive, u32 num_verts)
+void IndexGenerator::AddIndices(int primitive, u32 numVerts)
 {
   switch (primitive)
   {
   case OpcodeDecoder::GX_DRAW_QUADS:
-    m_index_buffer_current = AddQuads(m_index_buffer_current, num_verts, m_base_index);
+    index_buffer_current = AddQuads(index_buffer_current, numVerts, base_index);
     break;
   case OpcodeDecoder::GX_DRAW_QUADS_2:
-    m_index_buffer_current = AddQuads_nonstandard(m_index_buffer_current, num_verts, m_base_index);
+    index_buffer_current = AddQuads_nonstandard(index_buffer_current, numVerts, base_index);
     break;
   case OpcodeDecoder::GX_DRAW_TRIANGLES:
-    m_index_buffer_current = AddList(m_index_buffer_current, num_verts, m_base_index);
+    index_buffer_current = AddList(index_buffer_current, numVerts, base_index);
     break;
   case OpcodeDecoder::GX_DRAW_TRIANGLE_STRIP:
-    m_index_buffer_current = AddStrip(m_index_buffer_current, num_verts, m_base_index);
+    index_buffer_current = AddStrip(index_buffer_current, numVerts, base_index);
     break;
   case OpcodeDecoder::GX_DRAW_TRIANGLE_FAN:
-    m_index_buffer_current = AddFan(m_index_buffer_current, num_verts, m_base_index);
+    index_buffer_current = AddFan(index_buffer_current, numVerts, base_index);
     break;
   case OpcodeDecoder::GX_DRAW_LINES:
-    m_index_buffer_current = AddLineList(m_index_buffer_current, num_verts, m_base_index);
+    index_buffer_current = AddLineList(index_buffer_current, numVerts, base_index);
     break;
   case OpcodeDecoder::GX_DRAW_LINE_STRIP:
-    m_index_buffer_current = AddLineStrip(m_index_buffer_current, num_verts, m_base_index);
+    index_buffer_current = AddLineStrip(index_buffer_current, numVerts, base_index);
     break;
   case OpcodeDecoder::GX_DRAW_POINTS:
-    m_index_buffer_current = AddPoints(m_index_buffer_current, num_verts, m_base_index);
+    index_buffer_current = AddPoints(index_buffer_current, numVerts, base_index);
     break;
   }
-  m_base_index += num_verts;
+  base_index += numVerts;
 }
 
 void IndexGenerator::AddExternalIndices(const u16* indices, u32 num_indices, u32 num_vertices)
 {
-  std::memcpy(m_index_buffer_current, indices, sizeof(u16) * num_indices);
-  m_index_buffer_current += num_indices;
-  m_base_index += num_vertices;
+  std::memcpy(index_buffer_current, indices, sizeof(u16) * num_indices);
+  index_buffer_current += num_indices;
+  base_index += num_vertices;
 }
 
 // Triangles
-u16* IndexGenerator::AddList(u16* index_ptr, u32 num_verts, u32 index)
+u16* IndexGenerator::AddList(u16* Iptr, u32 numVerts, u32 index)
 {
-  bool ccw = bpmem.genMode.cullmode == CullMode::Front;
+  bool ccw = bpmem.genMode.cullmode == GenMode::CULL_FRONT;
   int v1 = ccw ? 0 : 1;
   int v2 = ccw ? 1 : 0;
-  for (u32 i = 2; i < num_verts; i += 3)
+  for (u32 i = 2; i < numVerts; i += 3)
   {
-    *index_ptr++ = index + i - 2;
-    *index_ptr++ = index + i - v1;
-    *index_ptr++ = index + i - v2;
+    *Iptr++ = index + i - 2;
+    *Iptr++ = index + i - v1;
+    *Iptr++ = index + i - v2;
   }
-  return index_ptr;
+  return Iptr;
 }
 
-u16* IndexGenerator::AddStrip(u16* index_ptr, u32 num_verts, u32 index)
+u16* IndexGenerator::AddStrip(u16* Iptr, u32 numVerts, u32 index)
 {
-  bool ccw = bpmem.genMode.cullmode == CullMode::Front;
+  bool ccw = bpmem.genMode.cullmode == GenMode::CULL_FRONT;
   int wind = ccw ? 0 : 1;
-  for (u32 i = 2; i < num_verts; ++i)
+  for (u32 i = 2; i < numVerts; ++i)
   {
-    *index_ptr++ = index + i - 2;
-    *index_ptr++ = index + i - wind;
+    *Iptr++ = index + i - 2;
+    *Iptr++ = index + i - wind;
     wind ^= 1;  // toggle between 0 and 1
-    *index_ptr++ = index + i - wind;
+    *Iptr++ = index + i - wind;
   }
-  return index_ptr;
+  return Iptr;
 }
 
 /**
@@ -108,21 +110,21 @@ u16* IndexGenerator::AddStrip(u16* index_ptr, u32 num_verts, u32 index)
  *
  * so we use 6 indices for 3 triangles
  */
-u16* IndexGenerator::AddFan(u16* index_ptr, u32 num_verts, u32 index)
+u16* IndexGenerator::AddFan(u16* Iptr, u32 numVerts, u32 index)
 {
-  bool ccw = bpmem.genMode.cullmode == CullMode::Front;
+  bool ccw = bpmem.genMode.cullmode == GenMode::CULL_FRONT;
   int v1 = ccw ? 0 : 1;
   int v2 = ccw ? 1 : 0;
-  for (u32 i = 2; i < num_verts; ++i)
+  for (u32 i = 2; i < numVerts; ++i)
   {
-    *index_ptr++ = index;
-    *index_ptr++ = index + i - v1;
-    *index_ptr++ = index + i - v2;
+    *Iptr++ = index;
+    *Iptr++ = index + i - v1;
+    *Iptr++ = index + i - v2;
   }
-  return index_ptr;
+  return Iptr;
 }
 
-/**
+/*
  * QUAD simulator
  *
  * 0---1   4---5
@@ -139,74 +141,73 @@ u16* IndexGenerator::AddFan(u16* index_ptr, u32 num_verts, u32 index)
  * A simple triangle has to be rendered for three vertices.
  * ZWW do this for sun rays
  */
-u16* IndexGenerator::AddQuads(u16* index_ptr, u32 num_verts, u32 index)
+u16* IndexGenerator::AddQuads(u16* Iptr, u32 numVerts, u32 index)
 {
-  bool ccw = bpmem.genMode.cullmode == CullMode::Front;
+  bool ccw = bpmem.genMode.cullmode == GenMode::CULL_FRONT;
   u32 i = 3;
   int v1 = ccw ? 1 : 2;
   int v2 = ccw ? 2 : 1;
   int v3 = ccw ? 0 : 1;
   int v4 = ccw ? 1 : 0;
 
-  for (; i < num_verts; i += 4)
+  for (; i < numVerts; i += 4)
   {
-    *index_ptr++ = index + i - 3;
-    *index_ptr++ = index + i - v1;
-    *index_ptr++ = index + i - v2;
+    *Iptr++ = index + i - 3;
+    *Iptr++ = index + i - v1;
+    *Iptr++ = index + i - v2;
 
-    *index_ptr++ = index + i - 3;
-    *index_ptr++ = index + i - v3;
-    *index_ptr++ = index + i - v4;
+    *Iptr++ = index + i - 3;
+    *Iptr++ = index + i - v3;
+    *Iptr++ = index + i - v4;
   }
 
   // Legend of Zelda The Wind Waker
   // if three vertices remaining, render a triangle
-  if (i == num_verts)
+  if (i == numVerts)
   {
-    *index_ptr++ = index + i - 3;
-    *index_ptr++ = index + i - v1;
-    *index_ptr++ = index + i - v2;
+    *Iptr++ = index + i - 3;
+    *Iptr++ = index + i - v1;
+    *Iptr++ = index + i - v2;
   }
 
-  return index_ptr;
+  return Iptr;
 }
 
-u16* IndexGenerator::AddQuads_nonstandard(u16* index_ptr, u32 num_verts, u32 index)
+u16* IndexGenerator::AddQuads_nonstandard(u16* Iptr, u32 numVerts, u32 index)
 {
-  WARN_LOG_FMT(VIDEO, "Non-standard primitive drawing command GL_DRAW_QUADS_2");
-  return AddQuads(index_ptr, num_verts, index);
+  WARN_LOG(VIDEO, "Non-standard primitive drawing command GL_DRAW_QUADS_2");
+  return AddQuads(Iptr, numVerts, index);
 }
 
 // Lines
-u16* IndexGenerator::AddLineList(u16* index_ptr, u32 num_verts, u32 index)
+u16* IndexGenerator::AddLineList(u16* Iptr, u32 numVerts, u32 index)
 {
-  for (u32 i = 1; i < num_verts; i += 2)
+  for (u32 i = 1; i < numVerts; i += 2)
   {
-    *index_ptr++ = index + i - 1;
-    *index_ptr++ = index + i;
+    *Iptr++ = index + i - 1;
+    *Iptr++ = index + i;
   }
-  return index_ptr;
+  return Iptr;
 }
 
 // shouldn't be used as strips as LineLists are much more common
 // so converting them to lists
-u16* IndexGenerator::AddLineStrip(u16* index_ptr, u32 num_verts, u32 index)
+u16* IndexGenerator::AddLineStrip(u16* Iptr, u32 numVerts, u32 index)
 {
-  for (u32 i = 1; i < num_verts; ++i)
+  for (u32 i = 1; i < numVerts; ++i)
   {
-    *index_ptr++ = index + i - 1;
-    *index_ptr++ = index + i;
+    *Iptr++ = index + i - 1;
+    *Iptr++ = index + i;
   }
-  return index_ptr;
+  return Iptr;
 }
 
 // Points
-u16* IndexGenerator::AddPoints(u16* index_ptr, u32 num_verts, u32 index)
+u16* IndexGenerator::AddPoints(u16* Iptr, u32 numVerts, u32 index)
 {
-  for (u32 i = 0; i != num_verts; ++i)
+  for (u32 i = 0; i != numVerts; ++i)
   {
-    *index_ptr++ = index + i;
+    *Iptr++ = index + i;
   }
-  return index_ptr;
+  return Iptr;
 }
-

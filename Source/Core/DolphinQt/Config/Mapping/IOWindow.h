@@ -1,26 +1,20 @@
 // Copyright 2017 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
-#include <memory>
-#include <mutex>
-#include <string>
-
-#include <QComboBox>
 #include <QDialog>
 #include <QString>
-#include <QSyntaxHighlighter>
 
 #include "Common/Flag.h"
-#include "InputCommon/ControllerInterface/CoreDevice.h"
+#include "InputCommon/ControllerInterface/Device.h"
 
 class ControlReference;
-class MappingWidget;
 class QAbstractButton;
+class QComboBox;
 class QDialogButtonBox;
-class QLineEdit;
-class QTableWidget;
+class QListWidget;
 class QVBoxLayout;
 class QWidget;
 class QPlainTextEdit;
@@ -33,29 +27,6 @@ namespace ControllerEmu
 class EmulatedController;
 }
 
-class InputStateLineEdit;
-
-class ControlExpressionSyntaxHighlighter final : public QSyntaxHighlighter
-{
-  Q_OBJECT
-public:
-  explicit ControlExpressionSyntaxHighlighter(QTextDocument* parent);
-
-protected:
-  void highlightBlock(const QString& text) final override;
-};
-
-class QComboBoxWithMouseWheelDisabled : public QComboBox
-{
-  Q_OBJECT
-public:
-  explicit QComboBoxWithMouseWheelDisabled(QWidget* parent = nullptr) : QComboBox(parent) {}
-
-protected:
-  // Consumes event while doing nothing
-  void wheelEvent(QWheelEvent* event) override;
-};
-
 class IOWindow final : public QDialog
 {
   Q_OBJECT
@@ -66,35 +37,23 @@ public:
     Output
   };
 
-  explicit IOWindow(MappingWidget* parent, ControllerEmu::EmulatedController* m_controller,
+  explicit IOWindow(QWidget* parent, ControllerEmu::EmulatedController* m_controller,
                     ControlReference* ref, Type type);
 
 private:
-  std::shared_ptr<ciface::Core::Device> GetSelectedDevice() const;
-
   void CreateMainLayout();
   void ConnectWidgets();
   void ConfigChanged();
-  void Update();
 
   void OnDialogButtonPressed(QAbstractButton* button);
-  void OnDeviceChanged();
+  void OnDeviceChanged(const QString& device);
   void OnDetectButtonPressed();
   void OnTestButtonPressed();
   void OnRangeChanged(int range);
 
-  void AppendSelectedOption();
+  void AppendSelectedOption(const std::string& prefix);
   void UpdateOptionList();
   void UpdateDeviceList();
-  void ReleaseDevices();
-
-  enum class UpdateMode
-  {
-    Normal,
-    Force,
-  };
-
-  void UpdateExpression(std::string new_expression, UpdateMode mode = UpdateMode::Normal);
 
   // Main Layout
   QVBoxLayout* m_main_layout;
@@ -103,7 +62,7 @@ private:
   QComboBox* m_devices_combo;
 
   // Options
-  QTableWidget* m_option_list;
+  QListWidget* m_option_list;
 
   // Range
   QSlider* m_range_slider;
@@ -111,30 +70,28 @@ private:
 
   // Shared actions
   QPushButton* m_select_button;
-  QComboBox* m_operators_combo;
-  QComboBox* m_variables_combo;
+  QPushButton* m_or_button;
 
   // Input actions
   QPushButton* m_detect_button;
-  QComboBox* m_functions_combo;
+  QPushButton* m_and_button;
+  QPushButton* m_not_button;
+  QPushButton* m_add_button;
 
   // Output actions
   QPushButton* m_test_button;
 
   // Textarea
   QPlainTextEdit* m_expression_text;
-  InputStateLineEdit* m_parse_text;
 
   // Buttonbox
   QDialogButtonBox* m_button_box;
   QPushButton* m_clear_button;
+  QPushButton* m_apply_button;
 
   ControlReference* m_reference;
-  std::string m_original_expression;
   ControllerEmu::EmulatedController* m_controller;
 
   ciface::Core::DeviceQualifier m_devq;
   Type m_type;
-  std::shared_ptr<ciface::Core::Device> m_selected_device;
-  std::mutex m_selected_device_mutex;
 };

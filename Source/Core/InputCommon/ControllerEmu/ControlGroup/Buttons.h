@@ -1,5 +1,6 @@
 // Copyright 2017 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
@@ -19,10 +20,17 @@ public:
   Buttons(const std::string& ini_name, const std::string& group_name);
 
   template <typename C>
-  void GetState(C* const buttons, const C* bitmasks) const
+  void GetState(C* const buttons, const C* bitmasks)
   {
     for (auto& control : controls)
-      *buttons |= *(bitmasks++) * control->GetState<bool>();
+    {
+      if (control->control_ref->State() > ACTIVATION_THRESHOLD)
+        *buttons |= *bitmasks;
+
+      bitmasks++;
+    }
   }
+
+  static constexpr ControlState ACTIVATION_THRESHOLD = 0.5;
 };
 }  // namespace ControllerEmu

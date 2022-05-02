@@ -1,18 +1,12 @@
-// SPDX-License-Identifier: GPL-2.0-or-later
-
 package org.dolphinemu.dolphinemu.features.settings.ui.viewholder;
 
 import android.content.res.Resources;
-import android.text.TextUtils;
 import android.view.View;
 import android.widget.TextView;
-
-import androidx.annotation.Nullable;
 
 import org.dolphinemu.dolphinemu.R;
 import org.dolphinemu.dolphinemu.features.settings.model.view.SettingsItem;
 import org.dolphinemu.dolphinemu.features.settings.model.view.SingleChoiceSetting;
-import org.dolphinemu.dolphinemu.features.settings.model.view.SingleChoiceSettingDynamicDescriptions;
 import org.dolphinemu.dolphinemu.features.settings.model.view.StringSingleChoiceSetting;
 import org.dolphinemu.dolphinemu.features.settings.ui.SettingsAdapter;
 
@@ -39,17 +33,16 @@ public final class SingleChoiceViewHolder extends SettingViewHolder
   public void bind(SettingsItem item)
   {
     mItem = item;
+    mTextSettingName.setText(item.getNameId());
 
-    mTextSettingName.setText(item.getName());
-
-    if (!TextUtils.isEmpty(item.getDescription()))
+    if (item.getDescriptionId() > 0)
     {
-      mTextSettingDescription.setText(item.getDescription());
+      mTextSettingDescription.setText(item.getDescriptionId());
     }
     else if (item instanceof SingleChoiceSetting)
     {
       SingleChoiceSetting setting = (SingleChoiceSetting) item;
-      int selected = setting.getSelectedValue(getAdapter().getSettings());
+      int selected = setting.getSelectedValue();
       Resources resMgr = mTextSettingDescription.getContext().getResources();
       String[] choices = resMgr.getStringArray(setting.getChoicesId());
       int[] values = resMgr.getIntArray(setting.getValuesId());
@@ -65,39 +58,15 @@ public final class SingleChoiceViewHolder extends SettingViewHolder
     {
       StringSingleChoiceSetting setting = (StringSingleChoiceSetting) item;
       String[] choices = setting.getChoicesId();
-      int valueIndex = setting.getSelectValueIndex(getAdapter().getSettings());
+      int valueIndex = setting.getSelectValueIndex();
       if (valueIndex != -1)
         mTextSettingDescription.setText(choices[valueIndex]);
     }
-    else if (item instanceof SingleChoiceSettingDynamicDescriptions)
-    {
-      SingleChoiceSettingDynamicDescriptions setting =
-              (SingleChoiceSettingDynamicDescriptions) item;
-      int selected = setting.getSelectedValue(getAdapter().getSettings());
-      Resources resMgr = mTextSettingDescription.getContext().getResources();
-      String[] choices = resMgr.getStringArray(setting.getDescriptionChoicesId());
-      int[] values = resMgr.getIntArray(setting.getDescriptionValuesId());
-      for (int i = 0; i < values.length; ++i)
-      {
-        if (values[i] == selected)
-        {
-          mTextSettingDescription.setText(choices[i]);
-        }
-      }
-    }
-
-    setStyle(mTextSettingName, mItem);
   }
 
   @Override
   public void onClick(View clicked)
   {
-    if (!mItem.isEditable())
-    {
-      showNotRuntimeEditableError();
-      return;
-    }
-
     int position = getAdapterPosition();
     if (mItem instanceof SingleChoiceSetting)
     {
@@ -107,18 +76,5 @@ public final class SingleChoiceViewHolder extends SettingViewHolder
     {
       getAdapter().onStringSingleChoiceClick((StringSingleChoiceSetting) mItem, position);
     }
-    else if (mItem instanceof SingleChoiceSettingDynamicDescriptions)
-    {
-      getAdapter().onSingleChoiceDynamicDescriptionsClick(
-              (SingleChoiceSettingDynamicDescriptions) mItem, position);
-    }
-
-    setStyle(mTextSettingName, mItem);
-  }
-
-  @Nullable @Override
-  protected SettingsItem getItem()
-  {
-    return mItem;
   }
 }

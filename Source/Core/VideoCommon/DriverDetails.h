@@ -1,5 +1,6 @@
 // Copyright 2013 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 #pragma once
 #include "Common/CommonTypes.h"
 
@@ -26,8 +27,6 @@ enum OS
   OS_ANDROID = (1 << 4),
   OS_FREEBSD = (1 << 5),
   OS_OPENBSD = (1 << 6),
-  OS_NETBSD = (1 << 7),
-  OS_HAIKU = (1 << 8),
 };
 // Enum of known vendors
 // Tegra and Nvidia are separated out due to such substantial differences
@@ -148,7 +147,6 @@ enum Bug
   // It works for all the buffer types we use except GL_ELEMENT_ARRAY_BUFFER.
   // Causes complete blackscreen issues.
   BUG_INTEL_BROKEN_BUFFER_STORAGE,
-
   // Bug: Qualcomm has broken boolean negation
   // Affected devices: Adreno
   // Started Version: -1
@@ -230,19 +228,16 @@ enum Bug
   // index as a MRT location instead, or omit the binding completely.
   BUG_BROKEN_FRAGMENT_SHADER_INDEX_DECORATION,
 
-  // Bug: Dual-source outputs from fragment shaders are broken on some drivers.
+  // Bug: Dual-source outputs from fragment shaders are broken on AMD OpenGL drivers
   // Started Version: -1
   // Ended Version: -1
-  // On some AMD drivers, fragment shaders that specify dual-source outputs can cause the driver to
-  // crash. Sometimes this happens in the kernel mode part of the driver, resulting in a BSOD.
-  // These shaders are also particularly problematic on macOS's Intel drivers. On OpenGL, they can
-  // cause depth issues. On Metal, they can cause the driver to not write a primitive to the depth
-  // buffer whenever a fragment is discarded. Disable dual-source blending support on these drivers.
+  // Fragment shaders that specify dual-source outputs, cause the driver to crash
+  // sometimes this happens in the kernel mode part of the driver resulting in a BSOD.
+  // Disable dual-source blending support for now.
   BUG_BROKEN_DUAL_SOURCE_BLENDING,
-
   // BUG: ImgTec GLSL shader compiler fails when negating the input to a bitwise operation
   // Started version: 1.5
-  // Ended version: 1.8@4693462
+  // Ended version: 1.10
   // Shaders that do something like "variable <<= (-othervariable);" cause the shader to
   // fail compilation with no useful diagnostic log. This can be worked around by storing
   // the negated value to a temporary variable then using that in the bitwise op.
@@ -287,10 +282,6 @@ enum Bug
   // however the implementation is broken on some drivers.
   BUG_BROKEN_REVERSED_DEPTH_RANGE,
 
-  // BUG: Cached memory is significantly slower for readbacks than coherent memory in the
-  // Mali Vulkan driver, causing high CPU usage in the __pi___inval_cache_range kernel
-  // function. This flag causes readback buffers to select the coherent type.
-  BUG_SLOW_CACHED_READBACK_MEMORY,
 
   // BUG: Apparently ARM Mali GLSL compiler managed to break bitwise AND operations between
   // two integers vectors, when one of them is non-constant (though the exact cases of when
@@ -302,19 +293,7 @@ enum Bug
   // Ended version: -1
   BUG_BROKEN_VECTOR_BITWISE_AND,
 
-  // BUG: Atomic writes to different fields or array elements of an SSBO have no effect, only
-  // writing to the first field/element works. This causes bounding box emulation to give garbage
-  // values under OpenGL.
-  // Affected devices: AMD (Windows)
-  // Started version: -1
-  // Ended version: -1
-  BUG_BROKEN_SSBO_FIELD_ATOMICS,
 
-  // BUG: Accessing gl_SubgroupInvocationID causes the Metal shader compiler to crash.
-  // Affected devices: AMD (macOS)
-  // Started version: -1
-  // Ended version: -1
-  BUG_BROKEN_SUBGROUP_INVOCATION_ID,
 };
 
 // Initializes our internal vendor, device family, and driver version

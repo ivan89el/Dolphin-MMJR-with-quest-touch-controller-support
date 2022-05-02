@@ -1,5 +1,6 @@
 // Copyright 2017 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "InputCommon/ControllerEmu/ControlGroup/Slider.h"
 
@@ -18,8 +19,8 @@ namespace ControllerEmu
 Slider::Slider(const std::string& name_, const std::string& ui_name_)
     : ControlGroup(name_, ui_name_, GroupType::Slider)
 {
-  AddInput(Translate, _trans("Left"));
-  AddInput(Translate, _trans("Right"));
+  controls.emplace_back(std::make_unique<Input>(Translate, _trans("Left")));
+  controls.emplace_back(std::make_unique<Input>(Translate, _trans("Right")));
 
   AddDeadzoneSetting(&m_deadzone_setting, 50);
 }
@@ -28,11 +29,11 @@ Slider::Slider(const std::string& name_) : Slider(name_, name_)
 {
 }
 
-Slider::StateData Slider::GetState() const
+Slider::StateData Slider::GetState()
 {
   const ControlState deadzone = m_deadzone_setting.GetValue() / 100;
-  const ControlState state = controls[1]->GetState() - controls[0]->GetState();
+  const ControlState state = controls[1]->control_ref->State() - controls[0]->control_ref->State();
 
-  return {std::clamp(ApplyDeadzone(state, deadzone), -1.0, 1.0)};
+  return {ApplyDeadzone(state, deadzone)};
 }
 }  // namespace ControllerEmu

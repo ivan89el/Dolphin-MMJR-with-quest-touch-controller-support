@@ -1,5 +1,6 @@
 // Copyright 2009 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
@@ -56,7 +57,7 @@ class Tev
     INDIRECT = 32
   };
 
-  void SetRasColor(RasColorChan colorChan, int swaptable);
+  void SetRasColor(int colorChan, int swaptable);
 
   void DrawColorRegular(const TevStageCombiner::ColorCombiner& cc, const InputRegType inputs[4]);
   void DrawColorCompare(const TevStageCombiner::ColorCombiner& cc, const InputRegType inputs[4]);

@@ -1,18 +1,17 @@
 // Copyright 2017 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "DolphinQt/NetPlay/GameListDialog.h"
-
-#include <memory>
 
 #include <QDialogButtonBox>
 #include <QListWidget>
 #include <QVBoxLayout>
 
-#include "UICommon/GameFile.h"
+#include "DolphinQt/GameList/GameListModel.h"
+#include "DolphinQt/Settings.h"
 
-GameListDialog::GameListDialog(const GameListModel& game_list_model, QWidget* parent)
-    : QDialog(parent), m_game_list_model(game_list_model)
+GameListDialog::GameListDialog(QWidget* parent) : QDialog(parent)
 {
   setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
   setWindowTitle(tr("Select a game"));
@@ -36,8 +35,12 @@ void GameListDialog::CreateWidgets()
 
 void GameListDialog::ConnectWidgets()
 {
-  connect(m_game_list, &QListWidget::itemSelectionChanged,
-          [this] { m_button_box->setEnabled(m_game_list->currentRow() != -1); });
+  connect(m_game_list, &QListWidget::itemSelectionChanged, [this] {
+    int row = m_game_list->currentRow();
+
+    m_button_box->setEnabled(row != -1);
+    m_game_id = m_game_list->currentItem()->text();
+  });
 
   connect(m_game_list, &QListWidget::itemDoubleClicked, this, &GameListDialog::accept);
   connect(m_button_box, &QDialogButtonBox::accepted, this, &GameListDialog::accept);
@@ -45,25 +48,22 @@ void GameListDialog::ConnectWidgets()
 
 void GameListDialog::PopulateGameList()
 {
+  auto* game_list_model = Settings::Instance().GetGameListModel();
+
   m_game_list->clear();
 
-  for (int i = 0; i < m_game_list_model.rowCount(QModelIndex()); i++)
+  for (int i = 0; i < game_list_model->rowCount(QModelIndex()); i++)
   {
-    std::shared_ptr<const UICommon::GameFile> game = m_game_list_model.GetGameFile(i);
-
-    auto* item =
-        new QListWidgetItem(QString::fromStdString(m_game_list_model.GetNetPlayName(*game)));
-    item->setData(Qt::UserRole, QVariant::fromValue(std::move(game)));
+    auto* item = new QListWidgetItem(game_list_model->GetUniqueIdentifier(i));
     m_game_list->addItem(item);
   }
 
   m_game_list->sortItems();
 }
 
-const UICommon::GameFile& GameListDialog::GetSelectedGame() const
+const QString& GameListDialog::GetSelectedUniqueID() const
 {
-  auto items = m_game_list->selectedItems();
-  return *items[0]->data(Qt::UserRole).value<std::shared_ptr<const UICommon::GameFile>>();
+  return m_game_id;
 }
 
 int GameListDialog::exec()

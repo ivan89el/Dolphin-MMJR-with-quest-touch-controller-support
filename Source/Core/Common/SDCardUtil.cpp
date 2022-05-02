@@ -1,5 +1,6 @@
 // Copyright 2009 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 /* mksdcard.c
 **
@@ -34,6 +35,7 @@
 #include "Common/SDCardUtil.h"
 
 #include <algorithm>
+#include <cinttypes>
 #include <cstddef>
 #include <cstdio>
 #include <cstring>
@@ -42,11 +44,16 @@
 
 #include "Common/CommonFuncs.h"
 #include "Common/CommonTypes.h"
-#include "Common/IOFile.h"
+#include "Common/File.h"
 #include "Common/Logging/Log.h"
 
 #ifndef _WIN32
 #include <unistd.h>  // for unlink()
+#endif
+
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4310)
 #endif
 
 namespace Common
@@ -201,8 +208,9 @@ bool SDCardCreate(u64 disk_size /*in MB*/, const std::string& filename)
 
   if (disk_size < 0x800000 || disk_size > 0x800000000ULL)
   {
-    ERROR_LOG_FMT(COMMON, "Trying to create SD Card image of size {}MB is out of range (8MB-32GB)",
-                  disk_size / (1024 * 1024));
+    ERROR_LOG(COMMON,
+              "Trying to create SD Card image of size %" PRIu64 "MB is out of range (8MB-32GB)",
+              disk_size / (1024 * 1024));
     return false;
   }
 
@@ -216,7 +224,7 @@ bool SDCardCreate(u64 disk_size /*in MB*/, const std::string& filename)
   File::IOFile file(filename, "wb");
   if (!file)
   {
-    ERROR_LOG_FMT(COMMON, "Could not create file '{}', aborting...", filename);
+    ERROR_LOG(COMMON, "Could not create file '%s', aborting...", filename.c_str());
     return false;
   }
 
@@ -239,7 +247,7 @@ bool SDCardCreate(u64 disk_size /*in MB*/, const std::string& filename)
   if (!write_sector(file, s_fsinfo_sector))
     goto FailWrite;
 
-  if constexpr (BACKUP_BOOT_SECTOR > 0)
+  if (BACKUP_BOOT_SECTOR > 0)
   {
     if (!write_empty(file, BACKUP_BOOT_SECTOR - 2))
       goto FailWrite;
@@ -277,9 +285,13 @@ bool SDCardCreate(u64 disk_size /*in MB*/, const std::string& filename)
   return true;
 
 FailWrite:
-  ERROR_LOG_FMT(COMMON, "Could not write to '{}', aborting...", filename);
+  ERROR_LOG(COMMON, "Could not write to '%s', aborting...", filename.c_str());
   if (unlink(filename.c_str()) < 0)
-    ERROR_LOG_FMT(COMMON, "unlink({}) failed: {}", filename, LastStrerrorString());
+    ERROR_LOG(COMMON, "unlink(%s) failed: %s", filename.c_str(), LastStrerrorString().c_str());
   return false;
 }
 }  // namespace Common
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif

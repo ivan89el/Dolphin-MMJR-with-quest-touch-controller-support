@@ -1,5 +1,6 @@
 // Copyright 2009 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "Core/IOS/USB/USB_KBD.h"
 
@@ -19,7 +20,7 @@
 #include <windows.h>
 #endif
 
-namespace IOS::HLE
+namespace IOS::HLE::Device
 {
 namespace
 {
@@ -175,9 +176,9 @@ constexpr std::array<u8, 256> s_key_codes_azerty{};
 #endif
 }  // Anonymous namespace
 
-USB_KBD::MessageData::MessageData(MessageType type, u8 modifiers_, PressedKeyData pressed_keys_)
-    : msg_type{Common::swap32(static_cast<u32>(type))}, modifiers{modifiers_}, pressed_keys{
-                                                                                   pressed_keys_}
+USB_KBD::MessageData::MessageData(MessageType type, u8 modifiers, PressedKeyData pressed_keys)
+    : msg_type{Common::swap32(static_cast<u32>(type))}, modifiers{modifiers}, pressed_keys{
+                                                                                  pressed_keys}
 {
 }
 
@@ -187,9 +188,9 @@ USB_KBD::USB_KBD(Kernel& ios, const std::string& device_name) : Device(ios, devi
 {
 }
 
-std::optional<IPCReply> USB_KBD::Open(const OpenRequest& request)
+IPCCommandResult USB_KBD::Open(const OpenRequest& request)
 {
-  INFO_LOG_FMT(IOS, "USB_KBD: Open");
+  INFO_LOG(IOS, "USB_KBD: Open");
   IniFile ini;
   ini.Load(File::GetUserPath(F_DOLPHINCONFIG_IDX));
   ini.GetOrCreateSection("USB Keyboard")->Get("Layout", &m_keyboard_layout, KBD_LAYOUT_QWERTY);
@@ -202,21 +203,21 @@ std::optional<IPCReply> USB_KBD::Open(const OpenRequest& request)
   return Device::Open(request);
 }
 
-std::optional<IPCReply> USB_KBD::Write(const ReadWriteRequest& request)
+IPCCommandResult USB_KBD::Write(const ReadWriteRequest& request)
 {
   // Stubbed.
-  return IPCReply(IPC_SUCCESS);
+  return GetDefaultReply(IPC_SUCCESS);
 }
 
-std::optional<IPCReply> USB_KBD::IOCtl(const IOCtlRequest& request)
+IPCCommandResult USB_KBD::IOCtl(const IOCtlRequest& request)
 {
   if (SConfig::GetInstance().m_WiiKeyboard && !Core::WantsDeterminism() &&
-      ControlReference::GetInputGate() && !m_message_queue.empty())
+      ControlReference::InputGateOn() && !m_message_queue.empty())
   {
     Memory::CopyToEmu(request.buffer_out, &m_message_queue.front(), sizeof(MessageData));
     m_message_queue.pop();
   }
-  return IPCReply(IPC_SUCCESS);
+  return GetDefaultReply(IPC_SUCCESS);
 }
 
 bool USB_KBD::IsKeyPressed(int key) const
@@ -306,4 +307,4 @@ void USB_KBD::Update()
   if (got_event)
     m_message_queue.emplace(MessageType::Event, modifiers, pressed_keys);
 }
-}  // namespace IOS::HLE
+}  // namespace IOS::HLE::Device

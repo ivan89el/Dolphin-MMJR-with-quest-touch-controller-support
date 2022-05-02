@@ -1,5 +1,6 @@
 // Copyright 2008 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "Core/HW/SI/SI_DeviceGCSteeringWheel.h"
 
@@ -19,27 +20,30 @@ CSIDevice_GCSteeringWheel::CSIDevice_GCSteeringWheel(SIDevices device, int devic
 {
 }
 
-int CSIDevice_GCSteeringWheel::RunBuffer(u8* buffer, int request_length)
+int CSIDevice_GCSteeringWheel::RunBuffer(u8* buffer, int length)
 {
   // For debug logging only
-  ISIDevice::RunBuffer(buffer, request_length);
+  ISIDevice::RunBuffer(buffer, length);
 
   // Read the command
-  const auto command = static_cast<EBufferCommands>(buffer[0]);
+  EBufferCommands command = static_cast<EBufferCommands>(buffer[0]);
 
   // Handle it
   switch (command)
   {
-  case EBufferCommands::CMD_STATUS:
-  case EBufferCommands::CMD_RESET:
+  case CMD_RESET:
+  case CMD_ID:
   {
     u32 id = Common::swap32(SI_GC_STEERING);
     std::memcpy(buffer, &id, sizeof(id));
-    return sizeof(id);
+    break;
   }
+
   default:
-    return CSIDevice_GCController::RunBuffer(buffer, request_length);
+    return CSIDevice_GCController::RunBuffer(buffer, length);
   }
+
+  return length;
 }
 
 bool CSIDevice_GCSteeringWheel::GetData(u32& hi, u32& low)
@@ -101,7 +105,7 @@ void CSIDevice_GCSteeringWheel::SendCommand(u32 command, u8 poll)
 {
   UCommand wheel_command(command);
 
-  if (static_cast<EDirectCommands>(wheel_command.command) == EDirectCommands::CMD_FORCE)
+  if (wheel_command.command == CMD_FORCE)
   {
     // get the correct pad number that should rumble locally when using netplay
     const int pad_num = NetPlay_InGamePadToLocalPad(m_device_number);
@@ -128,15 +132,15 @@ void CSIDevice_GCSteeringWheel::SendCommand(u32 command, u8 poll)
         Pad::Rumble(pad_num, 0);
         break;
       default:
-        WARN_LOG_FMT(SERIALINTERFACE, "Unknown CMD_FORCE type {}", int(type));
+        WARN_LOG(SERIALINTERFACE, "Unknown CMD_FORCE type %i", int(type));
         break;
       }
     }
 
-    if (poll == 0)
+    if (!poll)
     {
       m_mode = wheel_command.parameter2;
-      INFO_LOG_FMT(SERIALINTERFACE, "PAD {} set to mode {}", m_device_number, m_mode);
+      INFO_LOG(SERIALINTERFACE, "PAD %i set to mode %i", m_device_number, m_mode);
     }
   }
   else

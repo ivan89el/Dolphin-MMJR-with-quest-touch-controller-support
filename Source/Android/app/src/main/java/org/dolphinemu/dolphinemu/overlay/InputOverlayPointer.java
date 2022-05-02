@@ -1,176 +1,198 @@
-// SPDX-License-Identifier: GPL-2.0-or-later
-
 package org.dolphinemu.dolphinemu.overlay;
-
-import android.graphics.Rect;
-import android.os.Handler;
-import android.view.MotionEvent;
-
 import org.dolphinemu.dolphinemu.NativeLibrary;
-
-import java.util.ArrayList;
 
 public class InputOverlayPointer
 {
-  public static final int DOUBLE_TAP_A = 0;
-  public static final int DOUBLE_TAP_B = 1;
-  public static final int DOUBLE_TAP_2 = 2;
-  public static final int DOUBLE_TAP_CLASSIC_A = 3;
+  public final static int TYPE_OFF = 0;
+  public final static int TYPE_CLICK = 1;
+  public final static int TYPE_STICK = 2;
 
-  public static final int MODE_DISABLED = 0;
-  public static final int MODE_FOLLOW = 1;
-  public static final int MODE_DRAG = 2;
+  private int mType;
+  private int mPointerId;
 
-  private final float[] mAxes = {0f, 0f};
-  private final float[] mOldAxes = {0f, 0f};
+  private float mDisplayScale;
+  private float mScaledDensity;
+  private int mMaxWidth;
+  private int mMaxHeight;
+  private float mGameWidthHalf;
+  private float mGameHeightHalf;
+  private float mAdjustX;
+  private float mAdjustY;
 
-  private float mGameCenterX;
-  private float mGameCenterY;
-  private float mGameWidthHalfInv;
-  private float mGameHeightHalfInv;
+  private int[] mAxisIDs = new int[4];
 
-  private float mTouchStartX;
-  private float mTouchStartY;
+  // used for stick
+  private float[] mAxises = new float[4];
+  private float mCenterX;
+  private float mCenterY;
 
-  private int mMode;
-  private boolean mRecenter;
+  // used for click
+  private long mLastClickTime;
+  private int mClickButtonId;
+  private boolean mIsDoubleClick;
 
-  private boolean doubleTap = false;
-  private int doubleTapButton;
-  private int mTrackId = -1;
-
-  public static ArrayList<Integer> DOUBLE_TAP_OPTIONS = new ArrayList<>();
-
-  static
+  public InputOverlayPointer(int width, int height, float scaledDensity)
   {
-    DOUBLE_TAP_OPTIONS.add(NativeLibrary.ButtonType.WIIMOTE_BUTTON_A);
-    DOUBLE_TAP_OPTIONS.add(NativeLibrary.ButtonType.WIIMOTE_BUTTON_B);
-    DOUBLE_TAP_OPTIONS.add(NativeLibrary.ButtonType.WIIMOTE_BUTTON_2);
-    DOUBLE_TAP_OPTIONS.add(NativeLibrary.ButtonType.CLASSIC_BUTTON_A);
+    mType = TYPE_OFF;
+    mAxisIDs[0] = 0;
+    mAxisIDs[1] = 0;
+    mAxisIDs[2] = 0;
+    mAxisIDs[3] = 0;
+
+    mDisplayScale = 1.0f;
+    mScaledDensity = scaledDensity;
+    mMaxWidth = width;
+    mMaxHeight = height;
+    mGameWidthHalf = width / 2.0f;
+    mGameHeightHalf = height / 2.0f;
+    mAdjustX = 1.0f;
+    mAdjustY = 1.0f;
+
+    mPointerId = -1;
+
+    mLastClickTime = 0;
+    mIsDoubleClick = false;
+    mClickButtonId = NativeLibrary.ButtonType.WIIMOTE_BUTTON_A;
+
+    if(NativeLibrary.IsRunning())
+    {
+      updateTouchPointer();
+    }
   }
 
-  public InputOverlayPointer(Rect surfacePosition, int button, int mode, boolean recenter)
+  public void updateTouchPointer()
   {
-    doubleTapButton = button;
-    mMode = mode;
-    mRecenter = recenter;
-
-    mGameCenterX = (surfacePosition.left + surfacePosition.right) / 2.0f;
-    mGameCenterY = (surfacePosition.top + surfacePosition.bottom) / 2.0f;
-
-    float gameWidth = surfacePosition.right - surfacePosition.left;
-    float gameHeight = surfacePosition.bottom - surfacePosition.top;
-
-    // Adjusting for device's black bars.
-    float surfaceAR = gameWidth / gameHeight;
+    float deviceAR = (float)mMaxWidth / (float)mMaxHeight;
     float gameAR = NativeLibrary.GetGameAspectRatio();
+    // same scale ratio in renderbase.cpp
+    mDisplayScale = (NativeLibrary.GetGameDisplayScale() - 1.0f) / 2.0f + 1.0f;
 
-    if (gameAR <= surfaceAR)
+    if(gameAR <= deviceAR)
     {
-      // Black bars on left/right
-      gameWidth = gameHeight * gameAR;
+      mAdjustX = gameAR / deviceAR;
+      mAdjustY = 1.0f;
+      mGameWidthHalf = Math.round(mMaxHeight * gameAR) / 2.0f;
+      mGameHeightHalf = mMaxHeight / 2.0f;
     }
     else
     {
-      // Black bars on top/bottom
-      gameHeight = gameWidth / gameAR;
-    }
-
-    mGameWidthHalfInv = 1.0f / (gameWidth * 0.5f);
-    mGameHeightHalfInv = 1.0f / (gameHeight * 0.5f);
-  }
-
-  public void onTouch(MotionEvent event)
-  {
-    int pointerIndex = event.getActionIndex();
-
-    switch (event.getAction() & MotionEvent.ACTION_MASK)
-    {
-      case MotionEvent.ACTION_DOWN:
-      case MotionEvent.ACTION_POINTER_DOWN:
-        mTrackId = event.getPointerId(pointerIndex);
-        mTouchStartX = event.getX(pointerIndex);
-        mTouchStartY = event.getY(pointerIndex);
-        touchPress();
-        break;
-      case MotionEvent.ACTION_UP:
-      case MotionEvent.ACTION_POINTER_UP:
-        if (mTrackId == event.getPointerId(pointerIndex))
-          mTrackId = -1;
-        if (mMode == MODE_DRAG)
-          updateOldAxes();
-        if (mRecenter)
-          reset();
-        break;
-    }
-
-    if (mTrackId == -1)
-      return;
-
-    if (mMode == MODE_FOLLOW)
-    {
-      mAxes[0] = (event.getY(event.findPointerIndex(mTrackId)) - mGameCenterY) * mGameHeightHalfInv;
-      mAxes[1] = (event.getX(event.findPointerIndex(mTrackId)) - mGameCenterX) * mGameWidthHalfInv;
-    }
-    else if (mMode == MODE_DRAG)
-    {
-      mAxes[0] = mOldAxes[0] +
-              (event.getY(event.findPointerIndex(mTrackId)) - mTouchStartY) * mGameHeightHalfInv;
-      mAxes[1] = mOldAxes[1] +
-              (event.getX(event.findPointerIndex(mTrackId)) - mTouchStartX) * mGameWidthHalfInv;
+      mAdjustX = 1.0f;
+      mAdjustY = gameAR / deviceAR;
+      mGameWidthHalf = mMaxWidth / 2.0f;
+      mGameHeightHalf = Math.round(mMaxWidth / gameAR) / 2.0f;
     }
   }
 
-  private void touchPress()
+  public void setType(int type)
   {
-    if (mMode != MODE_DISABLED)
+    reset();
+    mType = type;
+
+    if(type == TYPE_CLICK)
     {
-      if (doubleTap)
+      // click
+      mAxisIDs[0] = NativeLibrary.ButtonType.WIIMOTE_IR + 1;
+      mAxisIDs[1] = NativeLibrary.ButtonType.WIIMOTE_IR + 2;
+      mAxisIDs[2] = NativeLibrary.ButtonType.WIIMOTE_IR + 3;
+      mAxisIDs[3] = NativeLibrary.ButtonType.WIIMOTE_IR + 4;
+    }
+    else if(type == TYPE_STICK)
+    {
+      // stick
+      mAxisIDs[0] = NativeLibrary.ButtonType.WIIMOTE_IR + 1;
+      mAxisIDs[1] = NativeLibrary.ButtonType.WIIMOTE_IR + 2;
+      mAxisIDs[2] = NativeLibrary.ButtonType.WIIMOTE_IR + 3;
+      mAxisIDs[3] = NativeLibrary.ButtonType.WIIMOTE_IR + 4;
+    }
+  }
+
+  public void reset()
+  {
+    mPointerId = -1;
+    for (int i = 0; i < 4; i++)
+    {
+      mAxises[i] = 0.0f;
+      NativeLibrary.onGamePadMoveEvent(NativeLibrary.TouchScreenDevice,
+        NativeLibrary.ButtonType.WIIMOTE_IR + i + 1, 0.0f);
+    }
+  }
+
+  public int getPointerId()
+  {
+    return mPointerId;
+  }
+
+  public void onPointerDown(int id, float x, float y)
+  {
+    mPointerId = id;
+    mCenterX = x;
+    mCenterY = y;
+    setPointerState(x, y);
+
+    if(mType == TYPE_CLICK)
+    {
+      long currentTime = System.currentTimeMillis();
+      if(currentTime - mLastClickTime < 300)
       {
-        NativeLibrary.onGamePadEvent(NativeLibrary.TouchScreenDevice,
-                doubleTapButton, NativeLibrary.ButtonState.PRESSED);
-        new Handler()
-                .postDelayed(() -> NativeLibrary.onGamePadEvent(NativeLibrary.TouchScreenDevice,
-                        doubleTapButton, NativeLibrary.ButtonState.RELEASED), 50);
+        mIsDoubleClick = true;
+        NativeLibrary.onGamePadEvent(NativeLibrary.TouchScreenDevice, mClickButtonId, NativeLibrary.ButtonState.PRESSED);
       }
-      else
-      {
-        doubleTap = true;
-        new Handler().postDelayed(() -> doubleTap = false, 300);
-      }
+      mLastClickTime = currentTime;
     }
   }
 
-  private void updateOldAxes()
+  public void onPointerMove(int id, float x, float y)
   {
-    mOldAxes[0] = mAxes[0];
-    mOldAxes[1] = mAxes[1];
+    setPointerState(x, y);
   }
 
-  private void reset()
+  public void onPointerUp(int id, float x, float y)
   {
-    mAxes[0] = mAxes[1] = mOldAxes[0] = mOldAxes[1] = 0f;
+    mPointerId = -1;
+    setPointerState(x, y);
+
+    if(mIsDoubleClick)
+    {
+      NativeLibrary.onGamePadEvent(NativeLibrary.TouchScreenDevice, mClickButtonId, NativeLibrary.ButtonState.RELEASED);
+      mIsDoubleClick = false;
+    }
   }
 
-  public float[] getAxisValues()
+  private void setPointerState(float x, float y)
   {
-    float[] iraxes = {0f, 0f, 0f, 0f};
-    iraxes[1] = mAxes[0];
-    iraxes[0] = mAxes[0];
-    iraxes[3] = mAxes[1];
-    iraxes[2] = mAxes[1];
-    return iraxes;
-  }
+    float[] axises = new float[4];
+    float scale = mDisplayScale;
 
-  public void setMode(int mode)
-  {
-    mMode = mode;
-    if (mode == MODE_DRAG)
-      updateOldAxes();
-  }
+    if(mType == TYPE_CLICK)
+    {
+      // click
+      axises[0] = axises[1] = ((y * mAdjustY) - mGameHeightHalf) / mGameHeightHalf / scale;
+      axises[2] = axises[3] = ((x * mAdjustX) - mGameWidthHalf) / mGameWidthHalf / scale;
+    }
+    else if(mType == TYPE_STICK)
+    {
+      // stick
+      axises[0] = axises[1] = (y - mCenterY) / mGameHeightHalf * mScaledDensity / scale / 2.0f;
+      axises[2] = axises[3] = (x - mCenterX) / mGameWidthHalf * mScaledDensity / scale / 2.0f;
+    }
 
-  public void setRecenter(boolean recenter)
-  {
-    mRecenter = recenter;
+    for (int i = 0; i < mAxisIDs.length; ++i)
+    {
+      float value = mAxises[i] + axises[i];
+      if (mPointerId == -1)
+      {
+        if(InputOverlay.sIRRecenter)
+        {
+          // recenter
+          value = 0;
+        }
+        if(mType == TYPE_STICK)
+        {
+          // stick, save current value
+          mAxises[i] = value;
+        }
+      }
+      NativeLibrary.onGamePadMoveEvent(NativeLibrary.TouchScreenDevice, mAxisIDs[i], value);
+    }
   }
 }

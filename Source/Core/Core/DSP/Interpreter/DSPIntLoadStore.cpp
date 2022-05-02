@@ -1,42 +1,30 @@
 // Copyright 2009 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 //
 // Additional copyrights go to Duddie and Tratax (c) 2004
 
-#include "Common/CommonTypes.h"
+#include "Core/DSP/DSPMemoryMap.h"
+#include "Core/DSP/Interpreter/DSPIntUtil.h"
 #include "Core/DSP/Interpreter/DSPInterpreter.h"
 
 namespace DSP::Interpreter
 {
-// SRSH @M, $acS.h
-// 0010 10ss mmmm mmmm
-// Move value from register $acS.h to data memory pointed by address
+// SRS @M, $(0x18+S)
+// 0010 1sss mmmm mmmm
+// Move value from register $(0x18+S) to data memory pointed by address
 // CR[0-7] | M. That is, the upper 8 bits of the address are the
 // bottom 8 bits from CR, and the lower 8 bits are from the 8-bit immediate.
-void Interpreter::srsh(const UDSPInstruction opc)
+// Note: pc+=2 in duddie's doc seems wrong
+void srs(const UDSPInstruction opc)
 {
-  auto& state = m_dsp_core.DSPState();
-  const auto reg = static_cast<u8>(((opc >> 8) & 0x1) + DSP_REG_ACH0);
-  const auto addr = static_cast<u16>((state.r.cr << 8) | (opc & 0xFF));
-
-  state.WriteDMEM(addr, OpReadRegister(reg));
-}
-
-// SRS @M, $(0x1C+S)
-// 0010 11ss mmmm mmmm
-// Move value from register $(0x1C+S) to data memory pointed by address
-// CR[0-7] | M. That is, the upper 8 bits of the address are the
-// bottom 8 bits from CR, and the lower 8 bits are from the 8-bit immediate.
-void Interpreter::srs(const UDSPInstruction opc)
-{
-  auto& state = m_dsp_core.DSPState();
-  const auto reg = static_cast<u8>(((opc >> 8) & 0x3) + DSP_REG_ACL0);
-  const auto addr = static_cast<u16>((state.r.cr << 8) | (opc & 0xFF));
+  u8 reg = ((opc >> 8) & 0x7) + 0x18;
+  u16 addr = (g_dsp.r.cr << 8) | (opc & 0xFF);
 
   if (reg >= DSP_REG_ACM0)
-    state.WriteDMEM(addr, OpReadRegisterAndSaturate(reg - DSP_REG_ACM0));
+    dsp_dmem_write(addr, dsp_op_read_reg_and_saturate(reg - DSP_REG_ACM0));
   else
-    state.WriteDMEM(addr, OpReadRegister(reg));
+    dsp_dmem_write(addr, dsp_op_read_reg(reg));
 }
 
 // LRS $(0x18+D), @M
@@ -44,45 +32,40 @@ void Interpreter::srs(const UDSPInstruction opc)
 // Move value from data memory pointed by address CR[0-7] | M to register
 // $(0x18+D).  That is, the upper 8 bits of the address are the bottom 8 bits
 // from CR, and the lower 8 bits are from the 8-bit immediate.
-void Interpreter::lrs(const UDSPInstruction opc)
+void lrs(const UDSPInstruction opc)
 {
-  auto& state = m_dsp_core.DSPState();
-  const auto reg = static_cast<u8>(((opc >> 8) & 0x7) + 0x18);
-  const auto addr = static_cast<u16>((state.r.cr << 8) | (opc & 0xFF));
-
-  OpWriteRegister(reg, state.ReadDMEM(addr));
-  ConditionalExtendAccum(reg);
+  u8 reg = ((opc >> 8) & 0x7) + 0x18;
+  u16 addr = (g_dsp.r.cr << 8) | (opc & 0xFF);
+  dsp_op_write_reg(reg, dsp_dmem_read(addr));
+  dsp_conditional_extend_accum(reg);
 }
 
 // LR $D, @M
 // 0000 0000 110d dddd
 // mmmm mmmm mmmm mmmm
 // Move value from data memory pointed by address M to register $D.
-void Interpreter::lr(const UDSPInstruction opc)
+void lr(const UDSPInstruction opc)
 {
-  auto& state = m_dsp_core.DSPState();
-  const u8 reg = opc & 0x1F;
-  const u16 addr = state.FetchInstruction();
-  const u16 val = state.ReadDMEM(addr);
-
-  OpWriteRegister(reg, val);
-  ConditionalExtendAccum(reg);
+  u8 reg = opc & 0x1F;
+  u16 addr = dsp_fetch_code();
+  u16 val = dsp_dmem_read(addr);
+  dsp_op_write_reg(reg, val);
+  dsp_conditional_extend_accum(reg);
 }
 
 // SR @M, $S
 // 0000 0000 111s ssss
 // mmmm mmmm mmmm mmmm
 // Store value from register $S to a memory pointed by address M.
-void Interpreter::sr(const UDSPInstruction opc)
+void sr(const UDSPInstruction opc)
 {
-  auto& state = m_dsp_core.DSPState();
-  const u8 reg = opc & 0x1F;
-  const u16 addr = state.FetchInstruction();
+  u8 reg = opc & 0x1F;
+  u16 addr = dsp_fetch_code();
 
   if (reg >= DSP_REG_ACM0)
-    state.WriteDMEM(addr, OpReadRegisterAndSaturate(reg - DSP_REG_ACM0));
+    dsp_dmem_write(addr, dsp_op_read_reg_and_saturate(reg - DSP_REG_ACM0));
   else
-    state.WriteDMEM(addr, OpReadRegister(reg));
+    dsp_dmem_write(addr, dsp_op_read_reg(reg));
 }
 
 // SI @M, #I
@@ -90,189 +73,176 @@ void Interpreter::sr(const UDSPInstruction opc)
 // iiii iiii iiii iiii
 // Store 16-bit immediate value I to a memory location pointed by address
 // M (M is 8-bit value sign extended).
-void Interpreter::si(const UDSPInstruction opc)
+void si(const UDSPInstruction opc)
 {
-  auto& state = m_dsp_core.DSPState();
-  const u16 addr = static_cast<u16>(static_cast<s8>(opc));
-  const u16 imm = state.FetchInstruction();
-
-  state.WriteDMEM(addr, imm);
+  u16 addr = (s8)opc;
+  u16 imm = dsp_fetch_code();
+  dsp_dmem_write(addr, imm);
 }
 
-// LRR $D, @$arS
+// LRR $D, @$S
 // 0001 1000 0ssd dddd
-// Move value from data memory pointed by addressing register $arS to register $D.
-void Interpreter::lrr(const UDSPInstruction opc)
+// Move value from data memory pointed by addressing register $S to register $D.
+void lrr(const UDSPInstruction opc)
 {
-  const u8 sreg = (opc >> 5) & 0x3;
-  const u8 dreg = opc & 0x1f;
-  auto& state = m_dsp_core.DSPState();
+  u8 sreg = (opc >> 5) & 0x3;
+  u8 dreg = opc & 0x1f;
 
-  const u16 val = state.ReadDMEM(OpReadRegister(sreg));
-  OpWriteRegister(dreg, val);
-  ConditionalExtendAccum(dreg);
+  u16 val = dsp_dmem_read(dsp_op_read_reg(sreg));
+  dsp_op_write_reg(dreg, val);
+  dsp_conditional_extend_accum(dreg);
 }
 
-// LRRD $D, @$arS
+// LRRD $D, @$S
 // 0001 1000 1ssd dddd
-// Move value from data memory pointed by addressing register $arS to register $D.
-// Decrement register $arS.
-void Interpreter::lrrd(const UDSPInstruction opc)
+// Move value from data memory pointed by addressing register $S to register $D.
+// Decrement register $S.
+void lrrd(const UDSPInstruction opc)
 {
-  const u8 sreg = (opc >> 5) & 0x3;
-  const u8 dreg = opc & 0x1f;
-  auto& state = m_dsp_core.DSPState();
+  u8 sreg = (opc >> 5) & 0x3;
+  u8 dreg = opc & 0x1f;
 
-  const u16 val = state.ReadDMEM(OpReadRegister(sreg));
-  OpWriteRegister(dreg, val);
-  ConditionalExtendAccum(dreg);
-  state.r.ar[sreg] = DecrementAddressRegister(sreg);
+  u16 val = dsp_dmem_read(dsp_op_read_reg(sreg));
+  dsp_op_write_reg(dreg, val);
+  dsp_conditional_extend_accum(dreg);
+  g_dsp.r.ar[sreg] = dsp_decrement_addr_reg(sreg);
 }
 
-// LRRI $D, @$arS
+// LRRI $D, @$S
 // 0001 1001 0ssd dddd
-// Move value from data memory pointed by addressing register $arS to register $D.
-// Increment register $arS.
-void Interpreter::lrri(const UDSPInstruction opc)
+// Move value from data memory pointed by addressing register $S to register $D.
+// Increment register $S.
+void lrri(const UDSPInstruction opc)
 {
-  const u8 sreg = (opc >> 5) & 0x3;
-  const u8 dreg = opc & 0x1f;
-  auto& state = m_dsp_core.DSPState();
+  u8 sreg = (opc >> 5) & 0x3;
+  u8 dreg = opc & 0x1f;
 
-  const u16 val = state.ReadDMEM(OpReadRegister(sreg));
-  OpWriteRegister(dreg, val);
-  ConditionalExtendAccum(dreg);
-  state.r.ar[sreg] = IncrementAddressRegister(sreg);
+  u16 val = dsp_dmem_read(dsp_op_read_reg(sreg));
+  dsp_op_write_reg(dreg, val);
+  dsp_conditional_extend_accum(dreg);
+  g_dsp.r.ar[sreg] = dsp_increment_addr_reg(sreg);
 }
 
-// LRRN $D, @$arS
+// LRRN $D, @$S
 // 0001 1001 1ssd dddd
-// Move value from data memory pointed by addressing register $arS to register $D.
-// Add corresponding indexing register $ixS to register $arS.
-void Interpreter::lrrn(const UDSPInstruction opc)
+// Move value from data memory pointed by addressing register $S to register $D.
+// Add indexing register $(0x4+S) to register $S.
+void lrrn(const UDSPInstruction opc)
 {
-  const u8 sreg = (opc >> 5) & 0x3;
-  const u8 dreg = opc & 0x1f;
-  auto& state = m_dsp_core.DSPState();
+  u8 sreg = (opc >> 5) & 0x3;
+  u8 dreg = opc & 0x1f;
 
-  const u16 val = state.ReadDMEM(OpReadRegister(sreg));
-  OpWriteRegister(dreg, val);
-  ConditionalExtendAccum(dreg);
-  state.r.ar[sreg] = IncreaseAddressRegister(sreg, static_cast<s16>(state.r.ix[sreg]));
+  u16 val = dsp_dmem_read(dsp_op_read_reg(sreg));
+  dsp_op_write_reg(dreg, val);
+  dsp_conditional_extend_accum(dreg);
+  g_dsp.r.ar[sreg] = dsp_increase_addr_reg(sreg, (s16)g_dsp.r.ix[sreg]);
 }
 
-// SRR @$arD, $S
+// SRR @$D, $S
 // 0001 1010 0dds ssss
 // Store value from source register $S to a memory location pointed by
-// addressing register $arD.
-void Interpreter::srr(const UDSPInstruction opc)
+// addressing register $D.
+void srr(const UDSPInstruction opc)
 {
-  const u8 dreg = (opc >> 5) & 0x3;
-  const u8 sreg = opc & 0x1f;
-  auto& state = m_dsp_core.DSPState();
+  u8 dreg = (opc >> 5) & 0x3;
+  u8 sreg = opc & 0x1f;
 
   if (sreg >= DSP_REG_ACM0)
-    state.WriteDMEM(state.r.ar[dreg], OpReadRegisterAndSaturate(sreg - DSP_REG_ACM0));
+    dsp_dmem_write(g_dsp.r.ar[dreg], dsp_op_read_reg_and_saturate(sreg - DSP_REG_ACM0));
   else
-    state.WriteDMEM(state.r.ar[dreg], OpReadRegister(sreg));
+    dsp_dmem_write(g_dsp.r.ar[dreg], dsp_op_read_reg(sreg));
 }
 
-// SRRD @$arD, $S
+// SRRD @$D, $S
 // 0001 1010 1dds ssss
 // Store value from source register $S to a memory location pointed by
-// addressing register $arD. Decrement register $arD.
-void Interpreter::srrd(const UDSPInstruction opc)
+// addressing register $D. Decrement register $D.
+void srrd(const UDSPInstruction opc)
 {
-  const u8 dreg = (opc >> 5) & 0x3;
-  const u8 sreg = opc & 0x1f;
-  auto& state = m_dsp_core.DSPState();
+  u8 dreg = (opc >> 5) & 0x3;
+  u8 sreg = opc & 0x1f;
 
   if (sreg >= DSP_REG_ACM0)
-    state.WriteDMEM(state.r.ar[dreg], OpReadRegisterAndSaturate(sreg - DSP_REG_ACM0));
+    dsp_dmem_write(g_dsp.r.ar[dreg], dsp_op_read_reg_and_saturate(sreg - DSP_REG_ACM0));
   else
-    state.WriteDMEM(state.r.ar[dreg], OpReadRegister(sreg));
+    dsp_dmem_write(g_dsp.r.ar[dreg], dsp_op_read_reg(sreg));
 
-  state.r.ar[dreg] = DecrementAddressRegister(dreg);
+  g_dsp.r.ar[dreg] = dsp_decrement_addr_reg(dreg);
 }
 
-// SRRI @$arD, $S
+// SRRI @$D, $S
 // 0001 1011 0dds ssss
 // Store value from source register $S to a memory location pointed by
-// addressing register $arD. Increment register $arD.
-void Interpreter::srri(const UDSPInstruction opc)
+// addressing register $D. Increment register $D.
+void srri(const UDSPInstruction opc)
 {
-  const u8 dreg = (opc >> 5) & 0x3;
-  const u8 sreg = opc & 0x1f;
-  auto& state = m_dsp_core.DSPState();
+  u8 dreg = (opc >> 5) & 0x3;
+  u8 sreg = opc & 0x1f;
 
   if (sreg >= DSP_REG_ACM0)
-    state.WriteDMEM(state.r.ar[dreg], OpReadRegisterAndSaturate(sreg - DSP_REG_ACM0));
+    dsp_dmem_write(g_dsp.r.ar[dreg], dsp_op_read_reg_and_saturate(sreg - DSP_REG_ACM0));
   else
-    state.WriteDMEM(state.r.ar[dreg], OpReadRegister(sreg));
+    dsp_dmem_write(g_dsp.r.ar[dreg], dsp_op_read_reg(sreg));
 
-  state.r.ar[dreg] = IncrementAddressRegister(dreg);
+  g_dsp.r.ar[dreg] = dsp_increment_addr_reg(dreg);
 }
 
-// SRRN @$arD, $S
+// SRRN @$D, $S
 // 0001 1011 1dds ssss
 // Store value from source register $S to a memory location pointed by
-// addressing register $arD. Add corresponding indexing register $ixD to register $arD.
-void Interpreter::srrn(const UDSPInstruction opc)
+// addressing register $D. Add DSP_REG_IX0 register to register $D.
+void srrn(const UDSPInstruction opc)
 {
-  const u8 dreg = (opc >> 5) & 0x3;
-  const u8 sreg = opc & 0x1f;
-  auto& state = m_dsp_core.DSPState();
+  u8 dreg = (opc >> 5) & 0x3;
+  u8 sreg = opc & 0x1f;
 
   if (sreg >= DSP_REG_ACM0)
-    state.WriteDMEM(state.r.ar[dreg], OpReadRegisterAndSaturate(sreg - DSP_REG_ACM0));
+    dsp_dmem_write(g_dsp.r.ar[dreg], dsp_op_read_reg_and_saturate(sreg - DSP_REG_ACM0));
   else
-    state.WriteDMEM(state.r.ar[dreg], OpReadRegister(sreg));
+    dsp_dmem_write(g_dsp.r.ar[dreg], dsp_op_read_reg(sreg));
 
-  state.r.ar[dreg] = IncreaseAddressRegister(dreg, static_cast<s16>(state.r.ix[dreg]));
+  g_dsp.r.ar[dreg] = dsp_increase_addr_reg(dreg, (s16)g_dsp.r.ix[dreg]);
 }
 
 // ILRR $acD.m, @$arS
 // 0000 001d 0001 00ss
 // Move value from instruction memory pointed by addressing register
 // $arS to mid accumulator register $acD.m.
-void Interpreter::ilrr(const UDSPInstruction opc)
+void ilrr(const UDSPInstruction opc)
 {
-  const u16 reg = opc & 0x3;
-  const u16 dreg = DSP_REG_ACM0 + ((opc >> 8) & 1);
-  auto& state = m_dsp_core.DSPState();
+  u16 reg = opc & 0x3;
+  u16 dreg = DSP_REG_ACM0 + ((opc >> 8) & 1);
 
-  state.r.ac[dreg - DSP_REG_ACM0].m = state.ReadIMEM(state.r.ar[reg]);
-  ConditionalExtendAccum(dreg);
+  g_dsp.r.ac[dreg - DSP_REG_ACM0].m = dsp_imem_read(g_dsp.r.ar[reg]);
+  dsp_conditional_extend_accum(dreg);
 }
 
 // ILRRD $acD.m, @$arS
 // 0000 001d 0001 01ss
 // Move value from instruction memory pointed by addressing register
 // $arS to mid accumulator register $acD.m. Decrement addressing register $arS.
-void Interpreter::ilrrd(const UDSPInstruction opc)
+void ilrrd(const UDSPInstruction opc)
 {
-  const u16 reg = opc & 0x3;
-  const u16 dreg = DSP_REG_ACM0 + ((opc >> 8) & 1);
-  auto& state = m_dsp_core.DSPState();
+  u16 reg = opc & 0x3;
+  u16 dreg = DSP_REG_ACM0 + ((opc >> 8) & 1);
 
-  state.r.ac[dreg - DSP_REG_ACM0].m = state.ReadIMEM(state.r.ar[reg]);
-  ConditionalExtendAccum(dreg);
-  state.r.ar[reg] = DecrementAddressRegister(reg);
+  g_dsp.r.ac[dreg - DSP_REG_ACM0].m = dsp_imem_read(g_dsp.r.ar[reg]);
+  dsp_conditional_extend_accum(dreg);
+  g_dsp.r.ar[reg] = dsp_decrement_addr_reg(reg);
 }
 
 // ILRRI $acD.m, @$S
 // 0000 001d 0001 10ss
 // Move value from instruction memory pointed by addressing register
 // $arS to mid accumulator register $acD.m. Increment addressing register $arS.
-void Interpreter::ilrri(const UDSPInstruction opc)
+void ilrri(const UDSPInstruction opc)
 {
-  const u16 reg = opc & 0x3;
-  const u16 dreg = DSP_REG_ACM0 + ((opc >> 8) & 1);
-  auto& state = m_dsp_core.DSPState();
+  u16 reg = opc & 0x3;
+  u16 dreg = DSP_REG_ACM0 + ((opc >> 8) & 1);
 
-  state.r.ac[dreg - DSP_REG_ACM0].m = state.ReadIMEM(state.r.ar[reg]);
-  ConditionalExtendAccum(dreg);
-  state.r.ar[reg] = IncrementAddressRegister(reg);
+  g_dsp.r.ac[dreg - DSP_REG_ACM0].m = dsp_imem_read(g_dsp.r.ar[reg]);
+  dsp_conditional_extend_accum(dreg);
+  g_dsp.r.ar[reg] = dsp_increment_addr_reg(reg);
 }
 
 // ILRRN $acD.m, @$arS
@@ -280,14 +250,13 @@ void Interpreter::ilrri(const UDSPInstruction opc)
 // Move value from instruction memory pointed by addressing register
 // $arS to mid accumulator register $acD.m. Add corresponding indexing
 // register $ixS to addressing register $arS.
-void Interpreter::ilrrn(const UDSPInstruction opc)
+void ilrrn(const UDSPInstruction opc)
 {
-  const u16 reg = opc & 0x3;
-  const u16 dreg = DSP_REG_ACM0 + ((opc >> 8) & 1);
-  auto& state = m_dsp_core.DSPState();
+  u16 reg = opc & 0x3;
+  u16 dreg = DSP_REG_ACM0 + ((opc >> 8) & 1);
 
-  state.r.ac[dreg - DSP_REG_ACM0].m = state.ReadIMEM(state.r.ar[reg]);
-  ConditionalExtendAccum(dreg);
-  state.r.ar[reg] = IncreaseAddressRegister(reg, static_cast<s16>(state.r.ix[reg]));
+  g_dsp.r.ac[dreg - DSP_REG_ACM0].m = dsp_imem_read(g_dsp.r.ar[reg]);
+  dsp_conditional_extend_accum(dreg);
+  g_dsp.r.ar[reg] = dsp_increase_addr_reg(reg, (s16)g_dsp.r.ix[reg]);
 }
 }  // namespace DSP::Interpreter

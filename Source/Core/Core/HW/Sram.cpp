@@ -1,10 +1,11 @@
 // Copyright 2010 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "Core/HW/Sram.h"
 
 #include "Common/CommonTypes.h"
-#include "Common/IOFile.h"
+#include "Common/File.h"
 #include "Common/Logging/Log.h"
 #include "Common/Swap.h"
 #include "Core/ConfigManager.h"
@@ -62,7 +63,7 @@ void InitSRAM()
   {
     if (!file.ReadArray(&g_SRAM, 1))
     {
-      ERROR_LOG_FMT(EXPANSIONINTERFACE, "EXI IPL-DEV: Could not read all of SRAM");
+      ERROR_LOG(EXPANSIONINTERFACE, "EXI IPL-DEV: Could not read all of SRAM");
       g_SRAM = sram_dump;
     }
   }

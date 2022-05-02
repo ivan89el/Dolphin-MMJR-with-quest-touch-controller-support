@@ -1,5 +1,6 @@
 // Copyright 2018 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
@@ -8,11 +9,6 @@
 #include "Common/CommonTypes.h"
 
 class PointerWrap;
-
-namespace DSP
-{
-class DSPCore;
-}
 
 namespace DSP::JIT
 {
@@ -35,5 +31,5 @@ public:
   void DoState(PointerWrap&) override {}
 };
 
-std::unique_ptr<DSPEmitter> CreateDSPEmitter(DSPCore& dsp);
+std::unique_ptr<DSPEmitter> CreateDSPEmitter();
 }  // namespace DSP::JIT

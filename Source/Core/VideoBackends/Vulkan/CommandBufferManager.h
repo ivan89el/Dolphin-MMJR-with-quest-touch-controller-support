@@ -1,5 +1,6 @@
 // Copyright 2016 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
@@ -120,7 +121,7 @@ private:
   u64 m_completed_fence_counter = 0;
 
   std::array<FrameResources, NUM_COMMAND_BUFFERS> m_frame_resources;
-  u32 m_current_frame = 0;
+  u32 m_current_frame;
 
   // Threaded command buffer execution
   // Semaphore determines when a command buffer can be queued

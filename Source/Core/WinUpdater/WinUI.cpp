@@ -1,5 +1,6 @@
 // Copyright 2018 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "UpdaterCommon/UI.h"
 
@@ -10,10 +11,7 @@
 #include <CommCtrl.h>
 #include <ShObjIdl.h>
 #include <shellapi.h>
-#include <wrl/client.h>
 
-#include "Common/Event.h"
-#include "Common/ScopeGuard.h"
 #include "Common/StringUtil.h"
 
 namespace
@@ -22,10 +20,9 @@ HWND window_handle = nullptr;
 HWND label_handle = nullptr;
 HWND total_progressbar_handle = nullptr;
 HWND current_progressbar_handle = nullptr;
-Microsoft::WRL::ComPtr<ITaskbarList3> taskbar_list;
+ITaskbarList3* taskbar_list = nullptr;
 
 std::thread ui_thread;
-Common::Event window_created_event;
 
 int GetWindowHeight(HWND hwnd)
 {
@@ -48,7 +45,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 };  // namespace
 
 constexpr int PROGRESSBAR_FLAGS = WS_VISIBLE | WS_CHILD | PBS_SMOOTH | PBS_SMOOTHREVERSE;
-constexpr int WINDOW_FLAGS = WS_CLIPCHILDREN;
+constexpr int WINDOW_FLAGS = WS_VISIBLE | WS_CLIPCHILDREN;
 constexpr int PADDING_HEIGHT = 5;
 
 namespace UI
@@ -56,9 +53,6 @@ namespace UI
 bool InitWindow()
 {
   InitCommonControls();
-
-  // Notify main thread we're done creating the window when we return
-  Common::ScopeGuard ui_guard{[] { window_created_event.Set(); }};
 
   WNDCLASS wndcl = {};
   wndcl.lpfnWndProc = WindowProc;
@@ -75,13 +69,15 @@ bool InitWindow()
   if (!window_handle)
     return false;
 
-  if (SUCCEEDED(CoCreateInstance(CLSID_TaskbarList, NULL, CLSCTX_INPROC_SERVER,
-                                 IID_PPV_ARGS(taskbar_list.GetAddressOf()))))
+  if (FAILED(CoCreateInstance(CLSID_TaskbarList, NULL, CLSCTX_INPROC_SERVER,
+                              IID_PPV_ARGS(&taskbar_list))))
   {
-    if (FAILED(taskbar_list->HrInit()))
-    {
-      taskbar_list.Reset();
-    }
+    taskbar_list = nullptr;
+  }
+  if (taskbar_list && FAILED(taskbar_list->HrInit()))
+  {
+    taskbar_list->Release();
+    taskbar_list = nullptr;
   }
 
   int y = PADDING_HEIGHT;
@@ -179,7 +175,7 @@ void ResetCurrentProgress()
 
 void Error(const std::string& text)
 {
-  auto wide_text = UTF8ToWString(text);
+  auto wide_text = UTF8ToUTF16(text);
 
   MessageBox(nullptr,
              (L"A fatal error occured and the updater cannot continue:\n " + wide_text).c_str(),
@@ -199,19 +195,11 @@ void SetCurrentProgress(int current, int total)
 
 void SetDescription(const std::string& text)
 {
-  SetWindowText(label_handle, UTF8ToWString(text).c_str());
+  SetWindowText(label_handle, UTF8ToUTF16(text).c_str());
 }
 
 void MessageLoop()
 {
-  HRESULT result = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
-
-  Common::ScopeGuard ui_guard{[result] {
-    taskbar_list.Reset();
-    if (SUCCEEDED(result))
-      CoUninitialize();
-  }};
-
   if (!InitWindow())
   {
     MessageBox(nullptr, L"Window init failed!", L"", MB_ICONERROR);
@@ -238,9 +226,6 @@ void MessageLoop()
 void Init()
 {
   ui_thread = std::thread(MessageLoop);
-
-  // Wait for UI thread to finish creating the window (or at least attempting to)
-  window_created_event.Wait();
 }
 
 void Stop()
@@ -255,7 +240,7 @@ void LaunchApplication(std::string path)
 {
   // Hack: Launching the updater over the explorer ensures that admin priviliges are dropped. Why?
   // Ask Microsoft.
-  ShellExecuteW(nullptr, nullptr, L"explorer.exe", UTF8ToWString(path).c_str(), nullptr, SW_SHOW);
+  ShellExecuteW(nullptr, nullptr, L"explorer.exe", UTF8ToUTF16(path).c_str(), nullptr, SW_SHOW);
 }
 
 void Sleep(int sleep)

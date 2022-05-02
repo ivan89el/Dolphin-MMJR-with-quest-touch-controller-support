@@ -1,5 +1,6 @@
 // Copyright 2010 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
@@ -24,10 +25,6 @@ struct CommonAsmRoutinesBase
   const u8* frsqrte;
   const u8* fres;
   const u8* mfcr;
-  const u8* cdts;
-  const u8* cstd;
-  const u8* fprf_single;
-  const u8* fprf_double;
 
   // In: array index: GQR to use.
   // In: ECX: Address to read from.

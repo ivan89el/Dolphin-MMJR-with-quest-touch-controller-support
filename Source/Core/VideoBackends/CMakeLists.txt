@@ -1,6 +1,10 @@
 add_subdirectory(OGL)
-add_subdirectory(Null)
-add_subdirectory(Software)
+add_subdirectory(Vulkan)
+
+if(NOT ANDROID)
+  add_subdirectory(Null)
+  add_subdirectory(Software)
+endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
   add_subdirectory(D3DCommon)
@@ -8,6 +12,3 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
   add_subdirectory(D3D12)
 endif()
 
-if(ENABLE_VULKAN)
-  add_subdirectory(Vulkan)
-endif()

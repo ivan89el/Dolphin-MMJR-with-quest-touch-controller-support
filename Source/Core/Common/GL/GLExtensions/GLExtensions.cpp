@@ -1,5 +1,6 @@
 // Copyright 2013 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include <sstream>
 #include <unordered_map>
@@ -10,6 +11,7 @@
 
 #if defined(__linux__) || defined(__APPLE__)
 #include <dlfcn.h>
+
 #endif
 
 // gl_1_1
@@ -854,6 +856,9 @@ PFNDOLBINDVERTEXARRAYPROC dolBindVertexArray;
 PFNDOLDELETEVERTEXARRAYSPROC dolDeleteVertexArrays;
 PFNDOLGENVERTEXARRAYSPROC dolGenVertexArrays;
 PFNDOLISVERTEXARRAYPROC dolIsVertexArray;
+
+// ARB_framebuffer_object
+PFNDODISCARDFRAMEBUFFEREXT doDiscardFramebufferEXT;
 
 // ARB_framebuffer_object
 PFNDOLBINDFRAMEBUFFERPROC dolBindFramebuffer;
@@ -1913,6 +1918,9 @@ const GLFunc gl_function_array[] = {
     GLFUNC_SUFFIX(glIsVertexArray, APPLE,
                   "GL_APPLE_vertex_array_object !GL_ARB_vertex_array_object"),
 
+    // EXT_discard_framebuffer
+    GLFUNC_REQUIRES(glDiscardFramebufferEXT, "GL_EXT_discard_framebuffer"),
+
     // ARB_framebuffer_object
     GLFUNC_REQUIRES(glFramebufferTexture1D, "GL_ARB_framebuffer_object"),
     GLFUNC_REQUIRES(glFramebufferTexture3D, "GL_ARB_framebuffer_object"),
@@ -2097,6 +2105,9 @@ const GLFunc gl_function_array[] = {
     // ARB_clip_control
     GLFUNC_REQUIRES(glClipControl, "GL_ARB_clip_control !VERSION_4_5"),
 
+    // EXT_clip_control
+    GLFUNC_SUFFIX(glClipControl, EXT, "GL_EXT_clip_control !GL_ARB_clip_control"),
+
     // ARB_copy_image
     GLFUNC_REQUIRES(glCopyImageSubData, "GL_ARB_copy_image !VERSION_4_3 |VERSION_GLES_3_2"),
 
@@ -2197,7 +2208,7 @@ static void InitExtensionList(GLContext* context)
     default:
     case 450:
     {
-      static const char* const gl450exts[] = {
+      std::string gl450exts[] = {
           "GL_ARB_ES3_1_compatibility",
           "GL_ARB_clip_control",
           "GL_ARB_conditional_render_inverted",
@@ -2215,7 +2226,7 @@ static void InitExtensionList(GLContext* context)
     }
     case 440:
     {
-      static const char* const gl440exts[] = {
+      std::string gl440exts[] = {
           "GL_ARB_buffer_storage",
           "GL_ARB_clear_texture",
           "GL_ARB_enhanced_layouts",
@@ -2231,7 +2242,7 @@ static void InitExtensionList(GLContext* context)
     }
     case 430:
     {
-      static const char* const gl430exts[] = {
+      std::string gl430exts[] = {
           "GL_ARB_ES3_compatibility",
           "GL_ARB_arrays_of_arrays",
           "GL_ARB_clear_buffer_object",
@@ -2259,7 +2270,7 @@ static void InitExtensionList(GLContext* context)
     }
     case 420:
     {
-      static const char* const gl420exts[] = {
+      std::string gl420exts[] = {
           "GL_ARB_base_instance",
           "GL_ARB_compressed_texture_pixel_storage",
           "GL_ARB_conservative_depth",
@@ -2279,7 +2290,7 @@ static void InitExtensionList(GLContext* context)
     }
     case 410:
     {
-      static const char* const gl410exts[] = {
+      std::string gl410exts[] = {
           "GL_ARB_ES2_compatibility",
           "GL_ARB_get_program_binary",
           "GL_ARB_separate_shader_objects",
@@ -2293,7 +2304,7 @@ static void InitExtensionList(GLContext* context)
     }
     case 400:
     {
-      static const char* const gl400exts[] = {
+      std::string gl400exts[] = {
           "GL_ARB_draw_indirect",
           "GL_ARB_gpu_shader5",
           "GL_ARB_gpu_shader_fp64",
@@ -2313,7 +2324,7 @@ static void InitExtensionList(GLContext* context)
     }
     case 330:
     {
-      static const char* const gl330exts[] = {
+      std::string gl330exts[] = {
           "GL_ARB_shader_bit_encoding",
           "GL_ARB_blend_func_extended",
           "GL_ARB_explicit_attrib_location",
@@ -2331,7 +2342,7 @@ static void InitExtensionList(GLContext* context)
     }
     case 320:
     {
-      static const char* const gl320exts[] = {
+      std::string gl320exts[] = {
           "GL_ARB_geometry_shader4",
           "GL_ARB_sync",
           "GL_ARB_vertex_array_bgra",
@@ -2349,7 +2360,7 @@ static void InitExtensionList(GLContext* context)
     case 310:
     {
       // Can't add NV_primitive_restart since function name changed
-      static const char* const gl310exts[] = {
+      std::string gl310exts[] = {
           "GL_ARB_draw_instanced",
           "GL_ARB_copy_buffer",
           "GL_ARB_texture_buffer_object",
@@ -2365,7 +2376,7 @@ static void InitExtensionList(GLContext* context)
     {
       // Quite a lot of these had their names changed when merged in to core
       // Disable the ones that have
-      static const char* const gl300exts[] = {
+      std::string gl300exts[] = {
           "GL_ARB_map_buffer_range",
           "GL_ARB_color_buffer_float",
           "GL_ARB_texture_float",
@@ -2438,7 +2449,7 @@ static void* GetFuncAddress(GLContext* context, const std::string& name, void** 
     *func = dlsym(RTLD_NEXT, name.c_str());
 #endif
     if (*func == nullptr)
-      ERROR_LOG_FMT(VIDEO, "Couldn't load function {}", name);
+      ERROR_LOG(VIDEO, "Couldn't load function %s", name.c_str());
   }
   return *func;
 }

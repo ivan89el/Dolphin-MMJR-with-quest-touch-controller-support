@@ -1,5 +1,6 @@
 // Copyright 2008 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include <algorithm>
 #include <cstdio>
@@ -9,8 +10,9 @@
 #include <vector>
 
 #include "Common/CommonTypes.h"
-#include "Common/IOFile.h"
+#include "Common/File.h"
 #include "Common/Logging/Log.h"
+#include "Common/MsgHandler.h"
 #include "DiscIO/Blob.h"
 #include "DiscIO/DriveBlob.h"
 
@@ -96,7 +98,7 @@ DriveReader::DriveReader(const std::string& drive)
   }
   else
   {
-    NOTICE_LOG_FMT(DISCIO, "Load from DVD backup failed or no disc in drive {}", drive);
+    NOTICE_LOG(DISCIO, "Load from DVD backup failed or no disc in drive %s", drive.c_str());
   }
 }
 
@@ -144,7 +146,7 @@ bool DriveReader::ReadMultipleAlignedBlocks(u64 block_num, u64 num_blocks, u8* o
       !ReadFile(m_disc_handle, out_ptr, static_cast<DWORD>(GetSectorSize() * num_blocks),
                 &bytes_read, nullptr))
   {
-    ERROR_LOG_FMT(DISCIO, "Disc Read Error");
+    PanicAlertT("Disc Read Error");
     return false;
   }
   return bytes_read == GetSectorSize() * num_blocks;

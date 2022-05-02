@@ -1,10 +1,10 @@
 // Copyright 2008 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
 #include <cstddef>
-#include <optional>
 
 #include "Common/Assert.h"
 #include "Common/CommonTypes.h"
@@ -20,8 +20,6 @@ public:
   {
     /// Value is currently at its default location
     Default,
-    /// Value is not stored anywhere because we know it won't be read before the next write
-    Discarded,
     /// Value is currently bound to a x64 register
     Bound,
     /// Value is known as an immediate and has not been written back to its default location
@@ -37,43 +35,32 @@ public:
   {
   }
 
-  const std::optional<Gen::OpArg>& Location() const { return location; }
+  const Gen::OpArg& Location() const { return location; }
 
   LocationType GetLocationType() const
   {
-    if (!location.has_value())
-      return LocationType::Discarded;
-
     if (!away)
     {
       ASSERT(!revertable);
 
-      if (location->IsImm())
+      if (location.IsImm())
         return LocationType::SpeculativeImmediate;
 
       ASSERT(location == default_location);
       return LocationType::Default;
     }
 
-    ASSERT(location->IsImm() || location->IsSimpleReg());
-    return location->IsImm() ? LocationType::Immediate : LocationType::Bound;
+    ASSERT(location.IsImm() || location.IsSimpleReg());
+    return location.IsImm() ? LocationType::Immediate : LocationType::Bound;
   }
 
   bool IsAway() const { return away; }
-  bool IsDiscarded() const { return !location.has_value(); }
   bool IsBound() const { return GetLocationType() == LocationType::Bound; }
 
   void SetBoundTo(Gen::X64Reg xreg)
   {
     away = true;
     location = Gen::R(xreg);
-  }
-
-  void SetDiscarded()
-  {
-    ASSERT(!revertable);
-    away = false;
-    location = std::nullopt;
   }
 
   void SetFlushed()
@@ -117,7 +104,7 @@ public:
 
 private:
   Gen::OpArg default_location{};
-  std::optional<Gen::OpArg> location{};
+  Gen::OpArg location{};
   bool away = false;  // value not in source register
   bool revertable = false;
   size_t locked = 0;
@@ -135,7 +122,7 @@ public:
     dirty = dirty_;
   }
 
-  void Unbind()
+  void SetFlushed()
   {
     ppcReg = static_cast<preg_t>(Gen::INVALID_REG);
     free = true;

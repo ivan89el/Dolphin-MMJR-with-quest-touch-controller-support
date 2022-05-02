@@ -1,13 +1,12 @@
 // Copyright 2008 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
 #include <string>
-
+#include "VideoCommon/RenderState.h"
 #include "Common/GL/GLExtensions/GLExtensions.h"
-
-#include "VideoCommon/RenderBase.h"
 
 class GLContext;
 
@@ -17,6 +16,6 @@ constexpr GLenum GL_MUTABLE_TEXTURE_INDEX = GL_TEXTURE10;
 namespace GLUtil
 {
 GLuint CompileProgram(const std::string& vertexShader, const std::string& fragmentShader);
-void EnablePrimitiveRestart(const GLContext* context);
+
 GLenum MapToGLPrimitive(PrimitiveType primitive_type);
 }  // namespace GLUtil

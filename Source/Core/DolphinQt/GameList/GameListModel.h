@@ -1,5 +1,6 @@
 // Copyright 2015 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
@@ -36,30 +37,26 @@ public:
   int columnCount(const QModelIndex& parent) const override;
 
   std::shared_ptr<const UICommon::GameFile> GetGameFile(int index) const;
-  std::string GetNetPlayName(const UICommon::GameFile& game) const;
+  // Path of the game at the specified index.
+  QString GetPath(int index) const;
+  // Unique identifier of the game at the specified index.
+  QString GetUniqueIdentifier(int index) const;
   bool ShouldDisplayGameListItem(int index) const;
   void SetSearchTerm(const QString& term);
 
-  // Using a custom sort role as it sometimes differs slightly from the default Qt::DisplayRole.
-  static constexpr int SORT_ROLE = Qt::UserRole;
-
-  enum class Column
+  enum
   {
-    Platform = 0,
-    Banner,
-    Title,
-    Description,
-    Maker,
-    ID,
-    Country,
-    Size,
-    FileName,
-    FilePath,
-    FileFormat,
-    BlockSize,
-    Compression,
-    Tags,
-    Count,
+    COL_PLATFORM = 0,
+    COL_BANNER,
+    COL_TITLE,
+    COL_DESCRIPTION,
+    COL_MAKER,
+    COL_ID,
+    COL_COUNTRY,
+    COL_SIZE,
+    COL_FILE_NAME,
+    COL_TAGS,
+    NUM_COLS
   };
 
   void AddGame(const std::shared_ptr<const UICommon::GameFile>& game);

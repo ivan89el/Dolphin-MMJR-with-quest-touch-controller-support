@@ -1,5 +1,6 @@
 // Copyright 2019 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "DolphinQt/Config/Graphics/GraphicsInteger.h"
 
@@ -9,9 +10,9 @@
 
 #include "DolphinQt/Settings.h"
 
-GraphicsInteger::GraphicsInteger(int minimum, int maximum, const Config::Info<int>& setting,
+GraphicsInteger::GraphicsInteger(int minimum, int maximum, const Config::ConfigInfo<int>& setting,
                                  int step)
-    : ToolTipSpinBox(), m_setting(setting)
+    : QSpinBox(), m_setting(setting)
 {
   setMinimum(minimum);
   setMaximum(maximum);
@@ -19,8 +20,10 @@ GraphicsInteger::GraphicsInteger(int minimum, int maximum, const Config::Info<in
 
   setValue(Config::Get(setting));
 
-  connect(this, qOverload<int>(&GraphicsInteger::valueChanged), this, &GraphicsInteger::Update);
-  connect(&Settings::Instance(), &Settings::ConfigChanged, this, [this] {
+  connect(this, static_cast<void (GraphicsInteger::*)(int)>(&GraphicsInteger::valueChanged), this,
+          &GraphicsInteger::Update);
+
+  connect(&Settings::Instance(), &Settings::ConfigChanged, [this] {
     QFont bf = font();
     bf.setBold(Config::GetActiveLayerForConfig(m_setting) != Config::LayerType::Base);
     setFont(bf);

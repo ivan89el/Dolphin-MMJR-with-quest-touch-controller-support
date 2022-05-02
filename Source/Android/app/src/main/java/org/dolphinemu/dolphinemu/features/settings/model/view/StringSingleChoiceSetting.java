@@ -1,53 +1,22 @@
-// SPDX-License-Identifier: GPL-2.0-or-later
-
 package org.dolphinemu.dolphinemu.features.settings.model.view;
 
-import android.content.Context;
-
-import org.dolphinemu.dolphinemu.DolphinApplication;
-import org.dolphinemu.dolphinemu.features.settings.model.AbstractSetting;
-import org.dolphinemu.dolphinemu.features.settings.model.AbstractStringSetting;
-import org.dolphinemu.dolphinemu.features.settings.model.Settings;
-import org.dolphinemu.dolphinemu.features.settings.ui.MenuTag;
+import org.dolphinemu.dolphinemu.features.settings.model.Setting;
+import org.dolphinemu.dolphinemu.features.settings.model.StringSetting;
 
 public class StringSingleChoiceSetting extends SettingsItem
 {
-  private AbstractStringSetting mSetting;
+  private String mDefaultValue;
 
   private String[] mChoicesId;
   private String[] mValuesId;
-  private MenuTag mMenuTag;
 
-  public StringSingleChoiceSetting(Context context, AbstractStringSetting setting, int titleId,
-          int descriptionId, String[] choicesId, String[] valuesId, MenuTag menuTag)
+  public StringSingleChoiceSetting(String key, String section, int titleId, int descriptionId,
+    String[] choicesId, String[] valuesId, String defaultValue, Setting setting)
   {
-    super(context, titleId, descriptionId);
-    mSetting = setting;
-    mChoicesId = choicesId;
+    super(key, section, setting, titleId, descriptionId);
     mValuesId = valuesId;
-    mMenuTag = menuTag;
-  }
-
-  public StringSingleChoiceSetting(Context context, AbstractStringSetting setting, int titleId,
-          int descriptionId, String[] choicesId, String[] valuesId)
-  {
-    this(context, setting, titleId, descriptionId, choicesId, valuesId, null);
-  }
-
-  public StringSingleChoiceSetting(Context context, AbstractStringSetting setting, int titleId,
-          int descriptionId, int choicesId, int valuesId, MenuTag menuTag)
-  {
-    super(context, titleId, descriptionId);
-    mSetting = setting;
-    mChoicesId = DolphinApplication.getAppContext().getResources().getStringArray(choicesId);
-    mValuesId = DolphinApplication.getAppContext().getResources().getStringArray(valuesId);
-    mMenuTag = menuTag;
-  }
-
-  public StringSingleChoiceSetting(Context context, AbstractStringSetting setting, int titleId,
-          int descriptionId, int choicesId, int valuesId)
-  {
-    this(context, setting, titleId, descriptionId, choicesId, valuesId, null);
+    mChoicesId = choicesId;
+    mDefaultValue = defaultValue;
   }
 
   public String[] getChoicesId()
@@ -73,14 +42,22 @@ public class StringSingleChoiceSetting extends SettingsItem
     return "";
   }
 
-  public String getSelectedValue(Settings settings)
+  public String getSelectedValue()
   {
-    return mSetting.getString(settings);
+    if (getSetting() != null)
+    {
+      StringSetting setting = (StringSetting) getSetting();
+      return setting.getValue();
+    }
+    else
+    {
+      return mDefaultValue;
+    }
   }
 
-  public int getSelectValueIndex(Settings settings)
+  public int getSelectValueIndex()
   {
-    String selectedValue = getSelectedValue(settings);
+    String selectedValue = getSelectedValue();
     for (int i = 0; i < mValuesId.length; i++)
     {
       if (mValuesId[i].equals(selectedValue))
@@ -92,26 +69,33 @@ public class StringSingleChoiceSetting extends SettingsItem
     return -1;
   }
 
-  public MenuTag getMenuTag()
+  /**
+   * Write a value to the backing int. If that int was previously null,
+   * initializes a new one and returns it, so it can be added to the Hashmap.
+   *
+   * @param selection New value of the int.
+   * @return null if overwritten successfully otherwise; a newly created IntSetting.
+   */
+  public StringSetting setSelectedValue(String selection)
   {
-    return mMenuTag;
-  }
-
-  public void setSelectedValue(Settings settings, String selection)
-  {
-    mSetting.setString(settings, selection);
+    if (getSetting() == null)
+    {
+      StringSetting setting = new StringSetting(getKey(), getSection(), selection);
+      setSetting(setting);
+      return setting;
+    }
+    else
+    {
+      StringSetting setting = (StringSetting) getSetting();
+      setting.setValue(selection);
+      return null;
+    }
   }
 
   @Override
   public int getType()
   {
     return TYPE_STRING_SINGLE_CHOICE;
-  }
-
-  @Override
-  public AbstractSetting getSetting()
-  {
-    return mSetting;
   }
 }
 

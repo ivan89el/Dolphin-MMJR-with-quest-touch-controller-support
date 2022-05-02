@@ -1,21 +1,22 @@
 // Copyright 2009 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "VideoBackends/Software/DebugUtil.h"
 
 #include <cstring>
-#include <memory>
 
 #include "Common/CommonTypes.h"
 #include "Common/FileUtil.h"
-#include "Common/Image.h"
 #include "Common/StringUtil.h"
 #include "Common/Swap.h"
 
 #include "VideoBackends/Software/EfbInterface.h"
+#include "VideoBackends/Software/SWRenderer.h"
 #include "VideoBackends/Software/TextureSampler.h"
 
 #include "VideoCommon/BPMemory.h"
+#include "VideoCommon/ImageWrite.h"
 #include "VideoCommon/Statistics.h"
 #include "VideoCommon/VideoCommon.h"
 #include "VideoCommon/VideoConfig.h"
@@ -44,21 +45,28 @@ void Init()
 
 void Shutdown()
 {
-  for (auto& slot : ObjectBuffer)
+  for (int i = 0; i < NUM_OBJECT_BUFFERS; i++)
   {
-    delete[] slot;
+    delete[] ObjectBuffer[i];
   }
 }
 
 static void SaveTexture(const std::string& filename, u32 texmap, s32 mip)
 {
-  u32 width = bpmem.tex.GetUnit(texmap).texImage0.width + 1;
-  u32 height = bpmem.tex.GetUnit(texmap).texImage0.height + 1;
+  FourTexUnits& texUnit = bpmem.tex[(texmap >> 2) & 1];
+  u8 subTexmap = texmap & 3;
 
-  auto data = std::make_unique<u8[]>(width * height * 4);
+  TexImage0& ti0 = texUnit.texImage0[subTexmap];
 
-  GetTextureRGBA(data.get(), texmap, mip, width, height);
-  Common::SavePNG(filename, data.get(), Common::ImageByteFormat::RGBA, width, height, width * 4);
+  u32 width = ti0.width + 1;
+  u32 height = ti0.height + 1;
+
+  u8* data = new u8[width * height * 4];
+
+  GetTextureRGBA(data, texmap, mip, width, height);
+
+  TextureToPng(data, width * 4, filename, width, height, true);
+  delete[] data;
 }
 
 void GetTextureRGBA(u8* dst, u32 texmap, s32 mip, u32 width, u32 height)
@@ -75,7 +83,10 @@ void GetTextureRGBA(u8* dst, u32 texmap, s32 mip, u32 width, u32 height)
 
 static s32 GetMaxTextureLod(u32 texmap)
 {
-  u8 maxLod = bpmem.tex.GetUnit(texmap).texMode1.max_lod;
+  FourTexUnits& texUnit = bpmem.tex[(texmap >> 2) & 1];
+  u8 subTexmap = texmap & 3;
+
+  u8 maxLod = texUnit.texMode1[subTexmap].max_lod;
   u8 mip = maxLod >> 4;
   u8 fract = maxLod & 0xf;
 
@@ -122,12 +133,12 @@ void DumpActiveTextures()
 
 static void DumpEfb(const std::string& filename)
 {
-  auto data = std::make_unique<u8[]>(EFB_WIDTH * EFB_HEIGHT * 4);
-  u8* writePtr = data.get();
+  u8* data = new u8[EFB_WIDTH * EFB_HEIGHT * 4];
+  u8* writePtr = data;
 
-  for (u32 y = 0; y < EFB_HEIGHT; y++)
+  for (int y = 0; y < EFB_HEIGHT; y++)
   {
-    for (u32 x = 0; x < EFB_WIDTH; x++)
+    for (int x = 0; x < EFB_WIDTH; x++)
     {
       // ABGR to RGBA
       const u32 sample = Common::swap32(EfbInterface::GetColor(x, y));
@@ -137,8 +148,8 @@ static void DumpEfb(const std::string& filename)
     }
   }
 
-  Common::SavePNG(filename, data.get(), Common::ImageByteFormat::RGBA, EFB_WIDTH, EFB_HEIGHT,
-                  EFB_WIDTH * 4);
+  TextureToPng(data, EFB_WIDTH * 4, filename, EFB_WIDTH, EFB_HEIGHT, true);
+  delete[] data;
 }
 
 void DrawObjectBuffer(s16 x, s16 y, const u8* color, int bufferBase, int subBuffer,
@@ -208,8 +219,7 @@ void OnObjectEnd()
           "%sobject%i_%s(%i).png", File::GetUserPath(D_DUMPOBJECTS_IDX).c_str(),
           g_stats.this_frame.num_drawn_objects, ObjectBufferName[i], i - BufferBase[i]);
 
-      Common::SavePNG(filename, reinterpret_cast<u8*>(ObjectBuffer[i]),
-                      Common::ImageByteFormat::RGBA, EFB_WIDTH, EFB_HEIGHT, EFB_WIDTH * 4);
+      TextureToPng((u8*)ObjectBuffer[i], EFB_WIDTH * 4, filename, EFB_WIDTH, EFB_HEIGHT, true);
       memset(ObjectBuffer[i], 0, EFB_WIDTH * EFB_HEIGHT * sizeof(u32));
     }
   }

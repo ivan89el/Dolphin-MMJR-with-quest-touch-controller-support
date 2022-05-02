@@ -1,12 +1,13 @@
 // Copyright 2017 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
 #include <string>
 #include "InputCommon/ControllerEmu/ControlGroup/ControlGroup.h"
 #include "InputCommon/ControllerEmu/Setting/NumericSetting.h"
-#include "InputCommon/ControllerInterface/CoreDevice.h"
+#include "InputCommon/ControllerInterface/Device.h"
 
 namespace ControllerEmu
 {
@@ -20,8 +21,6 @@ public:
 
   ControlState GetDeadzone() const;
   ControlState GetThreshold() const;
-
-  size_t GetTriggerCount() const;
 
 private:
   SettingValue<double> m_threshold_setting;

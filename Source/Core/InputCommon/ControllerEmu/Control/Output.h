@@ -1,5 +1,6 @@
 // Copyright 2017 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
@@ -11,6 +12,6 @@ namespace ControllerEmu
 class Output : public Control
 {
 public:
-  Output(Translatability translate, std::string name);
+  Output(Translatability translate, const std::string& name);
 };
 }  // namespace ControllerEmu

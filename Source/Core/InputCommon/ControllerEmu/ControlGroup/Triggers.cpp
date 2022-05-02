@@ -1,5 +1,6 @@
 // Copyright 2017 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "InputCommon/ControllerEmu/ControlGroup/Triggers.h"
 
@@ -20,14 +21,14 @@ Triggers::Triggers(const std::string& name_) : ControlGroup(name_, GroupType::Tr
   AddDeadzoneSetting(&m_deadzone_setting, 50);
 }
 
-Triggers::StateData Triggers::GetState() const
+Triggers::StateData Triggers::GetState()
 {
   const size_t trigger_count = controls.size();
   const ControlState deadzone = m_deadzone_setting.GetValue() / 100;
 
   StateData result(trigger_count);
   for (size_t i = 0; i < trigger_count; ++i)
-    result.data[i] = std::min(ApplyDeadzone(controls[i]->GetState(), deadzone), 1.0);
+    result.data[i] = ApplyDeadzone(controls[i]->control_ref->State(), deadzone);
 
   return result;
 }

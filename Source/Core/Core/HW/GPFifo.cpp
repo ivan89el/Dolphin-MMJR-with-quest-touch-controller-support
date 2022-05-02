@@ -1,5 +1,6 @@
 // Copyright 2008 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "Core/HW/GPFifo.h"
 
@@ -167,4 +168,4 @@ void FastWrite64(u64 value)
   PowerPC::ppcState.gather_pipe_ptr += sizeof(u64);
 }
 
-}  // namespace GPFifo
+}  // end of namespace GPFifo

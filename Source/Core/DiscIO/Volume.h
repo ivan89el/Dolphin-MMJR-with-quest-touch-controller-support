@@ -1,5 +1,6 @@
 // Copyright 2008 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
@@ -11,8 +12,6 @@
 #include <string>
 #include <vector>
 
-#include <mbedtls/sha1.h>
-
 #include "Common/CommonTypes.h"
 #include "Common/StringUtil.h"
 #include "Common/Swap.h"
@@ -21,26 +20,24 @@
 
 namespace DiscIO
 {
-class BlobReader;
 enum class BlobType;
 class FileSystem;
-class VolumeDisc;
 class VolumeWAD;
 
 struct Partition final
 {
-  constexpr Partition() = default;
-  constexpr explicit Partition(u64 offset_) : offset(offset_) {}
-  constexpr bool operator==(const Partition& other) const { return offset == other.offset; }
-  constexpr bool operator!=(const Partition& other) const { return !(*this == other); }
-  constexpr bool operator<(const Partition& other) const { return offset < other.offset; }
-  constexpr bool operator>(const Partition& other) const { return other < *this; }
-  constexpr bool operator<=(const Partition& other) const { return !(*this < other); }
-  constexpr bool operator>=(const Partition& other) const { return !(*this > other); }
-  u64 offset{std::numeric_limits<u64>::max()};
+  Partition() : offset(std::numeric_limits<u64>::max()) {}
+  explicit Partition(u64 offset_) : offset(offset_) {}
+  bool operator==(const Partition& other) const { return offset == other.offset; }
+  bool operator!=(const Partition& other) const { return !(*this == other); }
+  bool operator<(const Partition& other) const { return offset < other.offset; }
+  bool operator>(const Partition& other) const { return other < *this; }
+  bool operator<=(const Partition& other) const { return !(*this < other); }
+  bool operator>=(const Partition& other) const { return !(*this > other); }
+  u64 offset;
 };
 
-constexpr Partition PARTITION_NONE(std::numeric_limits<u64>::max() - 1);
+const Partition PARTITION_NONE(std::numeric_limits<u64>::max() - 1);
 
 class Volume
 {
@@ -53,26 +50,21 @@ public:
   {
     T temp;
     if (!Read(offset, sizeof(T), reinterpret_cast<u8*>(&temp), partition))
-      return std::nullopt;
+      return {};
     return Common::FromBigEndian(temp);
   }
   std::optional<u64> ReadSwappedAndShifted(u64 offset, const Partition& partition) const
   {
     const std::optional<u32> temp = ReadSwapped<u32>(offset, partition);
-    if (!temp)
-      return std::nullopt;
-    return static_cast<u64>(*temp) << GetOffsetShift();
+    return temp ? static_cast<u64>(*temp) << GetOffsetShift() : std::optional<u64>();
   }
 
   virtual bool IsEncryptedAndHashed() const { return false; }
   virtual std::vector<Partition> GetPartitions() const { return {}; }
   virtual Partition GetGamePartition() const { return PARTITION_NONE; }
-  virtual std::optional<u32> GetPartitionType(const Partition& partition) const
-  {
-    return std::nullopt;
-  }
+  virtual std::optional<u32> GetPartitionType(const Partition& partition) const { return {}; }
   std::optional<u64> GetTitleID() const { return GetTitleID(GetGamePartition()); }
-  virtual std::optional<u64> GetTitleID(const Partition& partition) const { return std::nullopt; }
+  virtual std::optional<u64> GetTitleID(const Partition& partition) const { return {}; }
   virtual const IOS::ES::TicketReader& GetTicket(const Partition& partition) const
   {
     return INVALID_TICKET;
@@ -84,12 +76,6 @@ public:
   }
   virtual std::vector<u8> GetContent(u16 index) const { return {}; }
   virtual std::vector<u64> GetContentOffsets() const { return {}; }
-  virtual bool CheckContentIntegrity(const IOS::ES::Content& content,
-                                     const std::vector<u8>& encrypted_data,
-                                     const IOS::ES::TicketReader& ticket) const
-  {
-    return false;
-  }
   virtual bool CheckContentIntegrity(const IOS::ES::Content& content, u64 content_offset,
                                      const IOS::ES::TicketReader& ticket) const
   {
@@ -121,15 +107,8 @@ public:
     return 0;
   }
   virtual Platform GetVolumeType() const = 0;
-  virtual bool IsDatelDisc() const = 0;
-  virtual bool IsNKit() const = 0;
   virtual bool SupportsIntegrityCheck() const { return false; }
   virtual bool CheckH3TableIntegrity(const Partition& partition) const { return false; }
-  virtual bool CheckBlockIntegrity(u64 block_index, const u8* encrypted_data,
-                                   const Partition& partition) const
-  {
-    return false;
-  }
   virtual bool CheckBlockIntegrity(u64 block_index, const Partition& partition) const
   {
     return false;
@@ -142,14 +121,6 @@ public:
   virtual bool IsSizeAccurate() const = 0;
   // Size on disc (compressed size)
   virtual u64 GetRawSize() const = 0;
-  virtual const BlobReader& GetBlobReader() const = 0;
-
-  // This hash is intended to be (but is not guaranteed to be):
-  // 1. Identical for discs with no differences that affect netplay/TAS sync
-  // 2. Different for discs with differences that affect netplay/TAS sync
-  // 3. Much faster than hashing the entire disc
-  // The way the hash is calculated may change with updates to Dolphin.
-  virtual std::array<u8, 20> GetSyncHash() const = 0;
 
 protected:
   template <u32 N>
@@ -163,10 +134,6 @@ protected:
     else
       return CP1252ToUTF8(string);
   }
-
-  void ReadAndAddToSyncHash(mbedtls_sha1_context* context, u64 offset, u64 length,
-                            const Partition& partition) const;
-  void AddTMDToSyncHash(mbedtls_sha1_context* context, const Partition& partition) const;
 
   virtual u32 GetOffsetShift() const { return 0; }
   static std::map<Language, std::string> ReadWiiNames(const std::vector<char16_t>& data);
@@ -182,11 +149,12 @@ protected:
   static const std::vector<u8> INVALID_CERT_CHAIN;
 };
 
-std::unique_ptr<VolumeDisc> CreateDisc(std::unique_ptr<BlobReader> reader);
+class VolumeDisc : public Volume
+{
+};
+
 std::unique_ptr<VolumeDisc> CreateDisc(const std::string& path);
-std::unique_ptr<VolumeWAD> CreateWAD(std::unique_ptr<BlobReader> reader);
 std::unique_ptr<VolumeWAD> CreateWAD(const std::string& path);
-std::unique_ptr<Volume> CreateVolume(std::unique_ptr<BlobReader> reader);
 std::unique_ptr<Volume> CreateVolume(const std::string& path);
 
 }  // namespace DiscIO

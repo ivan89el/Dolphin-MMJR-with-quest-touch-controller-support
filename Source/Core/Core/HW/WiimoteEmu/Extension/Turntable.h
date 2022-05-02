@@ -1,5 +1,6 @@
 // Copyright 2010 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
@@ -57,6 +58,7 @@ public:
   Turntable();
 
   void Update() override;
+  bool IsButtonPressed() const override;
   void Reset() override;
 
   ControllerEmu::ControlGroup* GetGroup(TurntableGroup group);

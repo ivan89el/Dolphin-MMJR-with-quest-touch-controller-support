@@ -1,9 +1,9 @@
 // Copyright 2008 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
-#include <array>
 #include <cstddef>
 #include <iosfwd>
 #include <tuple>
@@ -50,16 +50,12 @@ constexpr size_t TLB_WAYS = 2;
 
 struct TLBEntry
 {
-  using WayArray = std::array<u32, TLB_WAYS>;
-
   static constexpr u32 INVALID_TAG = 0xffffffff;
 
-  WayArray tag{INVALID_TAG, INVALID_TAG};
-  WayArray paddr{};
-  WayArray pte{};
-  u32 recent = 0;
-
-  void Invalidate() { tag.fill(INVALID_TAG); }
+  u32 tag[TLB_WAYS] = {INVALID_TAG, INVALID_TAG};
+  u32 paddr[TLB_WAYS] = {};
+  u32 pte[TLB_WAYS] = {};
+  u8 recent = 0;
 };
 
 struct PairedSingle
@@ -100,81 +96,66 @@ struct PairedSingle
 static_assert(std::is_standard_layout<PairedSingle>(), "PairedSingle must be standard layout");
 
 // This contains the entire state of the emulated PowerPC "Gekko" CPU.
-//
-// To minimize code size on x86, we want as much useful stuff in the first 256 bytes as possible.
-// ps needs to be relatively late in the struct due to it being larger than 256 bytes in itself.
-//
-// On AArch64, most load/store instructions support fairly large immediate offsets,
-// but not LDP/STP, which we want to use for accessing certain things.
-// These must be in the first 260 bytes: pc, npc
-// These must be in the first 520 bytes: gather_pipe_ptr, gather_pipe_base_ptr
-// Better code is generated if these are in the first 260 bytes: gpr
-// Better code is generated if these are in the first 520 bytes: ps
-// Unfortunately not all of those fit in 520 bytes, but we can fit most of ps and all of the rest.
 struct PowerPCState
 {
-  u32 pc = 0;  // program counter
-  u32 npc = 0;
+  u32 gpr[32];  // General purpose registers. r1 = stack pointer.
 
-  // gather pipe pointer for JIT access
-  u8* gather_pipe_ptr = nullptr;
-  u8* gather_pipe_base_ptr = nullptr;
+  u32 pc;  // program counter
+  u32 npc;
 
-  u32 gpr[32]{};  // General purpose registers. r1 = stack pointer.
-
-#ifndef _M_X86_64
-  // The paired singles are strange : PS0 is stored in the full 64 bits of each FPR
-  // but ps calculations are only done in 32-bit precision, and PS1 is only 32 bits.
-  // Since we want to use SIMD, SSE2 is the only viable alternative - 2x double.
-  alignas(16) PairedSingle ps[32];
-#endif
-
-  ConditionRegister cr{};
+  ConditionRegister cr;
 
   UReg_MSR msr;      // machine state register
   UReg_FPSCR fpscr;  // floating point flags/status bits
 
   // Exception management.
-  u32 Exceptions = 0;
+  u32 Exceptions;
 
   // Downcount for determining when we need to do timing
   // This isn't quite the right location for it, but it is here to accelerate the ARM JIT
   // This variable should be inside of the CoreTiming namespace if we wanted to be correct.
-  int downcount = 0;
+  int downcount;
 
   // XER, reformatted into byte fields for easier access.
-  u8 xer_ca = 0;
-  u8 xer_so_ov = 0;  // format: (SO << 1) | OV
+  u8 xer_ca;
+  u8 xer_so_ov;  // format: (SO << 1) | OV
   // The Broadway CPU implements bits 16-23 of the XER register... even though it doesn't support
   // lscbx
-  u16 xer_stringctrl = 0;
+  u16 xer_stringctrl;
+
+  // gather pipe pointer for JIT access
+  u8* gather_pipe_ptr;
+  u8* gather_pipe_base_ptr;
 
 #if _M_X86_64
-  // This member exists only for the purpose of an assertion that its offset <= 0x100.
+  // This member exists for the purpose of an assertion in x86 JitBase.cpp
+  // that its offset <= 0x100.  To minimize code size on x86, we want as much
+  // useful stuff in the one-byte offset range as possible - which is why ps
+  // is sitting down here.  It currently doesn't make a difference on other
+  // supported architectures.
   std::tuple<> above_fits_in_first_0x100;
-
-  alignas(16) PairedSingle ps[32];
 #endif
 
-  u32 sr[16]{};  // Segment registers.
+  // The paired singles are strange : PS0 is stored in the full 64 bits of each FPR
+  // but ps calculations are only done in 32-bit precision, and PS1 is only 32 bits.
+  // Since we want to use SIMD, SSE2 is the only viable alternative - 2x double.
+  alignas(16) PairedSingle ps[32];
+
+  u32 sr[16];  // Segment registers.
 
   // special purpose registers - controls quantizers, DMA, and lots of other misc extensions.
   // also for power management, but we don't care about that.
-  u32 spr[1024]{};
+  u32 spr[1024];
 
   // Storage for the stack pointer of the BLR optimization.
-  u8* stored_stack_pointer = nullptr;
+  u8* stored_stack_pointer;
 
   std::array<std::array<TLBEntry, TLB_SIZE / TLB_WAYS>, NUM_TLBS> tlb;
 
-  u32 pagetable_base = 0;
-  u32 pagetable_hashmask = 0;
+  u32 pagetable_base;
+  u32 pagetable_hashmask;
 
   InstructionCache iCache;
-
-  // Reservation monitor for lwarx and its friend stwcxd.
-  bool reserve;
-  u32 reserve_address;
 
   void UpdateCR1()
   {
@@ -239,9 +220,6 @@ void UpdatePerformanceMonitor(u32 cycles, u32 num_load_stores, u32 num_fp_inst);
 #define DMAL (*(UReg_DMAL*)&PowerPC::ppcState.spr[SPR_DMAL])
 #define MMCR0 ((UReg_MMCR0&)PowerPC::ppcState.spr[SPR_MMCR0])
 #define MMCR1 ((UReg_MMCR1&)PowerPC::ppcState.spr[SPR_MMCR1])
-#define THRM1 ((UReg_THRM12&)PowerPC::ppcState.spr[SPR_THRM1])
-#define THRM2 ((UReg_THRM12&)PowerPC::ppcState.spr[SPR_THRM2])
-#define THRM3 ((UReg_THRM3&)PowerPC::ppcState.spr[SPR_THRM3])
 #define PC PowerPC::ppcState.pc
 #define NPC PowerPC::ppcState.npc
 #define FPSCR PowerPC::ppcState.fpscr
@@ -312,9 +290,6 @@ inline void SetXER_OV(bool value)
   SetXER_SO(value);
 }
 
-void UpdateFPRFDouble(double dvalue);
-void UpdateFPRFSingle(float fvalue);
-
-void RoundingModeUpdated();
+void UpdateFPRF(double dvalue);
 
 }  // namespace PowerPC

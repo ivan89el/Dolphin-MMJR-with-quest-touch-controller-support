@@ -1,5 +1,6 @@
 // Copyright 2017 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "DolphinQt/Settings/USBDeviceAddToWhitelistDialog.h"
 
@@ -123,18 +124,30 @@ void USBDeviceAddToWhitelistDialog::RefreshDeviceList()
 
 void USBDeviceAddToWhitelistDialog::AddUSBDeviceToWhitelist()
 {
-  const std::string vid_string(StripSpaces(device_vid_textbox->text().toStdString()));
-  const std::string pid_string(StripSpaces(device_pid_textbox->text().toStdString()));
+  const std::string vid_string = StripSpaces(device_vid_textbox->text().toStdString());
+  const std::string pid_string = StripSpaces(device_pid_textbox->text().toStdString());
   if (!IsValidUSBIDString(vid_string))
   {
     // i18n: Here, VID means Vendor ID (for a USB device).
-    ModalMessageBox::critical(this, tr("USB Whitelist Error"), tr("The entered VID is invalid."));
+    ModalMessageBox vid_warning_box(this);
+    vid_warning_box.setIcon(QMessageBox::Warning);
+    vid_warning_box.setWindowTitle(tr("USB Whitelist Error"));
+    // i18n: Here, VID means Vendor ID (for a USB device).
+    vid_warning_box.setText(tr("The entered VID is invalid."));
+    vid_warning_box.setStandardButtons(QMessageBox::Ok);
+    vid_warning_box.exec();
     return;
   }
   if (!IsValidUSBIDString(pid_string))
   {
     // i18n: Here, PID means Product ID (for a USB device).
-    ModalMessageBox::critical(this, tr("USB Whitelist Error"), tr("The entered PID is invalid."));
+    ModalMessageBox pid_warning_box(this);
+    pid_warning_box.setIcon(QMessageBox::Warning);
+    pid_warning_box.setWindowTitle(tr("USB Whitelist Error"));
+    // i18n: Here, PID means Product ID (for a USB device).
+    pid_warning_box.setText(tr("The entered PID is invalid."));
+    pid_warning_box.setStandardButtons(QMessageBox::Ok);
+    pid_warning_box.exec();
     return;
   }
 
@@ -143,8 +156,7 @@ void USBDeviceAddToWhitelistDialog::AddUSBDeviceToWhitelist()
 
   if (SConfig::GetInstance().IsUSBDeviceWhitelisted({vid, pid}))
   {
-    ModalMessageBox::critical(this, tr("USB Whitelist Error"),
-                              tr("This USB device is already whitelisted."));
+    ModalMessageBox::critical(this, tr("Error"), tr("This USB device is already whitelisted."));
     return;
   }
   SConfig::GetInstance().m_usb_passthrough_devices.emplace(vid, pid);
@@ -156,9 +168,10 @@ void USBDeviceAddToWhitelistDialog::OnDeviceSelection()
 {
   // Not the nicest way of doing this but...
   QString device = usb_inserted_devices_list->currentItem()->text().left(9);
-  QStringList split = device.split(QString::fromStdString(":"));
-  QString* vid = new QString(split[0]);
-  QString* pid = new QString(split[1]);
+  QString* vid = new QString(
+      device.split(QString::fromStdString(":"), QString::SplitBehavior::KeepEmptyParts)[0]);
+  QString* pid = new QString(
+      device.split(QString::fromStdString(":"), QString::SplitBehavior::KeepEmptyParts)[1]);
   device_vid_textbox->setText(*vid);
   device_pid_textbox->setText(*pid);
 }

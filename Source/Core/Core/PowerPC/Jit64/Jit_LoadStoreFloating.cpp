@@ -1,5 +1,6 @@
 // Copyright 2008 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "Common/BitSet.h"
 #include "Common/CommonTypes.h"
@@ -104,20 +105,19 @@ void Jit64::stfXXX(UGeckoInstruction inst)
 
   if (single)
   {
-    if (js.fpr_is_store_safe[s] && js.op->fprIsSingle[s])
+    if (js.op->fprIsStoreSafe[s])
     {
       RCOpArg Rs = fpr.Use(s, RCMode::Read);
       RegCache::Realize(Rs);
       CVTSD2SS(XMM0, Rs);
-      MOVD_xmm(R(RSCRATCH), XMM0);
     }
     else
     {
       RCX64Reg Rs = fpr.Bind(s, RCMode::Read);
       RegCache::Realize(Rs);
-      MOVAPD(XMM0, Rs);
-      CALL(asm_routines.cdts);
+      ConvertDoubleToSingle(XMM0, Rs);
     }
+    MOVD_xmm(R(RSCRATCH), XMM0);
   }
   else
   {

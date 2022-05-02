@@ -1,5 +1,6 @@
 // Copyright 2015 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include <algorithm>
 #include <vector>
@@ -44,11 +45,6 @@ ToolBar::ToolBar(QWidget* parent) : QToolBar(parent)
 
   connect(&Settings::Instance(), &Settings::WidgetLockChanged, this,
           [this](bool locked) { setMovable(!locked); });
-
-  connect(&Settings::Instance(), &Settings::GameListRefreshRequested, this,
-          [this] { m_refresh_action->setEnabled(false); });
-  connect(&Settings::Instance(), &Settings::GameListRefreshStarted, this,
-          [this] { m_refresh_action->setEnabled(true); });
 
   OnEmulationStateChanged(Core::GetState());
   OnDebugModeToggled(Settings::Instance().IsDebugModeEnabled());
@@ -113,8 +109,7 @@ void ToolBar::MakeActions()
   m_set_pc_action = addAction(tr("Set PC"), this, &ToolBar::SetPCPressed);
 
   m_open_action = addAction(tr("Open"), this, &ToolBar::OpenPressed);
-  m_refresh_action = addAction(tr("Refresh"), [this] { emit RefreshPressed(); });
-  m_refresh_action->setEnabled(false);
+  m_refresh_action = addAction(tr("Refresh"), this, &ToolBar::RefreshPressed);
 
   addSeparator();
 

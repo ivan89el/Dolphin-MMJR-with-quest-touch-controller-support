@@ -1,26 +1,22 @@
 // Copyright 2019 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "DolphinQt/TAS/TASCheckBox.h"
 
 #include <QMouseEvent>
 
 #include "Core/Movie.h"
-#include "DolphinQt/TAS/TASInputWindow.h"
 
-TASCheckBox::TASCheckBox(const QString& text, TASInputWindow* parent)
-    : QCheckBox(text, parent), m_parent(parent)
+TASCheckBox::TASCheckBox(const QString& text) : QCheckBox(text)
 {
   setTristate(true);
 }
 
-bool TASCheckBox::GetValue() const
+bool TASCheckBox::GetValue()
 {
   if (checkState() == Qt::PartiallyChecked)
-  {
-    const u64 frames_elapsed = Movie::GetCurrentFrame() - m_frame_turbo_started;
-    return static_cast<int>(frames_elapsed % m_turbo_total_frames) < m_turbo_press_frames;
-  }
+    return Movie::GetCurrentFrame() % 2 == static_cast<u64>(m_trigger_on_odd);
 
   return isChecked();
 }
@@ -39,8 +35,6 @@ void TASCheckBox::mousePressEvent(QMouseEvent* event)
     return;
   }
 
-  m_frame_turbo_started = Movie::GetCurrentFrame();
-  m_turbo_press_frames = m_parent->GetTurboPressFrames();
-  m_turbo_total_frames = m_turbo_press_frames + m_parent->GetTurboReleaseFrames();
+  m_trigger_on_odd = Movie::GetCurrentFrame() % 2 == 0;
   setCheckState(Qt::PartiallyChecked);
 }

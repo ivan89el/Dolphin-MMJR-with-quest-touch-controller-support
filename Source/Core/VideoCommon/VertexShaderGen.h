@@ -1,5 +1,6 @@
 // Copyright 2008 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
@@ -8,9 +9,6 @@
 #include "VideoCommon/ShaderGenCommon.h"
 
 enum class APIType;
-enum class TexInputForm : u32;
-enum class TexGenType : u32;
-enum class SourceRow : u32;
 
 // TODO should be reordered
 enum : int
@@ -49,9 +47,9 @@ struct vertex_shader_uid_data
 
   struct
   {
-    TexInputForm inputform : 2;
-    TexGenType texgentype : 3;
-    SourceRow sourcerow : 5;
+    u32 inputform : 2;
+    u32 texgentype : 3;
+    u32 sourcerow : 5;
     u32 embosssourceshift : 3;
     u32 embosslightshift : 3;
   } texMtxInfo[8];

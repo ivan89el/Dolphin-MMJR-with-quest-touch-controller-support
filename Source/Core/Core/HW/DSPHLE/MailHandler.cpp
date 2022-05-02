@@ -1,5 +1,6 @@
 // Copyright 2008 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "Core/HW/DSPHLE/MailHandler.h"
 
@@ -36,7 +37,7 @@ void CMailHandler::PushMail(u32 mail, bool interrupt, int cycles_into_future)
     }
   }
   m_Mails.emplace(mail, false);
-  DEBUG_LOG_FMT(DSP_MAIL, "DSP writes {:#010x}", mail);
+  DEBUG_LOG(DSP_MAIL, "DSP writes 0x%08x", mail);
 }
 
 u16 CMailHandler::ReadDSPMailboxHigh()
@@ -120,7 +121,7 @@ void CMailHandler::DoState(PointerWrap& p)
       temp.emplace(value, interrupt);
     }
     if (!m_Mails.empty())
-      PanicAlertFmt("CMailHandler::DoState - WTF?");
+      PanicAlert("CMailHandler::DoState - WTF?");
 
     // Restore queue.
     for (int i = 0; i < sz; i++)

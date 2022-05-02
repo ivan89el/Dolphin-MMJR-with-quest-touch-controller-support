@@ -1,5 +1,6 @@
 // Copyright 2009 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include <string>
 #include <utility>
@@ -21,13 +22,7 @@ u8 DSP::Host::ReadHostMemory(u32 addr)
 void DSP::Host::WriteHostMemory(u8 value, u32 addr)
 {
 }
-void DSP::Host::DMAToDSP(u16* dst, u32 addr, u32 size)
-{
-}
-void DSP::Host::DMAFromDSP(const u16* src, u32 addr, u32 size)
-{
-}
-void DSP::Host::OSD_AddMessage(std::string str, u32 ms)
+void DSP::Host::OSD_AddMessage(const std::string& str, u32 ms)
 {
 }
 bool DSP::Host::OnThread()
@@ -38,10 +33,7 @@ bool DSP::Host::IsWiiHost()
 {
   return false;
 }
-void DSP::Host::CodeLoaded(DSPCore& dsp, u32 addr, size_t size)
-{
-}
-void DSP::Host::CodeLoaded(DSPCore& dsp, const u8* ptr, size_t size)
+void DSP::Host::CodeLoaded(const u8* ptr, int size)
 {
 }
 void DSP::Host::InterruptRequest()
@@ -408,39 +400,21 @@ int main(int argc, const char* argv[])
   {
     const std::string argument = argv[i];
     if (argument == "-d")
-    {
       disassemble = true;
-    }
     else if (argument == "-o")
-    {
-      if (++i < argc)
-        output_name = argv[i];
-    }
+      output_name = argv[++i];
     else if (argument == "-h")
-    {
-      if (++i < argc)
-        output_header_name = argv[i];
-    }
+      output_header_name = argv[++i];
     else if (argument == "-c")
-    {
       compare = true;
-    }
     else if (argument == "-s")
-    {
       outputSize = true;
-    }
     else if (argument == "-m")
-    {
       multiple = true;
-    }
     else if (argument == "-f")
-    {
       force = true;
-    }
     else if (argument == "-p")
-    {
       print_results = true;
-    }
     else if (argument == "-ps")
     {
       print_results = true;

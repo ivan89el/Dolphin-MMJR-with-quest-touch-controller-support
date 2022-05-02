@@ -1,5 +1,6 @@
 // Copyright 2008 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include <algorithm>
 #include <cstddef>
@@ -10,8 +11,7 @@
 
 #include "Common/CDUtils.h"
 #include "Common/CommonTypes.h"
-#include "Common/IOFile.h"
-#include "Common/MsgHandler.h"
+#include "Common/File.h"
 
 #include "DiscIO/Blob.h"
 #include "DiscIO/CISOBlob.h"
@@ -20,40 +20,10 @@
 #include "DiscIO/DriveBlob.h"
 #include "DiscIO/FileBlob.h"
 #include "DiscIO/TGCBlob.h"
-#include "DiscIO/WIABlob.h"
 #include "DiscIO/WbfsBlob.h"
 
 namespace DiscIO
 {
-std::string GetName(BlobType blob_type, bool translate)
-{
-  const auto translate_str = [translate](const std::string& str) {
-    return translate ? Common::GetStringT(str.c_str()) : str;
-  };
-
-  switch (blob_type)
-  {
-  case BlobType::PLAIN:
-    return "ISO";
-  case BlobType::DIRECTORY:
-    return translate_str("Directory");
-  case BlobType::GCZ:
-    return "GCZ";
-  case BlobType::CISO:
-    return "CISO";
-  case BlobType::WBFS:
-    return "WBFS";
-  case BlobType::TGC:
-    return "TGC";
-  case BlobType::WIA:
-    return "WIA";
-  case BlobType::RVZ:
-    return "RVZ";
-  default:
-    return "";
-  }
-}
-
 void SectorReader::SetSectorSize(int blocksize)
 {
   m_block_size = std::max(blocksize, 0);
@@ -126,9 +96,6 @@ const SectorReader::Cache* SectorReader::GetCacheLine(u64 block_num)
 
 bool SectorReader::Read(u64 offset, u64 size, u8* out_ptr)
 {
-  if (offset + size > GetDataSize())
-    return false;
-
   u64 remain = size;
   u64 block = 0;
   u32 position_in_block = static_cast<u32>(offset % m_block_size);
@@ -235,10 +202,6 @@ std::unique_ptr<BlobReader> CreateBlobReader(const std::string& filename)
     return TGCFileReader::Create(std::move(file));
   case WBFS_MAGIC:
     return WbfsFileReader::Create(std::move(file), filename);
-  case WIA_MAGIC:
-    return WIAFileReader::Create(std::move(file), filename);
-  case RVZ_MAGIC:
-    return RVZFileReader::Create(std::move(file), filename);
   default:
     if (auto directory_blob = DirectoryBlobReader::Create(filename))
       return std::move(directory_blob);

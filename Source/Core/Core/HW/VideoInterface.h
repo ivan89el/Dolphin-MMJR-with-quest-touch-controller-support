@@ -1,5 +1,6 @@
 // Copyright 2008 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #pragma once
 
@@ -362,10 +363,7 @@ void UpdateInterrupts();
 // Change values pertaining to video mode
 void UpdateParameters();
 
-double GetTargetRefreshRate();
-u32 GetTargetRefreshRateNumerator();
-u32 GetTargetRefreshRateDenominator();
-
+u32 GetTargetRefreshRate();
 u32 GetTicksPerSample();
 u32 GetTicksPerHalfLine();
 u32 GetTicksPerField();

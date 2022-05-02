@@ -1,5 +1,6 @@
 // Copyright 2009 Dolphin Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+// Licensed under GPLv2+
+// Refer to the license.txt file included.
 
 #include "VideoBackends/Software/SWRenderer.h"
 
@@ -12,13 +13,13 @@
 
 #include "VideoBackends/Software/EfbCopy.h"
 #include "VideoBackends/Software/EfbInterface.h"
-#include "VideoBackends/Software/SWBoundingBox.h"
 #include "VideoBackends/Software/SWOGLWindow.h"
 #include "VideoBackends/Software/SWTexture.h"
 
 #include "VideoCommon/AbstractPipeline.h"
 #include "VideoCommon/AbstractShader.h"
 #include "VideoCommon/AbstractTexture.h"
+#include "VideoCommon/BoundingBox.h"
 #include "VideoCommon/NativeVertexFormat.h"
 #include "VideoCommon/VideoBackendBase.h"
 #include "VideoCommon/VideoCommon.h"
@@ -26,8 +27,7 @@
 namespace SW
 {
 SWRenderer::SWRenderer(std::unique_ptr<SWOGLWindow> window)
-    : ::Renderer(static_cast<int>(std::max(window->GetContext()->GetBackBufferWidth(), 1u)),
-                 static_cast<int>(std::max(window->GetContext()->GetBackBufferHeight(), 1u)), 1.0f,
+    : ::Renderer(static_cast<int>(MAX_XFB_WIDTH), static_cast<int>(MAX_XFB_HEIGHT), 1.0f,
                  AbstractTextureFormat::RGBA8),
       m_window(std::move(window))
 {
@@ -38,8 +38,7 @@ bool SWRenderer::IsHeadless() const
   return m_window->IsHeadless();
 }
 
-std::unique_ptr<AbstractTexture> SWRenderer::CreateTexture(const TextureConfig& config,
-                                                           [[maybe_unused]] std::string_view name)
+std::unique_ptr<AbstractTexture> SWRenderer::CreateTexture(const TextureConfig& config)
 {
   return std::make_unique<SWTexture>(config);
 }
@@ -57,18 +56,6 @@ SWRenderer::CreateFramebuffer(AbstractTexture* color_attachment, AbstractTexture
                                static_cast<SWTexture*>(depth_attachment));
 }
 
-void SWRenderer::BindBackbuffer(const ClearColor& clear_color)
-{
-  // Look for framebuffer resizes
-  if (!m_surface_resized.TestAndClear())
-    return;
-
-  GLContext* context = m_window->GetContext();
-  context->Update();
-  m_backbuffer_width = context->GetBackBufferWidth();
-  m_backbuffer_height = context->GetBackBufferHeight();
-}
-
 class SWShader final : public AbstractShader
 {
 public:
@@ -79,15 +66,13 @@ public:
 };
 
 std::unique_ptr<AbstractShader>
-SWRenderer::CreateShaderFromSource(ShaderStage stage, [[maybe_unused]] std::string_view source,
-                                   [[maybe_unused]] std::string_view name)
+SWRenderer::CreateShaderFromSource(ShaderStage stage, [[maybe_unused]] std::string_view source)
 {
   return std::make_unique<SWShader>(stage);
 }
 
-std::unique_ptr<AbstractShader>
-SWRenderer::CreateShaderFromBinary(ShaderStage stage, const void* data, size_t length,
-                                   [[maybe_unused]] std::string_view name)
+std::unique_ptr<AbstractShader> SWRenderer::CreateShaderFromBinary(ShaderStage stage,
+                                                                   const void* data, size_t length)
 {
   return std::make_unique<SWShader>(stage);
 }
@@ -141,9 +126,14 @@ u32 SWRenderer::AccessEFB(EFBAccessType type, u32 x, u32 y, u32 InputData)
   return value;
 }
 
-std::unique_ptr<BoundingBox> SWRenderer::CreateBoundingBox() const
+u16 SWRenderer::BBoxRead(int index)
 {
-  return std::make_unique<SWBoundingBox>();
+  return BoundingBox::coords[index];
+}
+
+void SWRenderer::BBoxWrite(int index, u16 value)
+{
+  BoundingBox::coords[index] = value;
 }
 
 void SWRenderer::ClearScreen(const MathUtil::Rectangle<int>& rc, bool colorEnable, bool alphaEnable,
