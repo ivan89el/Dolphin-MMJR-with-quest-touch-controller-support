@@ -12,6 +12,8 @@
 #include <utility>
 #include <variant>
 
+#include <fmt/time.h>
+
 #ifdef _WIN32
 #include <windows.h>
 #endif
@@ -88,6 +90,7 @@ static bool s_wants_determinism;
 static Common::Timer s_timer;
 static std::atomic<u32> s_drawn_frame;
 static std::atomic<u32> s_drawn_video;
+static PerformanceStatistics perf_stats;
 
 static bool s_is_stopping = false;
 static bool s_hardware_initialized = false;
@@ -232,6 +235,8 @@ bool Init(std::unique_ptr<BootParameters> boot, const WindowSystemInfo& wsi)
 
   // Issue any API calls which must occur on the main thread for the graphics backend.
   g_video_backend->PrepareWindow(wsi);
+
+  static PerformanceStatistics perf_stats;
 
   // Start the emu thread
   s_emu_thread = std::thread(EmuThread, std::move(boot), wsi);
@@ -672,15 +677,20 @@ static std::string GenerateScreenshotFolderPath()
 
 static std::string GenerateScreenshotName()
 {
-  std::string path = GenerateScreenshotFolderPath();
-
   // append gameId, path only contains the folder here.
-  path += SConfig::GetInstance().GetGameID();
+  const std::string path_prefix =
+      GenerateScreenshotFolderPath() + SConfig::GetInstance().GetGameID();
 
-  std::string name;
-  for (int i = 1; File::Exists(name = StringFromFormat("%s-%d.png", path.c_str(), i)); ++i)
+  const std::time_t cur_time = std::time(nullptr);
+  const std::string base_name =
+      fmt::format("{}_{:%Y-%m-%d_%H-%M-%S}", path_prefix, *std::localtime(&cur_time));
+
+  // First try a filename without any suffixes, if already exists then append increasing numbers
+  std::string name = fmt::format("{}.png", base_name);
+  if (File::Exists(name))
   {
-    // TODO?
+    for (u32 i = 1; File::Exists(name = fmt::format("{}_{}.png", base_name, i)); ++i)
+      ;
   }
 
   return name;
@@ -704,9 +714,8 @@ void SaveScreenShot(const std::string& name, bool wait_for_completion)
 
   SetState(State::Paused);
 
-  std::string filePath = GenerateScreenshotFolderPath() + name + ".png";
-
-  g_renderer->SaveScreenshot(filePath, wait_for_completion);
+  g_renderer->SaveScreenshot(fmt::format("{}{}.png", GenerateScreenshotFolderPath(), name),
+                             wait_for_completion);
 
   if (!bPaused)
     SetState(State::Running);
@@ -808,6 +817,11 @@ void Callback_VideoCopiedToXFB(bool video_update)
   }
 }
 
+const PerformanceStatistics& GetPerformanceStatistics()
+{
+  return perf_stats;
+}
+
 void UpdateTitle()
 {
   u32 ElapseTime = (u32)s_timer.GetTimeDifference();
@@ -816,22 +830,23 @@ void UpdateTitle()
   if (ElapseTime == 0)
     ElapseTime = 1;
 
-  float FPS = s_drawn_frame.load() * 1000.0f / ElapseTime;
-  float VPS = s_drawn_video.load() * 1000.0f / ElapseTime;
-  float Speed = VPS * 100.0f / VideoInterface::GetTargetRefreshRate();
+  perf_stats.FPS = s_drawn_frame.load() * 1000.0f / ElapseTime;
+  perf_stats.VPS = s_drawn_video.load() * 1000.0f / ElapseTime;
+  perf_stats.Speed = perf_stats.VPS * 100.0f / VideoInterface::GetTargetRefreshRate();
 
   std::string SFPS;
 
   if(g_ActiveConfig.bShowFPS)
   {
-    SFPS = StringFromFormat("|MMJR| FPS: %.0f | VPS:%.0f | Speed:%.0f%% |", FPS, VPS, Speed);
+    SFPS = StringFromFormat("|MMJR| FPS: %.0f | VPS:%.0f | Speed:%.0f%% |",
+                            perf_stats.FPS, perf_stats.VPS, perf_stats.Speed);
   }
 
   // Update the audio timestretcher with the current speed
   if (g_sound_stream)
   {
     Mixer* pMixer = g_sound_stream->GetMixer();
-    pMixer->UpdateSpeed((float)Speed / 100);
+    pMixer->UpdateSpeed(perf_stats.Speed / 100);
   }
 
   g_renderer->UpdateDebugTitle(SFPS);

@@ -3,7 +3,7 @@
 
     <!-- Title of the app -->
     <string name="app_name">Dolphin |MMJR|</string>
-    <string name="app_name_version">Dolphin |MMJR| - 11485</string>
+    <string name="app_name_version">Dolphin |MMJR| - 11500</string>
     <string name="host">app</string>
     <string name="scheme">dolphinemu</string>
 
@@ -168,6 +168,8 @@
 
     <!-- Interface Preference Fragment -->
     <string name="interface_submenu">Interface</string>
+    <string name="expand_to_cutout_area">Expand to Cutout Area</string>
+    <string name="expand_to_cutout_area_description">Expands the display area to include the cutout (or notch) area.</string>
     <string name="panic_handlers">Use Panic Handlers</string>
     <string name="panic_handlers_description">Show a message box when a potentially serious error has occurred. Disabling this may avoid annoying and non-fatal messages.</string>
     <string name="osd_messages">Show On-Screen Display Messages</string>
@@ -250,6 +252,9 @@
     <string name="shader_compilation_mode_description">Skip Drawing - Do not draw objects while shaders are compiling, will cause broken effects.</string>
     <string name="wait_for_shaders">Compile Shaders Before Starting</string>
     <string name="wait_for_shaders_description">This causes a delay when launching games, but will reduce stuttering early on.</string>
+    <string name="memory_override">Memory Override</string>
+    <string name="emulated_mem_size_override">Emulated Memory Size Override</string>
+    <string name="emulated_mem_size_override_description">Adjusts the amount of RAM in the emulated console.\n\nWARNING: Enabling this will completely break many games. Only a small number of games can benefit from this.</string>
 
     <!-- Debug -->
     <string name="debug_submenu">Debug</string>
@@ -276,6 +281,9 @@
     <string name="grid_menu_wiimote_settings">Wii Input</string>
     <string name="grid_menu_refresh">Refresh Library</string>
     <string name="grid_menu_open_file">Run Files</string>
+    <string name="grid_menu_install_wad">Install WAD</string>
+    <string name="wad_install_success">Successfully installed this title to the NAND.</string>
+    <string name="wad_install_failure">Failed to install this title to the NAND.</string>
 
     <!-- Add Directory Screen-->
     <string name="toggle_list">Toggle List</string>
@@ -392,6 +400,12 @@
     <string name="nnf_new_folder_ok">@android:string/ok</string>
     <string name="nnf_new_folder_cancel">@android:string/cancel</string>
 
+    <!-- File Pickers -->
+    <string name="no_file_extension">The selected file does not appear to have a file name extension.\n\nContinue anyway?</string>
+    <string name="wrong_file_extension_single">The selected file has the file name extension \"%1$s\", but \"%2$s\" was expected.\n\nContinue anyway?</string>
+    <string name="wrong_file_extension_multiple">The selected file has the file name extension \"%1$s\", but one of these extensions was expected: %2$s\n\nContinue anyway?</string>
+    <string name="wrong_file_extension_in_directory">No compatible files were found in the selected location.\n\nThe supported formats are: %1$s</string>
+
     <!-- Misc -->
     <string name="pitch">Total Pitch</string>
     <string name="yaw">Total Yaw</string>
@@ -399,5 +413,29 @@
     <string name="advanced_submenu2">Advanced Settings</string>
     <string name="hires_textures_submenu">Custom Hires-Textures</string>
     <string name="more_enhancements_submenu">More Enhancement Settings</string>
+
+    <!-- Convert Screen -->
+    <string name="convert_format">Format</string>
+    <string name="convert_block_size">Block Size</string>
+    <string name="convert_compression">Compression</string>
+    <string name="convert_compression_level">Compression Level</string>
+    <string name="convert_remove_junk_data">Remove Junk Data (Irreversible)</string>
+    <string name="convert_convert">Convert</string>
+    <string name="convert_converting">Converting</string>
+    <string name="convert_warning_iso">Removing junk data does not save any space when converting to ISO (unless you package the ISO file in a compressed file format such as ZIP afterwards). Do you want to continue anyway?</string>
+    <string name="convert_warning_gcz">Converting Wii disc images to GCZ without removing junk data does not save any noticeable amount of space compared to converting to ISO. Do you want to continue anyway?</string>
+    <string name="convert_success_message">The disc image was successfully converted.</string>
+    <string name="convert_failure_message">Dolphin failed to complete the requested action.</string>
+    <string name="convert_format_info">
+ISO: A simple and robust format which is supported by many programs. It takes up more space
+than any other format.
+\n\nGCZ: A basic compressed format which is compatible with most versions of Dolphin and some
+other programs. It can\'t efficiently compress junk data (unless removed) or encrypted Wii data.
+\n\nWIA: An advanced compressed format which is compatible with Dolphin 5.0-12188 and later,
+and a few other programs. It can efficiently compress encrypted Wii data, but not junk data
+(unless removed).
+\n\nRVZ: An advanced compressed format which is compatible with Dolphin 5.0-12188 and later.
+It can efficiently compress both junk data and encrypted Wii data.
+    </string>
 
 </resources>

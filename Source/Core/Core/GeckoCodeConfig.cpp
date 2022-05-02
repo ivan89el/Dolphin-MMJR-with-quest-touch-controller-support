@@ -16,7 +16,6 @@
 
 namespace Gecko
 {
-#ifndef ANDROID
 std::vector<GeckoCode> DownloadCodes(std::string gametdb_id, bool* succeeded)
 {
   std::string endpoint{"https://www.geckocodes.org/txt.php?txt=" + gametdb_id};
@@ -120,7 +119,7 @@ std::vector<GeckoCode> DownloadCodes(std::string gametdb_id, bool* succeeded)
 
   return gcodes;
 }
-#endif
+
 std::vector<GeckoCode> LoadCodes(const IniFile& globalIni, const IniFile& localIni)
 {
   std::vector<GeckoCode> gcodes;

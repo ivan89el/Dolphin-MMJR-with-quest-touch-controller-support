@@ -16,6 +16,7 @@
 #include <thread>
 #include <utility>
 
+#include "Common/Assert.h"
 #include "Common/CPUDetect.h"
 #include "Common/CommonPaths.h"
 #include "Common/CommonTypes.h"
@@ -23,6 +24,7 @@
 #include "Common/FileUtil.h"
 #include "Common/Logging/LogManager.h"
 #include "Common/MsgHandler.h"
+#include "Common/ScopeGuard.h"
 #include "Common/Version.h"
 #include "Common/WindowSystemInfo.h"
 
@@ -46,12 +48,15 @@
 #include "Core/PowerPC/PowerPC.h"
 #include "Core/PowerPC/Profiler.h"
 #include "Core/State.h"
+#include "Core/WiiUtils.h"
 #include "Core/TitleDatabase.h"
 #include "InputCommon/ControllerEmu/ControlGroup/ControlGroup.h"
 #include "InputCommon/ControllerEmu/Setting/NumericSetting.h"
 #include "VideoCommon/VideoConfig.h"
 
+#include "DiscIO/Blob.h"
 #include "DiscIO/Enums.h"
+#include "DiscIO/ScrubbedBlob.h"
 #include "DiscIO/Volume.h"
 
 #include "UICommon/UICommon.h"
@@ -265,63 +270,6 @@ JNIEXPORT void JNICALL Java_org_dolphinemu_dolphinemu_NativeLibrary_SaveScreenSh
 {
   std::lock_guard<std::mutex> guard(s_host_identity_lock);
   Core::SaveScreenShot();
-}
-
-JNIEXPORT void JNICALL Java_org_dolphinemu_dolphinemu_NativeLibrary_LoadGameIniFile(JNIEnv* env,
-                                                                                    jobject obj,
-                                                                                    jstring jGameID)
-{
-  std::string gameid = GetJString(env, jGameID);
-  s_game_ini.Load(File::GetUserPath(D_GAMESETTINGS_IDX) + gameid + ".ini");
-}
-
-JNIEXPORT void JNICALL Java_org_dolphinemu_dolphinemu_NativeLibrary_SaveGameIniFile(JNIEnv* env,
-                                                                                    jobject obj,
-                                                                                    jstring jGameID)
-{
-  std::string gameid = GetJString(env, jGameID);
-  s_game_ini.Save(File::GetUserPath(D_GAMESETTINGS_IDX) + gameid + ".ini");
-}
-
-JNIEXPORT void JNICALL Java_org_dolphinemu_dolphinemu_NativeLibrary_SetUserSetting(
-    JNIEnv* env, jobject obj, jstring jGameID, jstring jSection, jstring jKey, jstring jValue)
-{
-  std::string gameid = GetJString(env, jGameID);
-  std::string section = GetJString(env, jSection);
-  std::string key = GetJString(env, jKey);
-  std::string val = GetJString(env, jValue);
-
-  if (val != "-1" && !val.empty())
-  {
-    s_game_ini.GetOrCreateSection(section)->Set(key, val);
-  }
-  else
-  {
-    s_game_ini.GetOrCreateSection(section)->Delete(key);
-  }
-}
-
-JNIEXPORT void JNICALL Java_org_dolphinemu_dolphinemu_NativeLibrary_SetProfileSetting(
-    JNIEnv* env, jobject obj, jstring jProfile, jstring jSection, jstring jKey, jstring jValue)
-{
-  IniFile ini;
-  std::string profile = GetJString(env, jProfile);
-  std::string section = GetJString(env, jSection);
-  std::string key = GetJString(env, jKey);
-  std::string val = GetJString(env, jValue);
-
-  ini.Load(File::GetUserPath(D_CONFIG_IDX) + "Profiles/Wiimote/" + profile + ".ini");
-
-  if (val != "-1" && !val.empty())
-  {
-    ini.GetOrCreateSection(section)->Set(key, val);
-  }
-  else
-  {
-    ini.GetOrCreateSection(section)->Delete(key);
-  }
-
-  ini.Save(File::GetUserPath(D_CONFIG_IDX) + "Profiles/Wiimote/" + profile + ".ini");
 }
 
 JNIEXPORT void JNICALL Java_org_dolphinemu_dolphinemu_NativeLibrary_SetConfig(
@@ -649,6 +597,78 @@ JNIEXPORT void JNICALL Java_org_dolphinemu_dolphinemu_NativeLibrary_ReloadWiimot
                                                                                         jobject obj)
 {
   Wiimote::LoadConfig();
+}
+
+JNIEXPORT jboolean JNICALL Java_org_dolphinemu_dolphinemu_NativeLibrary_InstallWAD(JNIEnv* env,
+                                                                                   jobject obj,
+                                                                                   jstring jFile)
+{
+  const std::string path = GetJString(env, jFile);
+  return static_cast<jboolean>(WiiUtils::InstallWAD(path));
+}
+
+JNIEXPORT jboolean JNICALL Java_org_dolphinemu_dolphinemu_NativeLibrary_ConvertDiscImage(
+        JNIEnv* env, jobject obj, jstring jInPath, jstring jOutPath, jint jPlatform, jint jFormat,
+        jint jBlockSize, jint jCompression, jint jCompressionLevel, jboolean jScrub, jobject jCallback)
+{
+  const std::string in_path = GetJString(env, jInPath);
+  const std::string out_path = GetJString(env, jOutPath);
+  const DiscIO::Platform platform = static_cast<DiscIO::Platform>(jPlatform);
+  const DiscIO::BlobType format = static_cast<DiscIO::BlobType>(jFormat);
+  const DiscIO::WIARVZCompressionType compression =
+      static_cast<DiscIO::WIARVZCompressionType>(jCompression);
+  const bool scrub = static_cast<bool>(jScrub);
+
+  std::unique_ptr<DiscIO::BlobReader> blob_reader;
+  if (scrub)
+    blob_reader = DiscIO::ScrubbedBlob::Create(in_path);
+  else
+    blob_reader = DiscIO::CreateBlobReader(in_path);
+
+  if (!blob_reader)
+    return static_cast<jboolean>(false);
+
+  jobject jCallbackGlobal = env->NewGlobalRef(jCallback);
+  Common::ScopeGuard scope_guard([jCallbackGlobal, env] { env->DeleteGlobalRef(jCallbackGlobal); });
+
+  const auto callback = [&jCallbackGlobal](const std::string& text, float completion) {
+    JNIEnv* env = IDCache::GetEnvForThread();
+    return static_cast<bool>(env->CallBooleanMethod(
+        jCallbackGlobal, IDCache::sCompressCallback.Run, ToJString(env, text), completion));
+  };
+
+  bool success = false;
+
+  switch (format)
+  {
+    case DiscIO::BlobType::PLAIN:
+      success = DiscIO::ConvertToPlain(blob_reader.get(), in_path, out_path, callback);
+      break;
+
+    case DiscIO::BlobType::GCZ:
+      success =
+        DiscIO::ConvertToGCZ(blob_reader.get(), in_path, out_path,
+                             platform == DiscIO::Platform::WiiDisc ? 1 : 0, jBlockSize, callback);
+      break;
+
+    case DiscIO::BlobType::WIA:
+    case DiscIO::BlobType::RVZ:
+      success = DiscIO::ConvertToWIAOrRVZ(blob_reader.get(), in_path, out_path,
+                                          format == DiscIO::BlobType::RVZ, compression,
+                                          jCompressionLevel, jBlockSize, callback);
+      break;
+
+    default:
+      ASSERT(false);
+      break;
+  }
+
+  return static_cast<jboolean>(success);
+}
+
+JNIEXPORT void JNICALL Java_org_dolphinemu_dolphinemu_NativeLibrary_ReloadConfig(JNIEnv*, jclass)
+{
+  SConfig::GetInstance().LoadSettings();
 }
 
 JNIEXPORT void JNICALL Java_org_dolphinemu_dolphinemu_NativeLibrary_Run(JNIEnv* env, jclass obj,

@@ -11,7 +11,8 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Environment;
 import android.preference.PreferenceManager;
-import android.support.v4.content.LocalBroadcastManager;
+
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import org.dolphinemu.dolphinemu.BuildConfig;
 import org.dolphinemu.dolphinemu.NativeLibrary;
@@ -24,7 +25,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 
 /**
  * A service that spawns its own thread in order to copy several binary and shader files
@@ -70,7 +70,7 @@ public final class DirectoryInitialization
           initializeInternalStorage(context);
           initializeExternalStorage(context);
           String lan = Locale.getDefault().getLanguage();
-          if(lan.equals("zh"))
+          if (lan.equals("zh"))
             lan = lan + "_" + Locale.getDefault().getCountry();
           NativeLibrary.setSystemLanguage(lan);
           mDirectoryState = DirectoryInitializationState.DIRECTORIES_INITIALIZED;

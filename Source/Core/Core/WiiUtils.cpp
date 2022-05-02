@@ -162,7 +162,7 @@ bool InstallWAD(IOS::HLE::Kernel& ios, const DiscIO::VolumeWAD& wad, InstallType
 
   return true;
 }
-#ifndef ANDROID
+
 bool InstallWAD(const std::string& wad_path)
 {
   std::unique_ptr<DiscIO::VolumeWAD> wad = DiscIO::CreateWAD(wad_path);
@@ -173,6 +173,7 @@ bool InstallWAD(const std::string& wad_path)
   return InstallWAD(ios, *wad, InstallType::Permanent);
 }
 
+#ifndef ANDROID
 bool UninstallTitle(u64 title_id)
 {
   IOS::HLE::Kernel ios;

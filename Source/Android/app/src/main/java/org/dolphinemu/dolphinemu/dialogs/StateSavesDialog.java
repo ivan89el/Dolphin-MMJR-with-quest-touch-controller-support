@@ -2,19 +2,20 @@ package org.dolphinemu.dolphinemu.dialogs;
 
 import android.app.AlertDialog;
 import android.app.Dialog;
-import android.graphics.drawable.Drawable;
 import android.os.Bundle;
-import android.support.annotation.NonNull;
-import android.support.v4.app.DialogFragment;
-import android.support.v7.widget.GridLayoutManager;
-import android.support.v7.widget.RecyclerView;
+
+import androidx.annotation.NonNull;
+import androidx.fragment.app.DialogFragment;
+import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.TextView;
 
-import com.nononsenseapps.filepicker.DividerItemDecoration;
+import org.dolphinemu.dolphinemu.ui.DividerItemDecoration;
 
 import org.dolphinemu.dolphinemu.NativeLibrary;
 import org.dolphinemu.dolphinemu.R;
@@ -208,13 +209,12 @@ public class StateSavesDialog extends DialogFragment
     textTitle.setText(R.string.state_saves);
 
     int columns = 1;
-    Drawable lineDivider = getContext().getDrawable(R.drawable.line_divider);
     RecyclerView recyclerView = contents.findViewById(R.id.list_settings);
     RecyclerView.LayoutManager layoutManager = new GridLayoutManager(getContext(), columns);
     recyclerView.setLayoutManager(layoutManager);
     mAdapter = new StateSavesAdapter(this, getArguments().getString(ARG_GAME_ID));
     recyclerView.setAdapter(mAdapter);
-    recyclerView.addItemDecoration(new DividerItemDecoration(lineDivider));
+    recyclerView.addItemDecoration(new DividerItemDecoration(requireActivity(), null));
     builder.setView(contents);
     return builder.create();
   }

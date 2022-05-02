@@ -39,6 +39,8 @@ public:
   GetCertificateChain(const Partition& partition = PARTITION_NONE) const override;
   std::vector<u8> GetContent(u16 index) const override;
   std::vector<u64> GetContentOffsets() const override;
+  bool CheckContentIntegrity(const IOS::ES::Content& content, const std::vector<u8>& encrypted_data,
+                             const IOS::ES::TicketReader& ticket) const override;
   bool CheckContentIntegrity(const IOS::ES::Content& content, u64 content_offset,
                              const IOS::ES::TicketReader& ticket) const override;
   IOS::ES::TicketReader GetTicketWithFixedCommonKey() const override;
@@ -57,6 +59,7 @@ public:
     return "";
   }
   Platform GetVolumeType() const override;
+  bool IsDatelDisc() const override;
   Region GetRegion() const override;
   Country GetCountry(const Partition& partition = PARTITION_NONE) const override;
 
@@ -66,9 +69,6 @@ public:
   u64 GetRawSize() const override;
 
 private:
-  bool CheckContentIntegrity(const IOS::ES::Content& content, const std::vector<u8>& encrypted_data,
-                             const IOS::ES::TicketReader& ticket) const;
-
   std::unique_ptr<BlobReader> m_reader;
   IOS::ES::TicketReader m_ticket;
   IOS::ES::TMDReader m_tmd;

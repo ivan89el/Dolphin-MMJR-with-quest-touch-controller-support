@@ -1,6 +1,6 @@
 package org.dolphinemu.dolphinemu.features.settings.ui;
 
-import android.support.annotation.Nullable;
+import androidx.annotation.Nullable;
 
 public enum MenuTag
 {

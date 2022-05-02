@@ -1,26 +1,31 @@
 package org.dolphinemu.dolphinemu.ui.main;
 
+import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.graphics.drawable.Drawable;
+import android.net.Uri;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
-import android.support.v4.content.LocalBroadcastManager;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.GridLayoutManager;
-import android.support.v7.widget.RecyclerView;
-import android.support.v7.widget.Toolbar;
+
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+import androidx.appcompat.widget.Toolbar;
+
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.widget.Toast;
 
-import com.nononsenseapps.filepicker.DividerItemDecoration;
+import org.dolphinemu.dolphinemu.ui.DividerItemDecoration;
 
+import org.dolphinemu.dolphinemu.NativeLibrary;
 import org.dolphinemu.dolphinemu.R;
 import org.dolphinemu.dolphinemu.adapters.GameAdapter;
 import org.dolphinemu.dolphinemu.activities.EmulationActivity;
@@ -31,18 +36,17 @@ import org.dolphinemu.dolphinemu.services.GameFileCacheService;
 import org.dolphinemu.dolphinemu.utils.DirectoryInitialization;
 import org.dolphinemu.dolphinemu.utils.FileBrowserHelper;
 import org.dolphinemu.dolphinemu.utils.PermissionsHandler;
+import org.dolphinemu.dolphinemu.utils.SafHandler;
 import org.dolphinemu.dolphinemu.utils.StartupHandler;
 
 import java.io.File;
+import java.util.Arrays;
 
-/**
- * The main Activity of the Lollipop style UI. Manages several PlatformGamesFragments, which
- * individually display a grid of available games for each Fragment, in a tabbed layout.
- */
 public final class MainActivity extends AppCompatActivity
 {
   public static final int REQUEST_ADD_DIRECTORY = 1;
   public static final int REQUEST_OPEN_FILE = 2;
+	public static final int REQUEST_INSTALL_WAD = 3;
   private static final String PREF_GAMELIST = "GAME_LIST_TYPE";
   private static final byte[] TITLE_BYTES = {
     0x44, 0x6f, 0x6c, 0x70, 0x68, 0x69, 0x6e, 0x20, 0x35, 0x2e, 0x30, 0x28, 0x4d, 0x4d, 0x4a, 0x29};
@@ -92,7 +96,7 @@ public final class MainActivity extends AppCompatActivity
     super.onResume();
     if (mDirToAdd != null)
     {
-      GameFileCache.addGameFolder(mDirToAdd, this);
+      GameFileCache.addGameFolder(mDirToAdd);
       mDirToAdd = null;
       GameFileCacheService.startRescan(this);
     }
@@ -112,8 +116,7 @@ public final class MainActivity extends AppCompatActivity
   private void findViews()
   {
     SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(this);
-    Drawable lineDivider = getDrawable(R.drawable.line_divider);
-    mDivider = new DividerItemDecoration(lineDivider);
+    mDivider = new DividerItemDecoration(this, null);
     mToolbar = findViewById(R.id.toolbar_main);
     mGameList = findViewById(R.id.grid_games);
     mAdapter = new GameAdapter();
@@ -195,6 +198,10 @@ public final class MainActivity extends AppCompatActivity
       case R.id.menu_open_file:
         launchOpenFileActivity();
         return true;
+
+			case R.id.menu_install_wad:
+				launchInstallWAD();
+				return true;
     }
 
     return false;
@@ -207,7 +214,8 @@ public final class MainActivity extends AppCompatActivity
 
   public void launchFileListActivity()
   {
-    FileBrowserHelper.openDirectoryPicker(this);
+		Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+		startActivityForResult(intent, REQUEST_ADD_DIRECTORY);
   }
 
   private void clearGameData(Context context)
@@ -251,8 +259,72 @@ public final class MainActivity extends AppCompatActivity
 
   public void launchOpenFileActivity()
   {
-    FileBrowserHelper.openFilePicker(this, REQUEST_OPEN_FILE, true);
+		Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+		intent.addCategory(Intent.CATEGORY_OPENABLE);
+		intent.setType("*/*");
+		startActivityForResult(intent, REQUEST_OPEN_FILE);
   }
+
+	public void launchInstallWAD()
+	{
+		Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+		intent.addCategory(Intent.CATEGORY_OPENABLE);
+		intent.setType("*/*");
+		startActivityForResult(intent, REQUEST_INSTALL_WAD);
+	}
+
+	public void installWAD(String file)
+	{
+		AlertDialog dialog = new AlertDialog.Builder(this).create();
+		dialog.setTitle("Installing WAD");
+		dialog.setMessage("Installing...");
+		dialog.setCancelable(false);
+		dialog.show();
+
+		Thread installWADThread = new Thread(() ->
+		{
+			if (NativeLibrary.InstallWAD(file))
+			{
+				runOnUiThread(
+					() -> Toast.makeText(this, R.string.wad_install_success, Toast.LENGTH_SHORT)
+						.show());
+			}
+			else
+			{
+				runOnUiThread(
+					() -> Toast.makeText(this, R.string.wad_install_failure, Toast.LENGTH_SHORT)
+						.show());
+			}
+			runOnUiThread(dialog::dismiss);
+		}, "InstallWAD");
+		installWADThread.start();
+	}
+
+	public void onDirectorySelected(Intent result)
+	{
+		Uri uri = result.getData();
+
+		String[] childNames = SafHandler.getChildNames(uri, false);
+		if (Arrays.stream(childNames).noneMatch((name) -> FileBrowserHelper.GAME_EXTENSIONS.contains(
+			FileBrowserHelper.getExtension(name, false))))
+		{
+			AlertDialog.Builder builder = new AlertDialog.Builder(this);
+			builder.setMessage(getString(R.string.wrong_file_extension_in_directory,
+				FileBrowserHelper.setToSortedDelimitedString(FileBrowserHelper.GAME_EXTENSIONS)));
+			builder.setPositiveButton(android.R.string.ok, null);
+			builder.show();
+		}
+
+		ContentResolver contentResolver = getContentResolver();
+		Uri canonicalizedUri = contentResolver.canonicalize(uri);
+		if (canonicalizedUri != null)
+			uri = canonicalizedUri;
+
+		int takeFlags = result.getFlags() & Intent.FLAG_GRANT_READ_URI_PERMISSION;
+		getContentResolver().takePersistableUriPermission(uri, takeFlags);
+
+		mDirToAdd = uri.toString();
+	}
 
   /**
    * @param requestCode An int describing whether the Activity that is returning did so successfully.
@@ -266,19 +338,34 @@ public final class MainActivity extends AppCompatActivity
     {
       case REQUEST_ADD_DIRECTORY:
         // If the user picked a file, as opposed to just backing out.
-        if (resultCode == MainActivity.RESULT_OK)
+        if (resultCode == RESULT_OK)
         {
-          mDirToAdd = FileBrowserHelper.getSelectedDirectory(result);
+          onDirectorySelected(result);
         }
         break;
 
       case REQUEST_OPEN_FILE:
         // If the user picked a file, as opposed to just backing out.
-        if (resultCode == MainActivity.RESULT_OK)
+        if (resultCode == RESULT_OK)
         {
-          EmulationActivity.launchFile(this, FileBrowserHelper.getSelectedFiles(result));
+					Uri uri = result.getData();
+					FileBrowserHelper.runAfterExtensionCheck(this, uri,
+						FileBrowserHelper.GAME_LIKE_EXTENSIONS,
+						() -> EmulationActivity.launch(this, result.getData().toString()));
         }
         break;
+
+
+			case REQUEST_INSTALL_WAD:
+				// If the user picked a file, as opposed to just backing out.
+				if (resultCode == RESULT_OK)
+				{
+					Uri uri = result.getData();
+					FileBrowserHelper.runAfterExtensionCheck(this, uri,
+						FileBrowserHelper.WAD_EXTENSION,
+						() -> installWAD(result.getData().toString()));
+				}
+				break;
     }
   }
 

@@ -8,7 +8,6 @@
 
 namespace IDCache
 {
-
 struct NativeLibrary
 {
   void OnLoad(JNIEnv* env);
@@ -24,11 +23,47 @@ struct NativeLibrary
 
 struct IniFile
 {
-    void OnLoad(JNIEnv* env);
-    void OnUnload(JNIEnv* env);
+  void OnLoad(JNIEnv* env);
+  void OnUnload(JNIEnv* env);
 
-    jclass Clazz;
-    jfieldID Pointer;
+  jclass Clazz;
+  jfieldID Pointer;
+};
+
+struct IniFileSaf
+{
+  void OnLoad(JNIEnv* env);
+  void OnUnload(JNIEnv* env);
+
+  jclass Clazz;
+  jclass SectionClazz;
+  jfieldID Pointer;
+  jfieldID SectionPointer;
+  jmethodID SectionConstructor;
+};
+
+struct SafHandler
+{
+  void OnLoad(JNIEnv* env);
+  void OnUnload(JNIEnv* env);
+
+  jclass Clazz;
+  jclass StringClazz;
+  jmethodID OpenFd;
+  jmethodID Delete;
+  jmethodID GetSizeAndIsDir;
+  jmethodID GetDisplayName;
+  jmethodID GetChildNames;
+  jmethodID DoFileSearch;
+};
+
+struct CompressCallback
+{
+  void OnLoad(JNIEnv* env);
+  void OnUnload(JNIEnv* env);
+
+  jclass Clazz;
+  jmethodID Run;
 };
 
 struct GameFile
@@ -53,6 +88,9 @@ JNIEnv* GetEnvForThread();
 
 extern NativeLibrary sNativeLibrary;
 extern IniFile sIniFile;
+extern IniFileSaf sIniFileSaf;
+extern SafHandler sSafHandler;
+extern CompressCallback sCompressCallback;
 extern GameFile sGameFile;
 extern WiimoteAdapter sWiimoteAdapter;
 

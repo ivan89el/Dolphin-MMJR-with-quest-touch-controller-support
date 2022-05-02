@@ -77,13 +77,13 @@ void JitArm64::psq_l(UGeckoInstruction inst)
   }
   else
   {
-    LDR(INDEX_UNSIGNED, scale_reg, PPC_REG, PPCSTATE_OFF(spr[SPR_GQR0 + inst.I]));
+    LDR(IndexType::Unsigned, scale_reg, PPC_REG, PPCSTATE_OFF(spr[SPR_GQR0 + inst.I]));
     UBFM(type_reg, scale_reg, 16, 18);   // Type
     UBFM(scale_reg, scale_reg, 24, 29);  // Scale
 
     MOVP2R(X30, inst.W ? single_load_quantized : paired_load_quantized);
-    LDR(X30, X30, ArithOption(EncodeRegTo64(type_reg), true));
-    BLR(X30);
+    LDR(EncodeRegTo64(type_reg), X30, ArithOption(EncodeRegTo64(type_reg), true));
+    BLR(EncodeRegTo64(type_reg));
 
     VS = fpr.RW(inst.RS, RegType::Single);
     m_float_emit.ORR(EncodeRegToDouble(VS), D0, D0);
@@ -116,13 +116,44 @@ void JitArm64::psq_st(UGeckoInstruction inst)
   const bool update = inst.OPCD == 61;
   const s32 offset = inst.SIMM_12;
 
-  gpr.Lock(W0, W1, W2, W30);
   fpr.Lock(Q0, Q1);
 
-  const bool single = fpr.IsSingle(inst.RS);
+  const bool have_single = fpr.IsSingle(inst.RS);
+
+  ARM64Reg VS = fpr.R(inst.RS, have_single ? RegType::Single : RegType::Register);
+
+  if (js.assumeNoPairedQuantize)
+  {
+    if (!have_single)
+    {
+      const ARM64Reg single_reg = fpr.GetReg();
+
+      if (inst.W)
+        m_float_emit.FCVT(32, 64, EncodeRegToDouble(single_reg), EncodeRegToDouble(VS));
+      else
+        m_float_emit.FCVTN(32, EncodeRegToDouble(single_reg), EncodeRegToDouble(VS));
+
+      VS = single_reg;
+    }
+  }
+  else
+  {
+    if (have_single)
+    {
+      m_float_emit.ORR(D0, VS, VS);
+    }
+    else
+    {
+      if (inst.W)
+        m_float_emit.FCVT(32, 64, D0, VS);
+      else
+        m_float_emit.FCVTN(32, D0, VS);
+    }
+  }
+
+  gpr.Lock(W0, W1, W2, W30);
 
   const ARM64Reg arm_addr = gpr.R(inst.RA);
-  const ARM64Reg VS = fpr.R(inst.RS, single ? RegType::Single : RegType::Register);
 
   constexpr ARM64Reg scale_reg = W0;
   constexpr ARM64Reg addr_reg = W1;
@@ -157,29 +188,14 @@ void JitArm64::psq_st(UGeckoInstruction inst)
   {
     u32 flags = BackPatchInfo::FLAG_STORE;
 
-    if (single)
-      flags |= (inst.W ? BackPatchInfo::FLAG_SIZE_F32I : BackPatchInfo::FLAG_SIZE_F32X2I);
-    else
-      flags |= (inst.W ? BackPatchInfo::FLAG_SIZE_F32 : BackPatchInfo::FLAG_SIZE_F32X2);
+    flags |= (inst.W ? BackPatchInfo::FLAG_SIZE_F32 : BackPatchInfo::FLAG_SIZE_F32X2);
 
     EmitBackpatchRoutine(flags, jo.fastmem, jo.fastmem, VS, EncodeRegTo64(addr_reg), gprs_in_use,
                          fprs_in_use);
   }
   else
   {
-    if (single)
-    {
-      m_float_emit.ORR(D0, VS, VS);
-    }
-    else
-    {
-      if (inst.W)
-        m_float_emit.FCVT(32, 64, D0, VS);
-      else
-        m_float_emit.FCVTN(32, D0, VS);
-    }
-
-    LDR(INDEX_UNSIGNED, scale_reg, PPC_REG, PPCSTATE_OFF(spr[SPR_GQR0 + inst.I]));
+    LDR(IndexType::Unsigned, scale_reg, PPC_REG, PPCSTATE_OFF(spr[SPR_GQR0 + inst.I]));
     UBFM(type_reg, scale_reg, 0, 2);    // Type
     UBFM(scale_reg, scale_reg, 8, 13);  // Scale
 
@@ -211,6 +227,9 @@ void JitArm64::psq_st(UGeckoInstruction inst)
 
     SetJumpTarget(continue1);
   }
+
+  if (js.assumeNoPairedQuantize && !have_single)
+    fpr.Unlock(VS);
 
   gpr.Unlock(W0, W1, W2, W30);
   fpr.Unlock(Q0, Q1);

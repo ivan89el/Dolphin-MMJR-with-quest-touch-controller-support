@@ -2,17 +2,16 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="#FFFFFF">
+    android:layout_height="match_parent">
 
-    <android.support.v7.widget.Toolbar
+    <androidx.appcompat.widget.Toolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
         android:layout_alignParentTop="true"
         android:background="?attr/colorPrimary"
         android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
-        app:popupTheme="@style/ThemeOverlay.AppCompat.Light" />
+        app:popupTheme="@style/ThemeOverlay.AppCompat.Dark" />
 
     <ProgressBar
         android:id="@+id/progress_bar"
@@ -38,7 +37,7 @@
             android:textSize="14sp"
             android:typeface="monospace" />
 
-        <android.support.v7.widget.RecyclerView
+        <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/code_list"
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
@@ -61,6 +60,7 @@
         android:layout_alignParentBottom="true"
         android:layout_toStartOf="@id/dummy_view"
         android:backgroundTint="#9C27B0"
+        android:textColor="#FFFFFF"
         android:stateListAnimator="@null"
         android:text="@android:string/cancel"
         android:textAllCaps="false" />
@@ -73,6 +73,7 @@
         android:layout_alignParentBottom="true"
         android:layout_toEndOf="@id/dummy_view"
         android:backgroundTint="#9C27B0"
+        android:textColor="#FFFFFF"
         android:stateListAnimator="@null"
         android:text="@string/save"
         android:textAllCaps="false" />

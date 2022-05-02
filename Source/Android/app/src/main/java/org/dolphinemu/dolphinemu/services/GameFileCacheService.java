@@ -3,7 +3,8 @@ package org.dolphinemu.dolphinemu.services;
 import android.app.IntentService;
 import android.content.Context;
 import android.content.Intent;
-import android.support.v4.content.LocalBroadcastManager;
+
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import org.dolphinemu.dolphinemu.model.GameFile;
 import org.dolphinemu.dolphinemu.model.GameFileCache;
@@ -23,7 +24,8 @@ public final class GameFileCacheService extends IntentService
   private static final String ACTION_RESCAN = "org.dolphinemu.dolphinemu.RESCAN_GAME_FILE_CACHE";
 
   private static GameFileCache gameFileCache = null;
-  private static AtomicReference<GameFile[]> gameFiles = new AtomicReference<>(new GameFile[]{});
+	private static final AtomicReference<GameFile[]> gameFiles =
+		new AtomicReference<>(new GameFile[]{});
 
   public GameFileCacheService()
   {
@@ -139,7 +141,7 @@ public final class GameFileCacheService extends IntentService
       // Rescan the file system and update the game list cache with the results
       synchronized (gameFileCache)
       {
-        if (gameFileCache.scanLibrary(this))
+        if (gameFileCache.scanLibrary())
         {
           updateGameFileArray();
         }

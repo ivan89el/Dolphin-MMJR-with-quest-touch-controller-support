@@ -1,7 +1,8 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 28
+    compileSdkVersion 32
+    ndkVersion "23.0.7599858"
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
@@ -31,10 +32,10 @@ android {
 
     signingConfigs {
         release {
-            keyAlias 'dolphin-release-key'
+            /*keyAlias 'dolphin-release-key'
             keyPassword 'zhangwei'
             storeFile file('D:/Android/android-sign-key/dolphin-release-key.jks')
-            storePassword 'zhangwei'
+            storePassword 'zhangwei'*/
         }
     }
 
@@ -77,20 +78,16 @@ android {
     }
 }
 
-ext {
-    androidSupportVersion = '27.1.0'
-}
-
 dependencies {
-    implementation "com.android.support:cardview-v7:$androidSupportVersion"
-    implementation "com.android.support:recyclerview-v7:$androidSupportVersion"
-    implementation "com.android.support:design:$androidSupportVersion"
+    implementation 'androidx.cardview:cardview:1.0.0'
+    implementation 'androidx.recyclerview:recyclerview:1.2.1'
+    implementation 'com.google.android.material:material:1.5.0'
     // For loading huge screenshots from the disk.
     implementation 'com.squareup.picasso:picasso:2.71828'
 }
 
 def getVersion() {
-    def versionNumber = '11485'
+    def versionNumber = '11500'
 
     try {
         versionNumber = 'git describe --always --long'.execute([], project.rootDir).text
@@ -100,7 +97,7 @@ def getVersion() {
         logger.error('Cannot find git, defaulting to dummy version number')
     }
 
-    return "11485 - bankaimaster999"
+    return "11500 - bankaimaster999"
 }
 
 

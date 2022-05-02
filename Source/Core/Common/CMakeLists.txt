@@ -56,6 +56,8 @@ add_library(common
   GekkoDisassembler.h
   Hash.cpp
   Hash.h
+  HttpRequest.cpp
+  HttpRequest.h
   Image.cpp
   Image.h
   IniFile.cpp
@@ -132,6 +134,7 @@ PUBLIC
   ${MBEDTLS_LIBRARIES}
 
 PRIVATE
+  ${CURL_LIBRARIES}
   ${ICONV_LIBRARIES}
   png
   ${VTUNE_LIBRARIES}
@@ -158,12 +161,17 @@ if(NOT ANDROID)
   target_sources(common PRIVATE
     Analytics.cpp
     Analytics.h
-    HttpRequest.cpp
-    HttpRequest.h
   )
   target_link_libraries(common
   PRIVATE
     ${CURL_LIBRARIES}
+  )
+endif()
+
+if (ANDROID)
+  target_link_libraries(common
+  PRIVATE
+    androidcommon
   )
 endif()
 

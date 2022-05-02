@@ -1,7 +1,9 @@
 package org.dolphinemu.dolphinemu.utils;
 
 import android.graphics.Bitmap;
+
 import org.dolphinemu.dolphinemu.model.GameFile;
+
 import java.io.FileOutputStream;
 
 public final class CoverHelper

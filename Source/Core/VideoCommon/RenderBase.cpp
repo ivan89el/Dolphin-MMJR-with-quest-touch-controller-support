@@ -339,12 +339,12 @@ bool Renderer::CalculateTargetSize()
   return false;
 }
 
-void Renderer::SaveScreenshot(const std::string& filename, bool wait_for_completion)
+void Renderer::SaveScreenshot(std::string filename, bool wait_for_completion)
 {
   // We must not hold the lock while waiting for the screenshot to complete.
   {
     std::lock_guard<std::mutex> lk(m_screenshot_lock);
-    m_screenshot_name = filename;
+    m_screenshot_name = std::move(filename);
     m_screenshot_request.Set();
   }
 
@@ -441,7 +441,15 @@ void Renderer::CheckForConfigChanges()
 // Create On-Screen-Messages
 void Renderer::DrawDebugText()
 {
-  RenderText(m_debug_title_text, 10, 18, 0xFFFF0099);
+  const Core::PerformanceStatistics& pstats = Core::GetPerformanceStatistics();
+  if (pstats.Speed > 85)
+  {
+    RenderText(m_debug_title_text, 10, 18, 0xFFFF0099); // purple
+  }
+  else
+  {
+    RenderText(m_debug_title_text, 10, 18, 0xFFFF0000); // red
+  }
 }
 
 void Renderer::RenderText(const std::string& text, int left, int top, u32 color)

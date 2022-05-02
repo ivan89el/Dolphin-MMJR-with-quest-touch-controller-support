@@ -1,11 +1,11 @@
 package org.dolphinemu.dolphinemu.features.settings.ui;
 
+import android.os.Build;
 import android.os.Bundle;
 import android.text.TextUtils;
 
 import org.dolphinemu.dolphinemu.NativeLibrary;
 import org.dolphinemu.dolphinemu.R;
-import org.dolphinemu.dolphinemu.features.settings.model.BooleanSetting;
 import org.dolphinemu.dolphinemu.features.settings.model.IntSetting;
 import org.dolphinemu.dolphinemu.features.settings.model.Setting;
 import org.dolphinemu.dolphinemu.features.settings.model.SettingSection;
@@ -158,7 +158,7 @@ public final class SettingsFragmentPresenter
     sl.add(new SubmenuSetting(null, null, R.string.gamecube_submenu, 0, MenuTag.CONFIG_GAME_CUBE));
     sl.add(new SubmenuSetting(null, null, R.string.wii_submenu, 0, MenuTag.CONFIG_WII));
     sl.add(new SubmenuSetting(null, null, R.string.debug_submenu, 0, MenuTag.DEBUG));
-	sl.add(new HeaderSetting(null, null, R.string.gametdb_thanks, 0));
+	  sl.add(new HeaderSetting(null, null, R.string.gametdb_thanks, 0));
   }
 
   private void addGeneralSettings(ArrayList<SettingsItem> sl)
@@ -179,6 +179,7 @@ public final class SettingsFragmentPresenter
     Setting audioBackend = mSettings.getSection(Settings.SECTION_INI_DSP)
       .getSetting(SettingsFile.KEY_AUDIO_BACKEND);
     Setting enableCheats = coreSection.getSetting(SettingsFile.KEY_ENABLE_CHEATS);
+		Setting emulatedMemSizeOverride = coreSection.getSetting(SettingsFile.KEY_EMULATED_MEM_SIZE_OVERRIDE);
 
     // TODO: Having different emuCoresEntries/emuCoresValues for each architecture is annoying.
     // The proper solution would be to have one emuCoresEntries and one emuCoresValues
@@ -224,9 +225,11 @@ public final class SettingsFragmentPresenter
     sl.add(new CheckBoxSetting(SettingsFile.KEY_AUTO_DISC_CHANGE, Settings.SECTION_INI_CORE,
       R.string.auto_disc_change, 0, false, autoDiscChange));
     sl.add(new CheckBoxSetting(SettingsFile.KEY_AUDIO_STRETCH, Settings.SECTION_INI_CORE,
-      R.string.audio_stretch, R.string.audio_stretch_description, false, audioStretch));
+      R.string.audio_stretch, R.string.audio_stretch_description, false,
+			audioStretch));
     sl.add(new SliderSetting(SettingsFile.KEY_AUDIO_STRETCH_MAX_LATENCY, Settings.SECTION_INI_CORE,
-      R.string.audio_stretch_max_latency, R.string.audio_stretch_max_latency_description, 300, "", 80, stretchLatency));
+      R.string.audio_stretch_max_latency, R.string.audio_stretch_max_latency_description, 300,
+			"", 80, stretchLatency));
 
     String defaultAudioBackend = NativeLibrary.DefaultAudioBackend();
     String[] audioListEntries = NativeLibrary.GetAudioBackendList();
@@ -235,15 +238,30 @@ public final class SettingsFragmentPresenter
     sl.add(new StringSingleChoiceSetting(SettingsFile.KEY_AUDIO_BACKEND, Settings.SECTION_INI_DSP,
       R.string.audio_backend, 0, audioListEntries,
       audioListValues, defaultAudioBackend, audioBackend));
+
+		sl.add(new HeaderSetting(null, null, R.string.memory_override, 0));
+
+		sl.add(new CheckBoxSetting(SettingsFile.KEY_EMULATED_MEM_SIZE_OVERRIDE, Settings.SECTION_INI_CORE,
+			R.string.emulated_mem_size_override, R.string.emulated_mem_size_override_description, false,
+			emulatedMemSizeOverride));
   }
 
   private void addInterfaceSettings(ArrayList<SettingsItem> sl)
   {
     SettingSection uiSection = mSettings.getSection(Settings.SECTION_INI_INTERFACE);
+		Setting expandToCutoutArea = uiSection.getSetting(SettingsFile.KEY_EXPAND_TO_CUTOUT_AREA);
     Setting usePanicHandlers = uiSection.getSetting(SettingsFile.KEY_USE_PANIC_HANDLERS);
     Setting onScreenDisplayMessages = uiSection.getSetting(SettingsFile.KEY_OSD_MESSAGES);
     Setting useBuiltinTitleDatabase = uiSection.getSetting(SettingsFile.KEY_BUILTIN_TITLE_DATABASE);
     Setting systemBack = uiSection.getSetting(SettingsFile.KEY_SYSTEM_BACK);
+
+		// Only android 9+ supports this feature.
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
+		{
+			sl.add(new CheckBoxSetting(SettingsFile.KEY_EXPAND_TO_CUTOUT_AREA, Settings.SECTION_INI_INTERFACE,
+				R.string.expand_to_cutout_area, R.string.expand_to_cutout_area_description, false,
+				expandToCutoutArea));
+		}
 
     sl.add(new CheckBoxSetting(SettingsFile.KEY_USE_PANIC_HANDLERS, Settings.SECTION_INI_INTERFACE,
       R.string.panic_handlers, R.string.panic_handlers_description, true, usePanicHandlers));
@@ -562,6 +580,7 @@ public final class SettingsFragmentPresenter
 		Setting skipDuplicateXfbs = hacksSection.getSetting(SettingsFile.KEY_SKIP_DUPLICATE_XFBS);
     Setting fastDepth = gfxSection.getSetting(SettingsFile.KEY_FAST_DEPTH);
     Setting tmemEmu = hacksSection.getSetting(SettingsFile.KEY_TMEM_CACHE_EMULATION);
+		Setting emulatedMemSizeOverride = hacksSection.getSetting(SettingsFile.KEY_EMULATED_MEM_SIZE_OVERRIDE);
 
     sl.add(new HeaderSetting(null, null, R.string.embedded_frame_buffer, 0));
 
