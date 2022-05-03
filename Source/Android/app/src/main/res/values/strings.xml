@@ -148,7 +148,7 @@
     <string name="audio_stretch_description">Stretches audio to reduce stuttering. Increases latency.</string>
     <string name="audio_stretch_max_latency">Stretching Buffer Size</string>
     <string name="audio_stretch_max_latency_description">Size of audio stretch buffer in milliseconds. Values too low may cause audio crackling.</string>
-	<string name="gametdb_thanks">Special Thanks to Weihuoya, The Dolphin Team and GameTDB.com for getting this emulator to where it is today!</string>
+	<string name="gametdb_thanks">Thanks to Weihuoya, The Dolphin Official Team, Bankaimaster999, Gamer64_ytb for this emulator fork!</string>
 
     <string name="sync_on_skip_idle">Sync On Skip Idle</string>
     <string name="sync_on_skip_idle_description">Wait to process events until the GPU thread finished.</string>
@@ -287,7 +287,7 @@
 
     <!-- Add Directory Screen-->
     <string name="toggle_list">Toggle List</string>
-    <string name="add_directory_title">Add Folder to Library</string>
+    <string name="add_directory_title">Add Games Folder</string>
     <string name="add_directory_up_one_level">Up one level</string>
     <string name="add_directory_empty_folder">That folder is empty.</string>
 

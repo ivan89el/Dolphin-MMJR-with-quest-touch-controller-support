@@ -838,8 +838,8 @@ void UpdateTitle()
 
   if(g_ActiveConfig.bShowFPS)
   {
-    SFPS = StringFromFormat("|MMJR| FPS: %.0f | VPS:%.0f | Speed:%.0f%% |",
-                            perf_stats.FPS, perf_stats.VPS, perf_stats.Speed);
+    SFPS = StringFromFormat("|MMJR| FPS: %.0f | %.0f%% |",
+                            perf_stats.FPS, perf_stats.Speed);
   }
 
   // Update the audio timestretcher with the current speed
