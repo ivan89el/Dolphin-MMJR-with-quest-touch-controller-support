@@ -7,6 +7,7 @@ import android.widget.TextView;
 
 import org.dolphinemu.dolphinemu.R;
 import org.dolphinemu.dolphinemu.model.GameFile;
+import org.w3c.dom.Text;
 
 /**
  * A simple class that stores references to views so that the GameAdapter doesn't need to
@@ -18,6 +19,8 @@ public class GameViewHolder extends RecyclerView.ViewHolder
   public TextView textGameTitle;
   public TextView textCompany;
   public TextView textPlatform;
+  public TextView textCountry;
+  public TextView textGameDisc;
 
   public GameFile gameFile;
 
@@ -31,5 +34,7 @@ public class GameViewHolder extends RecyclerView.ViewHolder
     textGameTitle = itemView.findViewById(R.id.text_game_title);
     textCompany = itemView.findViewById(R.id.text_company);
     textPlatform = itemView.findViewById(R.id.text_platform);
+		textCountry = itemView.findViewById(R.id.text_game_country);
+		textGameDisc = itemView.findViewById(R.id.text_game_disc);
   }
 }
