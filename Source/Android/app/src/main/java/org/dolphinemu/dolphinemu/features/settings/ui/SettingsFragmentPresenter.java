@@ -202,10 +202,10 @@ public final class SettingsFragmentPresenter
     sl.add(new CheckBoxSetting(SettingsFile.KEY_DUAL_CORE, Settings.SECTION_INI_CORE,
       R.string.dual_core, R.string.dual_core_description, true, dualCore));
     sl.add(new CheckBoxSetting(SettingsFile.KEY_OVERCLOCK_ENABLE, Settings.SECTION_INI_CORE,
-      R.string.overclock_enable, R.string.overclock_enable_description, false,
+      R.string.overclock_enable, R.string.overclock_enable_description, true,
       overclockEnable));
     sl.add(new SliderSetting(SettingsFile.KEY_OVERCLOCK_PERCENT, Settings.SECTION_INI_CORE,
-      R.string.overclock_title, R.string.overclock_title_description, 300, "%", 100,
+      R.string.overclock_title, R.string.overclock_title_description, 300, "%", 60,
       overclock));
     sl.add(new SliderSetting(SettingsFile.KEY_SPEED_LIMIT, Settings.SECTION_INI_CORE,
       R.string.speed_limit, 0, 200, "%", 100, speedLimit));
@@ -403,7 +403,7 @@ public final class SettingsFragmentPresenter
       R.string.video_backend, 0, R.array.videoBackendEntries,
       R.array.videoBackendValues, 0, videoBackend));
     sl.add(new CheckBoxSetting(SettingsFile.KEY_SHOW_FPS, Settings.SECTION_GFX_SETTINGS,
-      R.string.show_fps, R.string.show_fps_description, false, showFps));
+      R.string.show_fps, R.string.show_fps_description, true, showFps));
     sl.add(new SingleChoiceSetting(SettingsFile.KEY_SHADER_COMPILATION_MODE,
       Settings.SECTION_GFX_SETTINGS, R.string.shader_compilation_mode,
       R.string.shader_compilation_mode_description, R.array.shaderCompilationModeEntries,

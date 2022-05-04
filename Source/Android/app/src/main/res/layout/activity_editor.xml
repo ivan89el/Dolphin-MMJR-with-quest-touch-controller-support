@@ -59,11 +59,13 @@
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
         android:layout_toStartOf="@id/dummy_view"
-        android:backgroundTint="#9C27B0"
-        android:textColor="#FFFFFF"
+        android:background="@drawable/button_purple_gradient"
         android:stateListAnimator="@null"
+        android:layout_marginHorizontal="3dp"
+        android:layout_marginVertical="3dp"
         android:text="@android:string/cancel"
-        android:textAllCaps="false" />
+        android:textAllCaps="false"
+        android:textColor="#FFFFFF" />
 
     <Button
         android:id="@+id/button_confirm"
@@ -71,11 +73,13 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
+        android:layout_marginHorizontal="3dp"
+        android:layout_marginVertical="3dp"
         android:layout_toEndOf="@id/dummy_view"
-        android:backgroundTint="#9C27B0"
-        android:textColor="#FFFFFF"
+        android:background="@drawable/button_red_gradient"
         android:stateListAnimator="@null"
         android:text="@string/save"
-        android:textAllCaps="false" />
+        android:textAllCaps="false"
+        android:textColor="#FFFFFF" />
 
 </RelativeLayout>

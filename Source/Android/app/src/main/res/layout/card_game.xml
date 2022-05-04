@@ -8,14 +8,14 @@
     android:focusable="true"
     android:foreground="?android:attr/selectableItemBackground"
     android:transitionName="card_game"
-    app:cardBackgroundColor="#000000"
-    app:cardElevation="0dp">
+    app:cardElevation="0dp"
+    tools:layout_width="match_parent">
 
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:backgroundTint="#100000"
-        android:padding="@dimen/spacing_medium">
+        android:background="@android:color/black"
+        android:padding="10dp">
 
         <ImageView
             android:id="@+id/image_game_screen"
@@ -32,9 +32,9 @@
             android:id="@+id/game_info"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_alignParentTop="true"
             android:layout_alignParentEnd="true"
-            android:layout_marginStart="@dimen/spacing_medium"
+            android:layout_alignParentTop="true"
+            android:layout_marginStart="10dp"
             android:layout_toEndOf="@id/image_game_screen"
             android:orientation="vertical">
 
@@ -45,7 +45,8 @@
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
                 android:singleLine="true"
-                android:textColor="#FFFFFF"
+                android:textColor="@android:color/white"
+                android:textStyle="bold"
                 tools:text="The Legend of Zelda: The Wind Waker" />
 
             <TextView
@@ -55,7 +56,8 @@
                 android:layout_height="wrap_content"
                 android:singleLine="true"
                 android:text="@string/game_platform_wii"
-                android:textColor="#FFFFFF" />
+                android:textColor="@color/dolphin_purple"
+                android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/text_company"
@@ -64,12 +66,39 @@
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
                 android:singleLine="true"
-                android:textColor="#FFFFFF"
+                android:textColor="@android:color/white"
                 tools:text="The Legend of Zelda: The Wind Waker" />
 
+
         </LinearLayout>
+
+        <TextView
+            android:id="@+id/text_game_country"
+            style="@android:style/TextAppearance.Material.Caption"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:visibility="gone"
+            tools:visibility="gone" />
+
+
+        <TextView
+            android:id="@+id/text_game_caption"
+            style="@android:style/TextAppearance.Material.Caption"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:textSize="1px"
+            android:visibility="gone"
+            tools:visibility="gone" />
+
+        <TextView
+            android:id="@+id/text_game_disc"
+            style="@android:style/TextAppearance.Material.Caption"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:textSize="1px"
+            android:visibility="gone"
+            tools:visibility="gone" />
 
     </RelativeLayout>
 
 </androidx.cardview.widget.CardView>
-

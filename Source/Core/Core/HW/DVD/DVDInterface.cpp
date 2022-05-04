@@ -40,9 +40,11 @@
 
 #include "VideoCommon/OnScreenDisplay.h"
 
-// The minimum time it takes for the DVD drive to process a command (in
-// microseconds)
-constexpr u64 COMMAND_LATENCY_US = 300;
+// The minimum time it takes for the DVD drive to process a command (in microseconds)
+constexpr u64 MINIMUM_COMMAND_LATENCY_US = 300;
+
+// The time it takes for a read command to start (in microseconds)
+constexpr u64 READ_COMMAND_LATENCY_US = 600;
 
 // The size of the streaming buffer.
 constexpr u64 STREAMING_BUFFER_SIZE = 1024 * 1024;
@@ -1140,10 +1142,10 @@ void ExecuteCommand(u32 command_0, u32 command_1, u32 command_2, u32 output_addr
 
   if (!command_handled_by_thread)
   {
-    // TODO: Needs testing to determine if COMMAND_LATENCY_US is accurate for this
-    CoreTiming::ScheduleEvent(COMMAND_LATENCY_US * (SystemTimers::GetTicksPerSecond() / 1000000),
-                              s_finish_executing_command,
-                              PackFinishExecutingCommandUserdata(reply_type, interrupt_type));
+    // TODO: Needs testing to determine if MINIMUM_COMMAND_LATENCY_US is accurate for this
+    CoreTiming::ScheduleEvent(
+        MINIMUM_COMMAND_LATENCY_US * (SystemTimers::GetTicksPerSecond() / 1000000),
+        s_finish_executing_command, PackFinishExecutingCommandUserdata(reply_type, interrupt_type));
   }
 }
 
@@ -1286,8 +1288,8 @@ void ScheduleReads(u64 offset, u32 length, const DiscIO::Partition& partition, u
             "Schedule reads: offset=0x%" PRIx64 " length=0x%" PRIx32 " address=0x%" PRIx32, offset,
             length, output_address);
 
-  // The DVD drive's minimum turnaround time on a command, based on a hardware test.
-  s64 ticks_until_completion = COMMAND_LATENCY_US * (SystemTimers::GetTicksPerSecond() / 1000000);
+  s64 ticks_until_completion =
+      READ_COMMAND_LATENCY_US * (SystemTimers::GetTicksPerSecond() / 1000000);
 
   u32 buffered_blocks = 0;
   u32 unbuffered_blocks = 0;

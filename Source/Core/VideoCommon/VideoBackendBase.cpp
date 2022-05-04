@@ -147,7 +147,7 @@ u16 VideoBackendBase::Video_GetBoundingBox(int index)
     static bool warn_once = true;
     if (warn_once)
     {
-      ERROR_LOG(VIDEO, "BBox shall be used but it is disabled. Please use a gameini to enable it "
+      ERROR_LOG(VIDEO, "BBox shall be used but it is disabled. Please use a Game INI to enable it "
                        "for this game.");
     }
     warn_once = false;

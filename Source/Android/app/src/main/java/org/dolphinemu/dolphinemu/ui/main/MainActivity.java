@@ -6,33 +6,35 @@ import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
 
+import androidx.annotation.Nullable;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.recyclerview.widget.GridLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
 import androidx.appcompat.widget.Toolbar;
+import androidx.viewpager.widget.ViewPager;
 
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.View;
 import android.widget.Toast;
 
-import org.dolphinemu.dolphinemu.ui.DividerItemDecoration;
+import com.google.android.material.tabs.TabLayout;
+
+import org.dolphinemu.dolphinemu.adapters.PlatformPagerAdapter;
 
 import org.dolphinemu.dolphinemu.NativeLibrary;
 import org.dolphinemu.dolphinemu.R;
-import org.dolphinemu.dolphinemu.adapters.GameAdapter;
 import org.dolphinemu.dolphinemu.activities.EmulationActivity;
 import org.dolphinemu.dolphinemu.features.settings.ui.MenuTag;
 import org.dolphinemu.dolphinemu.features.settings.ui.SettingsActivity;
 import org.dolphinemu.dolphinemu.model.GameFileCache;
 import org.dolphinemu.dolphinemu.services.GameFileCacheService;
+import org.dolphinemu.dolphinemu.ui.platform.Platform;
+import org.dolphinemu.dolphinemu.ui.platform.PlatformGamesView;
 import org.dolphinemu.dolphinemu.utils.DirectoryInitialization;
 import org.dolphinemu.dolphinemu.utils.FileBrowserHelper;
 import org.dolphinemu.dolphinemu.utils.PermissionsHandler;
@@ -47,13 +49,11 @@ public final class MainActivity extends AppCompatActivity
   public static final int REQUEST_ADD_DIRECTORY = 1;
   public static final int REQUEST_OPEN_FILE = 2;
 	public static final int REQUEST_INSTALL_WAD = 3;
-  private static final String PREF_GAMELIST = "GAME_LIST_TYPE";
   private static final byte[] TITLE_BYTES = {
     0x44, 0x6f, 0x6c, 0x70, 0x68, 0x69, 0x6e, 0x20, 0x35, 0x2e, 0x30, 0x28, 0x4d, 0x4d, 0x4a, 0x29};
-  private DividerItemDecoration mDivider;
-  private RecyclerView mGameList;
-  private GameAdapter mAdapter;
+	private ViewPager mViewPager;
   private Toolbar mToolbar;
+	private TabLayout mTabLayout;
   private BroadcastReceiver mBroadcastReceiver;
   private String mDirToAdd;
 
@@ -65,6 +65,8 @@ public final class MainActivity extends AppCompatActivity
     setContentView(R.layout.activity_main);
     findViews();
     setSupportActionBar(mToolbar);
+
+		mTabLayout.setupWithViewPager(mViewPager);
     setTitle(getString(R.string.app_name_version));
 
     IntentFilter filter = new IntentFilter();
@@ -85,9 +87,17 @@ public final class MainActivity extends AppCompatActivity
 
     if (PermissionsHandler.hasWriteAccess(this))
     {
+			PlatformPagerAdapter platformPagerAdapter = new PlatformPagerAdapter(
+				getSupportFragmentManager(), this);
+			mViewPager.setAdapter(platformPagerAdapter);
       showGames();
       GameFileCacheService.startLoad(this);
     }
+		else
+		{
+			mViewPager.setVisibility(View.INVISIBLE);
+		}
+		mViewPager.setOffscreenPageLimit(3);
   }
 
   @Override
@@ -115,43 +125,9 @@ public final class MainActivity extends AppCompatActivity
   // TODO: Replace with a ButterKnife injection.
   private void findViews()
   {
-    SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(this);
-    mDivider = new DividerItemDecoration(this, null);
     mToolbar = findViewById(R.id.toolbar_main);
-    mGameList = findViewById(R.id.grid_games);
-    mAdapter = new GameAdapter();
-    mGameList.setAdapter(mAdapter);
-    refreshGameList(pref.getBoolean(PREF_GAMELIST, true));
-  }
-
-  private void refreshGameList(boolean flag)
-  {
-    int resourceId;
-    int columns = getResources().getInteger(R.integer.game_grid_columns);
-    RecyclerView.LayoutManager layoutManager;
-    if (flag)
-    {
-      resourceId = R.layout.card_game;
-      layoutManager = new GridLayoutManager(this, columns);
-      mGameList.addItemDecoration(mDivider);
-    }
-    else
-    {
-      columns = columns * 2 + 1;
-      resourceId = R.layout.card_game2;
-      layoutManager = new GridLayoutManager(this, columns);
-      mGameList.removeItemDecoration(mDivider);
-    }
-    mAdapter.setResourceId(resourceId);
-    mGameList.setLayoutManager(layoutManager);
-  }
-
-  public void toggleGameList()
-  {
-    SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(this);
-    boolean flag = !pref.getBoolean(PREF_GAMELIST, true);
-    pref.edit().putBoolean(PREF_GAMELIST, flag).apply();
-    refreshGameList(flag);
+		mViewPager = findViewById(R.id.pager_platforms);
+		mTabLayout = findViewById(R.id.tabs_platforms);
   }
 
   @Override
@@ -169,10 +145,6 @@ public final class MainActivity extends AppCompatActivity
     {
       case R.id.menu_add_directory:
         launchFileListActivity();
-        return true;
-
-      case R.id.menu_toggle_list:
-        toggleGameList();
         return true;
 
       case R.id.menu_settings_core:
@@ -378,6 +350,11 @@ public final class MainActivity extends AppCompatActivity
         if (grantResults[0] == PackageManager.PERMISSION_GRANTED)
         {
           DirectoryInitialization.start(this);
+					PlatformPagerAdapter platformPagerAdapter = new PlatformPagerAdapter(
+						getSupportFragmentManager(), this);
+					mViewPager.setAdapter(platformPagerAdapter);
+					mTabLayout.setupWithViewPager(mViewPager);
+					mViewPager.setVisibility(View.VISIBLE);
           GameFileCacheService.startLoad(this);
         }
         else
@@ -394,6 +371,21 @@ public final class MainActivity extends AppCompatActivity
 
   public void showGames()
   {
-    mAdapter.swapDataSet(GameFileCacheService.getAllGameFiles());
+		for (Platform platform : Platform.values())
+		{
+			PlatformGamesView fragment = getPlatformGamesView(platform);
+			if (fragment != null)
+			{
+				fragment.showGames();
+			}
+		}
+	}
+
+	@Nullable
+	private PlatformGamesView getPlatformGamesView(Platform platform)
+	{
+		String fragmentTag = "android:switcher:" + mViewPager.getId() + ":" + platform.toInt();
+
+		return (PlatformGamesView) getSupportFragmentManager().findFragmentByTag(fragmentTag);
   }
 }

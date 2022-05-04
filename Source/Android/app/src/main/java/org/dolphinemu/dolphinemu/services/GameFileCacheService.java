@@ -8,7 +8,9 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import org.dolphinemu.dolphinemu.model.GameFile;
 import org.dolphinemu.dolphinemu.model.GameFileCache;
+import org.dolphinemu.dolphinemu.ui.platform.Platform;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
@@ -33,10 +35,19 @@ public final class GameFileCacheService extends IntentService
     super("GameFileCacheService");
   }
 
-  public static List<GameFile> getAllGameFiles()
-  {
-    return Arrays.asList(gameFiles.get());
-  }
+	public static List<GameFile> getGameFilesForPlatform(Platform platform)
+	{
+		GameFile[] allGames = gameFiles.get();
+		ArrayList<GameFile> platformGames = new ArrayList<>();
+		for (GameFile game : allGames)
+		{
+			if (Platform.fromNativeInt(game.getPlatform()) == platform)
+			{
+				platformGames.add(game);
+			}
+		}
+		return platformGames;
+	}
 
   public static GameFile getGameFileByPath(String path)
   {

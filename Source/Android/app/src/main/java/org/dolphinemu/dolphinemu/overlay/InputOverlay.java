@@ -569,8 +569,8 @@ public final class InputOverlay extends SurfaceView implements OnTouchListener
     // joystick emulate
     if(sJoyStickSetting != JOYSTICK_EMULATE_NONE)
     {
-      mJoysticks.add(initializeOverlayJoystick(R.drawable.gcwii_joystick,
-        R.drawable.gcwii_joystick_pressed, 0));
+      mJoysticks.add(initializeOverlayJoystick(R.drawable.gcwii_joystick_violet,
+        R.drawable.gcwii_joystick_pressed_violet, 0));
     }
   }
 
@@ -624,8 +624,8 @@ public final class InputOverlay extends SurfaceView implements OnTouchListener
     // joystick emulate
     if(sJoyStickSetting != JOYSTICK_EMULATE_NONE)
     {
-      mJoysticks.add(initializeOverlayJoystick(R.drawable.gcwii_joystick,
-        R.drawable.gcwii_joystick_pressed, 0));
+      mJoysticks.add(initializeOverlayJoystick(R.drawable.gcwii_joystick_violet,
+        R.drawable.gcwii_joystick_pressed_violet, 0));
     }
   }
 
