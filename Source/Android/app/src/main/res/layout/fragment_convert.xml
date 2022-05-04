@@ -122,7 +122,7 @@
         android:id="@+id/button_convert"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:background="@drawable/button_red_gradient"
+        android:backgroundTint="#9C27B0"
         android:textColor="#FFFFFF"
         android:text="@string/convert_convert"
         app:layout_constraintStart_toStartOf="parent"

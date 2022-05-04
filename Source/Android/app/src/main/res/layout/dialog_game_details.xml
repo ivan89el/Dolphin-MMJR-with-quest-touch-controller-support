@@ -50,15 +50,12 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_below="@id/image_game_screen"
-        android:layout_marginHorizontal="4dp"
-        android:layout_marginVertical="3dp"
-
         android:layout_toStartOf="@id/dummy_view"
-        android:background="@drawable/button_purple_gradient"
+        android:backgroundTint="#9C27B0"
+        android:textColor="#FFFFFF"
         android:stateListAnimator="@null"
         android:text="@string/delete_game_setting"
-        android:textAllCaps="false"
-        android:textColor="#FFFFFF" />
+        android:textAllCaps="false" />
 
     <Button
         android:id="@+id/button_cheat_code"
@@ -67,13 +64,11 @@
         android:layout_height="wrap_content"
         android:layout_below="@id/image_game_screen"
         android:layout_toEndOf="@id/dummy_view"
-        android:background="@drawable/button_purple_gradient"
+        android:backgroundTint="#9C27B0"
+        android:textColor="#FFFFFF"
         android:stateListAnimator="@null"
         android:text="@string/cheat_code"
-        android:textAllCaps="false"
-        android:layout_marginHorizontal="4dp"
-        android:layout_marginVertical="3dp"
-        android:textColor="#FFFFFF" />
+        android:textAllCaps="false" />
 
     <!--  -->
     <Button
@@ -82,14 +77,12 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_below="@id/button_delete_setting"
-        android:layout_marginHorizontal="4dp"
-        android:layout_marginVertical="3dp"
         android:layout_toStartOf="@id/dummy_view"
-        android:background="@drawable/button_purple_gradient"
+        android:backgroundTint="#9C27B0"
+        android:textColor="#FFFFFF"
         android:stateListAnimator="@null"
         android:text="@string/grid_menu_wiimote_settings"
-        android:textAllCaps="false"
-        android:textColor="#FFFFFF" />
+        android:textAllCaps="false" />
 
     <Button
         android:id="@+id/button_gcpad_settings"
@@ -98,13 +91,11 @@
         android:layout_height="wrap_content"
         android:layout_below="@id/button_cheat_code"
         android:layout_toEndOf="@id/dummy_view"
-        android:background="@drawable/button_purple_gradient"
-        android:layout_marginHorizontal="4dp"
-        android:layout_marginVertical="3dp"
+        android:backgroundTint="#9C27B0"
+        android:textColor="#FFFFFF"
         android:stateListAnimator="@null"
         android:text="@string/grid_menu_gcpad_settings"
-        android:textAllCaps="false"
-        android:textColor="#FFFFFF" />
+        android:textAllCaps="false" />
 
     <!--  -->
     <Button
@@ -114,13 +105,11 @@
         android:layout_height="wrap_content"
         android:layout_below="@id/button_wiimote_settings"
         android:layout_toStartOf="@id/dummy_view"
-        android:background="@drawable/button_purple_gradient"
+        android:backgroundTint="#9C27B0"
+        android:textColor="#FFFFFF"
         android:stateListAnimator="@null"
         android:text="@string/preferences_game_settings"
-        android:layout_marginHorizontal="4dp"
-        android:layout_marginVertical="3dp"
-        android:textAllCaps="false"
-        android:textColor="#FFFFFF" />
+        android:textAllCaps="false" />
 
     <Button
         android:id="@+id/button_quick_load"
@@ -129,9 +118,7 @@
         android:layout_height="wrap_content"
         android:layout_below="@id/button_gcpad_settings"
         android:layout_toEndOf="@id/dummy_view"
-        android:background="@drawable/button_purple_gradient"
-        android:layout_marginHorizontal="4dp"
-        android:layout_marginVertical="3dp"
+        android:backgroundTint="#9C27B0"
         android:textColor="#FFFFFF"
         android:stateListAnimator="@null"
         android:text="@string/emulation_quickload"
@@ -144,12 +131,10 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_below="@id/button_quick_load"
-        android:layout_marginHorizontal="4dp"
-        android:layout_marginVertical="3dp"
-        android:background="@drawable/button_red_gradient"
+        android:backgroundTint="#9C27B0"
+        android:textColor="#FFFFFF"
         android:stateListAnimator="@null"
         android:text="@string/convert_convert"
-        android:textAllCaps="false"
-        android:textColor="#FFFFFF" />
+        android:textAllCaps="false" />
 
 </RelativeLayout>
