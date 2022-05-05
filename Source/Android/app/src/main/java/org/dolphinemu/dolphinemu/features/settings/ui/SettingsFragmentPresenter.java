@@ -253,6 +253,7 @@ public final class SettingsFragmentPresenter
     Setting usePanicHandlers = uiSection.getSetting(SettingsFile.KEY_USE_PANIC_HANDLERS);
     Setting onScreenDisplayMessages = uiSection.getSetting(SettingsFile.KEY_OSD_MESSAGES);
     Setting useBuiltinTitleDatabase = uiSection.getSetting(SettingsFile.KEY_BUILTIN_TITLE_DATABASE);
+		Setting checkUpdates = uiSection.getSetting(SettingsFile.KEY_UPDATER_CHECK_UPDATES);
     Setting systemBack = uiSection.getSetting(SettingsFile.KEY_SYSTEM_BACK);
 
 		// Only android 9+ supports this feature.
@@ -270,6 +271,8 @@ public final class SettingsFragmentPresenter
       onScreenDisplayMessages));
     sl.add(new CheckBoxSetting(SettingsFile.KEY_BUILTIN_TITLE_DATABASE, Settings.SECTION_INI_INTERFACE,
       R.string.use_builtin_title_database, 0, true, useBuiltinTitleDatabase));
+		sl.add(new CheckBoxSetting(SettingsFile.KEY_UPDATER_CHECK_UPDATES, Settings.SECTION_INI_INTERFACE,
+			R.string.updater_check_startup, R.string.updater_check_startup_description, false, checkUpdates));
     sl.add(new InputBindingSetting(SettingsFile.KEY_SYSTEM_BACK, Settings.SECTION_INI_INTERFACE,
       R.string.system_back, systemBack));
   }

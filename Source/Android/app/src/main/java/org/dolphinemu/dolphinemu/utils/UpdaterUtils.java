@@ -14,12 +14,12 @@ import com.android.volley.Request;
 import com.android.volley.toolbox.JsonArrayRequest;
 import com.android.volley.toolbox.JsonObjectRequest;
 
+import org.dolphinemu.dolphinemu.NativeLibrary;
 import org.dolphinemu.dolphinemu.R;
-import org.dolphinemu.dolphinemu.features.settings.model.Settings;
 import org.dolphinemu.dolphinemu.features.settings.utils.SettingsFile;
 import org.dolphinemu.dolphinemu.model.UpdaterData;
 import org.dolphinemu.dolphinemu.dialogs.UpdaterDialog;
-import org.dolphinemu.dolphinemu.features.settings.model.BooleanSetting;
+import org.dolphinemu.dolphinemu.features.settings.model.Settings;
 
 public class UpdaterUtils
 {
@@ -35,18 +35,20 @@ public class UpdaterUtils
 
 	public static void checkUpdatesInit(Context context)
 	{
+		File dolphinFile = SettingsFile.getSettingsFile(SettingsFile.FILE_NAME_DOLPHIN);
+		IniFileSaf dolphinIni = new IniFileSaf(dolphinFile);
 		if (DirectoryInitialization.isReady())
 		{
-			Settings settings = new Settings();
-			settings.loadSettings(null);
-
 			cleanDownloadFolder(context);
 
-			BooleanSetting checkUpdatesSetting =
-				(BooleanSetting) settings.getSection(Settings.SECTION_INI_INTERFACE)
-					.getSetting(SettingsFile.KEY_CHECK_UPDATES);
-			boolean checkUpdates = checkUpdatesSetting == null || checkUpdatesSetting.getValue();
-			if (checkUpdates)
+			if (!dolphinIni.getBoolean(Settings.SECTION_INI_INTERFACE,
+				SettingsFile.KEY_UPDATER_PERMISSION_ASKED, false))
+			{
+				showPermissionDialog(context);
+			}
+
+			if (dolphinIni.getBoolean(Settings.SECTION_INI_INTERFACE,
+				SettingsFile.KEY_UPDATER_CHECK_UPDATES, false))
 			{
 				checkUpdates(context);
 			}
@@ -61,7 +63,11 @@ public class UpdaterUtils
 			public void onLoad(UpdaterData data)
 			{
 				VersionCode version = getBuildVersion();
-				if (version.compareTo(data.version) < 0)
+				File dolphinFile = SettingsFile.getSettingsFile(SettingsFile.FILE_NAME_DOLPHIN);
+				IniFileSaf dolphinIni = new IniFileSaf(dolphinFile);
+				if (!dolphinIni.getString(Settings.SECTION_INI_INTERFACE,
+					SettingsFile.KEY_UPDATER_SKIP_VERSION, "").equals(data.version.toString()) &&
+					version.compareTo(data.version) < 0)
 				{
 					showUpdateMessage(context, data);
 				}
@@ -79,9 +85,63 @@ public class UpdaterUtils
 			.setMessage(context.getString(R.string.updater_alert_body))
 			.setPositiveButton(android.R.string.yes, (dialogInterface, i) ->
 				openUpdaterWindow(context, data))
-			.setNeutralButton(android.R.string.no,
+			.setNegativeButton(R.string.skip_version, (dialogInterface, i) ->
+				setSkipVersion(data.version.toString()))
+			.setNeutralButton(R.string.not_now,
 				((dialogInterface, i) -> dialogInterface.dismiss()))
 			.show();
+	}
+
+	private static void showPermissionDialog(Context context)
+	{
+		new AlertDialog.Builder(context)
+			.setTitle(context.getString(R.string.updater_check_startup))
+			.setMessage(context.getString(R.string.updater_check_startup_description))
+			.setPositiveButton(android.R.string.yes, (dialogInterface, i) ->
+				setPrefs(true))
+			.setNegativeButton(android.R.string.no, (dialogInterface, i) ->
+				setPrefs(false))
+			.setOnDismissListener(dialog -> checkUpdatesInit(context))
+			.show();
+	}
+
+	private static void setPrefs(boolean enabled)
+	{
+		try
+		{
+			File dolphinFile = SettingsFile.getSettingsFile(SettingsFile.FILE_NAME_DOLPHIN);
+			IniFileSaf dolphinIni = new IniFileSaf(dolphinFile);
+
+			dolphinIni.setBoolean(Settings.SECTION_INI_INTERFACE, SettingsFile.KEY_UPDATER_CHECK_UPDATES, enabled);
+			dolphinIni.setBoolean(Settings.SECTION_INI_INTERFACE, SettingsFile.KEY_UPDATER_PERMISSION_ASKED, true);
+
+			// save setting
+			dolphinIni.save(dolphinFile);
+			NativeLibrary.ReloadConfig();
+		}
+		catch (NullPointerException ignore)
+		{
+			// ignore
+		}
+	}
+
+	private static void setSkipVersion(String version)
+	{
+		try
+		{
+			File dolphinFile = SettingsFile.getSettingsFile(SettingsFile.FILE_NAME_DOLPHIN);
+			IniFileSaf dolphinIni = new IniFileSaf(dolphinFile);
+
+			dolphinIni.setString(Settings.SECTION_INI_INTERFACE, SettingsFile.KEY_UPDATER_SKIP_VERSION, version);
+
+			// save setting
+			dolphinIni.save(dolphinFile);
+			NativeLibrary.ReloadConfig();
+		}
+		catch (NullPointerException ignore)
+		{
+			// ignore
+		}
 	}
 
 	public static void makeDataRequest(LoadCallback<UpdaterData> listener)
