@@ -3,7 +3,7 @@ package org.dolphinemu.dolphinemu.model;
 import org.dolphinemu.dolphinemu.NativeLibrary;
 import org.dolphinemu.dolphinemu.features.settings.model.Settings;
 import org.dolphinemu.dolphinemu.features.settings.utils.SettingsFile;
-import org.dolphinemu.dolphinemu.utils.IniFileSaf;
+import org.dolphinemu.dolphinemu.utils.IniFile;
 import org.dolphinemu.dolphinemu.utils.SafHandler;
 
 import java.io.File;
@@ -19,7 +19,7 @@ public class GameFileCache
   public static void addGameFolder(String path)
   {
 		File dolphinFile = SettingsFile.getSettingsFile(SettingsFile.FILE_NAME_DOLPHIN);
-		IniFileSaf dolphinIni = new IniFileSaf(dolphinFile);
+		IniFile dolphinIni = new IniFile(dolphinFile);
 		LinkedHashSet<String> pathSet = getPathSet(false);
 		int totalISOPaths =
 			dolphinIni.getInt(Settings.SECTION_INI_INTERFACE, SettingsFile.KEY_ISO_PATHS, 0);
@@ -37,7 +37,7 @@ public class GameFileCache
 	private static LinkedHashSet<String> getPathSet(boolean removeNonExistentFolders)
 	{
 		File dolphinFile = SettingsFile.getSettingsFile(SettingsFile.FILE_NAME_DOLPHIN);
-		IniFileSaf dolphinIni = new IniFileSaf(dolphinFile);
+		IniFile dolphinIni = new IniFile(dolphinFile);
 		LinkedHashSet<String> pathSet = new LinkedHashSet<>();
 		int totalISOPaths =
 			dolphinIni.getInt(Settings.SECTION_INI_INTERFACE, SettingsFile.KEY_ISO_PATHS, 0);

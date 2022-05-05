@@ -5,7 +5,6 @@ add_library(main SHARED
   ButtonManager.cpp
   MainAndroid.cpp
   IniFile.cpp
-  IniFileSaf.cpp
 )
 
 target_link_libraries(main

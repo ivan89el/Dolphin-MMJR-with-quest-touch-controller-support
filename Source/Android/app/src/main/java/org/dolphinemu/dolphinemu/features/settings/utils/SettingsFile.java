@@ -13,7 +13,7 @@ import org.dolphinemu.dolphinemu.features.settings.model.Settings;
 import org.dolphinemu.dolphinemu.features.settings.model.StringSetting;
 import org.dolphinemu.dolphinemu.utils.BiMap;
 import org.dolphinemu.dolphinemu.utils.DirectoryInitialization;
-import org.dolphinemu.dolphinemu.utils.IniFileSaf;
+import org.dolphinemu.dolphinemu.utils.IniFile;
 import org.dolphinemu.dolphinemu.utils.Log;
 
 import java.io.BufferedReader;
@@ -465,7 +465,7 @@ public final class SettingsFile
     final HashMap<String, SettingSection> sections)
   {
     Set<String> sortedSections = new TreeSet<>(sections.keySet());
-		IniFileSaf ini = new IniFileSaf();
+		IniFile ini = new IniFile();
     for (String sectionKey : sortedSections)
     {
       SettingSection section = sections.get(sectionKey);
@@ -524,7 +524,7 @@ public final class SettingsFile
       DirectoryInitialization.copyFile(defautlWiiProfilePath, wiiConfigPath);
 		}
 
-		IniFileSaf wiiProfileIni = new IniFileSaf(wiiConfigPath);
+		IniFile wiiProfileIni = new IniFile(wiiConfigPath);
 
 		if (!wiiProfileExists)
 		{
@@ -537,7 +537,7 @@ public final class SettingsFile
 
     // Enable the profile
 		File gameSettingsFile = SettingsFile.getCustomGameSettingsFile(gameId);
-		IniFileSaf gameSettingsIni = new IniFileSaf(gameSettingsFile);
+		IniFile gameSettingsIni = new IniFile(gameSettingsFile);
 		gameSettingsIni.setString(Settings.SECTION_CONTROLS,
             KEY_WIIMOTE_PROFILE + (Integer.valueOf(padId) + 1), profile);
 		gameSettingsIni.save(gameSettingsFile);

@@ -5,7 +5,7 @@ import androidx.annotation.Keep;
 import java.io.File;
 
 // An in-memory copy of an INI file
-public class IniFileSaf
+public class IniFile
 {
 	// This class is non-static to ensure that the IniFile parent does not get garbage collected
 	// while a section still is accessible. (The finalizer of IniFile deletes the native sections.)
@@ -25,18 +25,18 @@ public class IniFileSaf
 	@Keep
 	private long mPointer;
 
-	public IniFileSaf()
+	public IniFile()
 	{
 		mPointer = newIniFile();
 	}
 
-	public IniFileSaf(String path)
+	public IniFile(String path)
 	{
 		this();
 		load(path, false);
 	}
 
-	public IniFileSaf(File file)
+	public IniFile(File file)
 	{
 		this();
 		load(file, false);

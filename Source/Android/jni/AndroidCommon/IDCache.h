@@ -27,15 +27,6 @@ struct IniFile
   void OnUnload(JNIEnv* env);
 
   jclass Clazz;
-  jfieldID Pointer;
-};
-
-struct IniFileSaf
-{
-  void OnLoad(JNIEnv* env);
-  void OnUnload(JNIEnv* env);
-
-  jclass Clazz;
   jclass SectionClazz;
   jfieldID Pointer;
   jfieldID SectionPointer;
@@ -88,7 +79,6 @@ JNIEnv* GetEnvForThread();
 
 extern NativeLibrary sNativeLibrary;
 extern IniFile sIniFile;
-extern IniFileSaf sIniFileSaf;
 extern SafHandler sSafHandler;
 extern CompressCallback sCompressCallback;
 extern GameFile sGameFile;

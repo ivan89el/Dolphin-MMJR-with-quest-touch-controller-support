@@ -36,7 +36,7 @@ public class UpdaterUtils
 	public static void checkUpdatesInit(Context context)
 	{
 		File dolphinFile = SettingsFile.getSettingsFile(SettingsFile.FILE_NAME_DOLPHIN);
-		IniFileSaf dolphinIni = new IniFileSaf(dolphinFile);
+		IniFile dolphinIni = new IniFile(dolphinFile);
 		if (DirectoryInitialization.isReady())
 		{
 			cleanDownloadFolder(context);
@@ -64,7 +64,7 @@ public class UpdaterUtils
 			{
 				VersionCode version = getBuildVersion();
 				File dolphinFile = SettingsFile.getSettingsFile(SettingsFile.FILE_NAME_DOLPHIN);
-				IniFileSaf dolphinIni = new IniFileSaf(dolphinFile);
+				IniFile dolphinIni = new IniFile(dolphinFile);
 				if (!dolphinIni.getString(Settings.SECTION_INI_INTERFACE,
 					SettingsFile.KEY_UPDATER_SKIP_VERSION, "").equals(data.version.toString()) &&
 					version.compareTo(data.version) < 0)
@@ -110,7 +110,7 @@ public class UpdaterUtils
 		try
 		{
 			File dolphinFile = SettingsFile.getSettingsFile(SettingsFile.FILE_NAME_DOLPHIN);
-			IniFileSaf dolphinIni = new IniFileSaf(dolphinFile);
+			IniFile dolphinIni = new IniFile(dolphinFile);
 
 			dolphinIni.setBoolean(Settings.SECTION_INI_INTERFACE, SettingsFile.KEY_UPDATER_CHECK_UPDATES, enabled);
 			dolphinIni.setBoolean(Settings.SECTION_INI_INTERFACE, SettingsFile.KEY_UPDATER_PERMISSION_ASKED, true);
@@ -130,7 +130,7 @@ public class UpdaterUtils
 		try
 		{
 			File dolphinFile = SettingsFile.getSettingsFile(SettingsFile.FILE_NAME_DOLPHIN);
-			IniFileSaf dolphinIni = new IniFileSaf(dolphinFile);
+			IniFile dolphinIni = new IniFile(dolphinFile);
 
 			dolphinIni.setString(Settings.SECTION_INI_INTERFACE, SettingsFile.KEY_UPDATER_SKIP_VERSION, version);
 

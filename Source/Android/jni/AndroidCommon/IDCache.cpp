@@ -15,7 +15,6 @@ namespace IDCache
 {
 NativeLibrary sNativeLibrary;
 IniFile sIniFile;
-IniFileSaf sIniFileSaf;
 SafHandler sSafHandler;
 CompressCallback sCompressCallback;
 GameFile sGameFile;
@@ -41,29 +40,16 @@ void NativeLibrary::OnUnload(JNIEnv* env)
 
 void IniFile::OnLoad(JNIEnv* env)
 {
-  jclass clazz = env->FindClass("org/dolphinemu/dolphinemu/model/IniFile");
+  jclass clazz = env->FindClass("org/dolphinemu/dolphinemu/utils/IniFile");
   Clazz = reinterpret_cast<jclass>(env->NewGlobalRef(clazz));
-  Pointer = env->GetFieldID(Clazz, "mPointer", "J");
-}
-
-void IniFile::OnUnload(JNIEnv* env)
-{
-  env->DeleteGlobalRef(Clazz);
-  Clazz = nullptr;
-}
-
-void IniFileSaf::OnLoad(JNIEnv* env)
-{
-  jclass clazz = env->FindClass("org/dolphinemu/dolphinemu/utils/IniFileSaf");
-  Clazz = reinterpret_cast<jclass>(env->NewGlobalRef(clazz));
-  jclass section_clazz = env->FindClass("org/dolphinemu/dolphinemu/utils/IniFileSaf$Section");
+  jclass section_clazz = env->FindClass("org/dolphinemu/dolphinemu/utils/IniFile$Section");
   SectionClazz = reinterpret_cast<jclass>(env->NewGlobalRef(section_clazz));
   Pointer = env->GetFieldID(clazz, "mPointer", "J");
   SectionPointer = env->GetFieldID(section_clazz, "mPointer", "J");
-  SectionConstructor = env->GetMethodID(section_clazz, "<init>", "(Lorg/dolphinemu/dolphinemu/utils/IniFileSaf;J)V");
+  SectionConstructor = env->GetMethodID(section_clazz, "<init>", "(Lorg/dolphinemu/dolphinemu/utils/IniFile;J)V");
 }
 
-void IniFileSaf::OnUnload(JNIEnv* env)
+void IniFile::OnUnload(JNIEnv* env)
 {
   env->DeleteGlobalRef(Clazz);
   env->DeleteGlobalRef(SectionClazz);
@@ -171,7 +157,6 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved)
 
   IDCache::sNativeLibrary.OnLoad(env);
   IDCache::sIniFile.OnLoad(env);
-  IDCache::sIniFileSaf.OnLoad(env);
   IDCache::sSafHandler.OnLoad(env);
   IDCache::sCompressCallback.OnLoad(env);
   IDCache::sGameFile.OnLoad(env);
@@ -190,7 +175,6 @@ void JNI_OnUnload(JavaVM* vm, void* reserved)
 
   IDCache::sNativeLibrary.OnUnload(env);
   IDCache::sIniFile.OnUnload(env);
-  IDCache::sIniFileSaf.OnUnload(env);
   IDCache::sSafHandler.OnUnload(env);
   IDCache::sCompressCallback.OnUnload(env);
   IDCache::sGameFile.OnUnload(env);
