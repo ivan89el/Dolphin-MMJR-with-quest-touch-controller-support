@@ -273,6 +273,7 @@
     <string name="off">Off</string>
     <string name="clear">Clear</string>
     <string name="other">Other</string>
+    <string name="error">Error</string>
 
     <!-- Game Grid Screen-->
     <string name="grid_menu_config">Config</string>
@@ -437,5 +438,25 @@ and a few other programs. It can efficiently compress encrypted Wii data, but no
 \n\nRVZ: An advanced compressed format which is compatible with Dolphin 5.0-12188 and later.
 It can efficiently compress both junk data and encrypted Wii data.
     </string>
+
+    <!-- Updater Window -->
+    <string name="grid_menu_open_updater">MMJR2 Updater</string>
+    <string name="updater_title">Updater</string>
+    <string name="updater_error">An error has occurred. Please check your internet connection.</string>
+    <string name="updater_uptodate">Up to date!</string>
+    <string name="updater_newavailable">New version available</string>
+    <string name="button_download">Download</string>
+    <string name="button_install">Install</string>
+    <string name="version_description">Latest: %1$s</string>
+    <string name="current_version">Current version: %1$s</string>
+    <string name="download_size">Size: %1$.2f MB</string>
+    <string name="button_view_changelog">View changelog</string>
+    <string name="changelog_section">Version %1$s\nDate: %2$s\nChanges:\n%3$s\n\n</string>
+
+    <!-- Update available dialog -->
+    <string name="updates_alert">Update available</string>
+    <string name="updater_alert_body">A new version of Dolphin |MMJR2| is available, do you want to update?</string>
+    <string name="not_now">Not now</string>
+    <string name="skip_version">Skip this version</string>
 
 </resources>

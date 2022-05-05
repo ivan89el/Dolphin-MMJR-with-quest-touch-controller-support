@@ -40,6 +40,7 @@ import org.dolphinemu.dolphinemu.utils.FileBrowserHelper;
 import org.dolphinemu.dolphinemu.utils.PermissionsHandler;
 import org.dolphinemu.dolphinemu.utils.SafHandler;
 import org.dolphinemu.dolphinemu.utils.StartupHandler;
+import org.dolphinemu.dolphinemu.utils.UpdaterUtils;
 
 import java.io.File;
 import java.util.Arrays;
@@ -80,6 +81,50 @@ public final class MainActivity extends AppCompatActivity
       }
     };
     LocalBroadcastManager.getInstance(this).registerReceiver(mBroadcastReceiver, filter);
+
+		// toolbar options
+		mToolbar.setOnMenuItemClickListener(menuItem ->
+		{
+			switch (menuItem.getItemId())
+			{
+				case R.id.menu_add_directory:
+					launchFileListActivity();
+					return true;
+
+				case R.id.menu_settings_core:
+					launchSettingsActivity(MenuTag.CONFIG);
+					return true;
+
+				case R.id.menu_settings_gcpad:
+					launchSettingsActivity(MenuTag.GCPAD_TYPE);
+					return true;
+
+				case R.id.menu_settings_wiimote:
+					launchSettingsActivity(MenuTag.WIIMOTE);
+					return true;
+
+				case R.id.menu_clear_data:
+					clearGameData(this);
+					return true;
+
+				case R.id.menu_refresh:
+					GameFileCacheService.startRescan(this);
+					return true;
+
+				case R.id.menu_open_file:
+					launchOpenFileActivity();
+					return true;
+
+				case R.id.menu_install_wad:
+					launchInstallWAD();
+					return true;
+
+				case R.id.updater_dialog:
+					openUpdaterDialog();
+					return true;
+			}
+			return false;
+		});
 
     // Stuff in this block only happens when this activity is newly created (i.e. not a rotation)
     if (savedInstanceState == null)
@@ -138,47 +183,6 @@ public final class MainActivity extends AppCompatActivity
     return true;
   }
 
-  @Override
-  public boolean onOptionsItemSelected(MenuItem item)
-  {
-    switch (item.getItemId())
-    {
-      case R.id.menu_add_directory:
-        launchFileListActivity();
-        return true;
-
-      case R.id.menu_settings_core:
-        launchSettingsActivity(MenuTag.CONFIG);
-        return true;
-
-      case R.id.menu_settings_gcpad:
-        launchSettingsActivity(MenuTag.GCPAD_TYPE);
-        return true;
-
-      case R.id.menu_settings_wiimote:
-        launchSettingsActivity(MenuTag.WIIMOTE);
-        return true;
-
-      case R.id.menu_clear_data:
-        clearGameData(this);
-        return true;
-
-      case R.id.menu_refresh:
-        GameFileCacheService.startRescan(this);
-        return true;
-
-      case R.id.menu_open_file:
-        launchOpenFileActivity();
-        return true;
-
-			case R.id.menu_install_wad:
-				launchInstallWAD();
-				return true;
-    }
-
-    return false;
-  }
-
   public void launchSettingsActivity(MenuTag menuTag)
   {
     SettingsActivity.launch(this, menuTag, "");
@@ -189,6 +193,11 @@ public final class MainActivity extends AppCompatActivity
 		Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
 		startActivityForResult(intent, REQUEST_ADD_DIRECTORY);
   }
+
+	public void openUpdaterDialog()
+	{
+		UpdaterUtils.openUpdaterWindow(this, null);
+	}
 
   private void clearGameData(Context context)
   {

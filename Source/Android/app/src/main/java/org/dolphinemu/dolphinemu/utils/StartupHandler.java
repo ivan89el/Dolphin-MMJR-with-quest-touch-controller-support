@@ -12,7 +12,10 @@ public final class StartupHandler
   {
     // Ask the user to grant write permission if it's not already granted
     PermissionsHandler.checkWritePermission(parent);
-    String[] start_files = null;
+		// Ask the user if he wants to check for updates at startup if we haven't yet.
+		// If allowed, check for updates.
+		UpdaterUtils.checkUpdatesInit(parent);
+		String[] start_files = null;
     Bundle extras = parent.getIntent().getExtras();
     if (extras != null)
     {
