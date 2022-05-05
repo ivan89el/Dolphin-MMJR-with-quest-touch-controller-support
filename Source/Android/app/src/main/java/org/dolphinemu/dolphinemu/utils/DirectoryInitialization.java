@@ -70,7 +70,7 @@ public final class DirectoryInitialization
           initializeInternalStorage(context);
           initializeExternalStorage(context);
           String lan = Locale.getDefault().getLanguage();
-          if (lan.equals("zh"))
+          if (lan.equals("zh")) // needed?
             lan = lan + "_" + Locale.getDefault().getCountry();
           NativeLibrary.setSystemLanguage(lan);
           mDirectoryState = DirectoryInitializationState.DIRECTORIES_INITIALIZED;

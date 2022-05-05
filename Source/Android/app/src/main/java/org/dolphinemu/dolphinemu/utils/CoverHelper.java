@@ -10,6 +10,7 @@ public final class CoverHelper
 {
   public static String buildGameTDBUrl(GameFile game, String region)
   {
+  	// get gametdb url and build it
     final String baseUrl = "https://art.gametdb.com/wii/cover/%s/%s.png";
     String id = game.getGameTdbId();
     if (region == null)
@@ -31,14 +32,14 @@ public final class CoverHelper
     }
     else if ("JA".equals(region))
     {
-      if(id.charAt(3) != 'J')
+      if (id.charAt(3) != 'J')
       {
         return id.substring(0, 3) + "J" + id.substring(4);
       }
     }
     else if ("US".equals(region))
     {
-      if(id.charAt(3) != 'E')
+      if (id.charAt(3) != 'E')
       {
         return id.substring(0, 3) + "E" + id.substring(4);
       }

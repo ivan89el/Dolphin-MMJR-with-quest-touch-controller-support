@@ -212,7 +212,15 @@ public final class NativeLibrary
    */
   public static final String TouchScreenDevice = "Touchscreen";
 
-  /**
+	public static boolean isValidFile(String filename)
+	{
+		String name = filename.toLowerCase();
+		return (name.endsWith(".gcm") || name.endsWith(".tgc") || name.endsWith(".iso") ||
+			name.endsWith(".ciso") || name.endsWith(".gcz") || name.endsWith(".wbfs") || name.endsWith(".wia") ||
+			name.endsWith(".rvz") || name.endsWith(".wad") || name.endsWith(".dol") || name.endsWith(".elf"));
+	}
+
+	/**
    * Handles button press events for a gamepad.
    *
    * @param Device The input descriptor of the gamepad.

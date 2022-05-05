@@ -116,14 +116,6 @@ enum Bug
   // It reduces what is needed for streaming to basically a memcpy call
   // It seems to work for all buffer types except GL_ARRAY_BUFFER
   BUG_BROKEN_BUFFER_STORAGE,
-  // Bug: Intel HD 3000 on OS X has broken primitive restart
-  // Affected devices: Intel HD 3000
-  // Affected OS: OS X
-  // Started Version: -1
-  // Ended Version: -1
-  // The drivers on OS X has broken primitive restart.
-  // Intel HD 4000 series isn't affected by the bug
-  BUG_PRIMITIVE_RESTART,
   // Bug: unsync mapping doesn't work fine
   // Affected devices: Nvidia driver, ARM Mali
   // Started Version: -1

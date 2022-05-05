@@ -21,6 +21,12 @@ import org.dolphinemu.dolphinemu.model.UpdaterData;
 import org.dolphinemu.dolphinemu.dialogs.UpdaterDialog;
 import org.dolphinemu.dolphinemu.features.settings.model.Settings;
 
+/*
+  We use C++ INI File parser (located on utils folder) because
+  some sections used here are missing or they are long on Java
+  INI File parser.
+ */
+
 public class UpdaterUtils
 {
 	public static final String URL = "https://api.github.com/repos/Bankaimaster999/Dolphin-MMJR/releases";
@@ -119,9 +125,9 @@ public class UpdaterUtils
 			dolphinIni.save(dolphinFile);
 			NativeLibrary.ReloadConfig();
 		}
-		catch (NullPointerException ignore)
+		catch (Exception e)
 		{
-			// ignore
+			Log.e(UpdaterUtils.class.getSimpleName(), e.toString());
 		}
 	}
 
@@ -138,9 +144,9 @@ public class UpdaterUtils
 			dolphinIni.save(dolphinFile);
 			NativeLibrary.ReloadConfig();
 		}
-		catch (NullPointerException ignore)
+		catch (Exception e)
 		{
-			// ignore
+			Log.e(UpdaterUtils.class.getSimpleName(), e.toString());
 		}
 	}
 

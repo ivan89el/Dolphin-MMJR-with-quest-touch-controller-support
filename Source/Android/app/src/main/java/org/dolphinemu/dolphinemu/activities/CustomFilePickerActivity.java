@@ -22,6 +22,7 @@ import com.nononsenseapps.filepicker.FilePickerFragment;
 
 import java.io.File;
 
+import org.dolphinemu.dolphinemu.NativeLibrary;
 import org.dolphinemu.dolphinemu.R;
 
 public final class CustomFilePickerActivity extends FilePickerActivity
@@ -55,6 +56,18 @@ public final class CustomFilePickerActivity extends FilePickerActivity
               getContext(),
               getContext().getApplicationContext().getPackageName() + ".filesprovider", file);
     }
+
+		@Override
+		protected boolean isItemVisible(final File file)
+		{
+			if (file.isHidden())
+				return false;
+			if (file.isDirectory())
+				return true;
+			if (mode == MODE_FILE)
+				return true;
+			return NativeLibrary.isValidFile(file.getName());
+		}
 
     public String getCurrentPath()
     {
@@ -91,7 +104,7 @@ public final class CustomFilePickerActivity extends FilePickerActivity
     File path = new File(text);
     if (path.isDirectory())
     {
-      mFilePickerFragment.goToDir(path); // go to writted dir
+      mFilePickerFragment.goToDir(path); // go to wrote dir
     }
     else
     {

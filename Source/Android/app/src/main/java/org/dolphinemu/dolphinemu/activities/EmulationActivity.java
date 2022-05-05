@@ -70,9 +70,13 @@ public final class EmulationActivity extends AppCompatActivity
   private String mSelectedGameId = "";
   private int mPlatform = 0;
   private String[] mPaths;
+	private static boolean sUserPausedEmulation;
   private String mSavedState;
 
 	private Settings mSettings;
+
+	private MenuItem mPauseEmulationButton;
+	private MenuItem mUnpauseEmulationButton;
 
   public static final String RUMBLE_PREF_KEY = "PhoneRumble";
 
@@ -81,6 +85,7 @@ public final class EmulationActivity extends AppCompatActivity
   public static final String EXTRA_SELECTED_GAMEID = "SelectedGameId";
   public static final String EXTRA_PLATFORM = "Platform";
   public static final String EXTRA_SAVED_STATE = "SavedState";
+	public static final String EXTRA_USER_PAUSED_EMULATION = "sUserPausedEmulation";
 
   public static void launch(Context context, GameFile game, String savedState)
   {
@@ -143,6 +148,7 @@ public final class EmulationActivity extends AppCompatActivity
       Intent gameToEmulate = getIntent();
       mPaths = gameToEmulate.getStringArrayExtra(EXTRA_SELECTED_GAMES);
       mSavedState = gameToEmulate.getStringExtra(EXTRA_SAVED_STATE);
+			sUserPausedEmulation = gameToEmulate.getBooleanExtra(EXTRA_USER_PAUSED_EMULATION, false);
       if (mPaths != null && mPaths.length > 0)
       {
         GameFile game = GameFileCacheService.getGameFileByPath(mPaths[0]);
@@ -230,6 +236,7 @@ public final class EmulationActivity extends AppCompatActivity
     outState.putString(EXTRA_SELECTED_GAMEID, mSelectedGameId);
     outState.putInt(EXTRA_PLATFORM, mPlatform);
     outState.putString(EXTRA_SAVED_STATE, mSavedState);
+		outState.putBoolean(EXTRA_USER_PAUSED_EMULATION, sUserPausedEmulation);
     super.onSaveInstanceState(outState);
   }
 
@@ -309,6 +316,15 @@ public final class EmulationActivity extends AppCompatActivity
     {
       getMenuInflater().inflate(R.menu.menu_emulation_wii, menu);
     }
+
+		mPauseEmulationButton = menu.findItem(R.id.menu_emulation_pause);
+		mUnpauseEmulationButton = menu.findItem(R.id.menu_emulation_unpause);
+
+		if (sUserPausedEmulation)
+		{
+			showUnpauseEmulationButton();
+		}
+
     return true;
   }
 
@@ -348,6 +364,18 @@ public final class EmulationActivity extends AppCompatActivity
       /*case R.id.menu_refresh_wiimotes:
         NativeLibrary.RefreshWiimotes();
         break;*/
+
+			case R.id.menu_emulation_pause:
+				sUserPausedEmulation = true;
+				NativeLibrary.PauseEmulation();
+				showUnpauseEmulationButton();
+				break;
+
+			case R.id.menu_emulation_unpause:
+				sUserPausedEmulation = false;
+				NativeLibrary.UnPauseEmulation();
+				showPauseEmulationButton();
+				break;
 
       // Screenshot capturing
       case R.id.menu_emulation_screenshot:
@@ -733,6 +761,28 @@ public final class EmulationActivity extends AppCompatActivity
     AlertDialog alertDialog = builder.create();
     alertDialog.show();
   }
+
+	private void showPauseEmulationButton()
+	{
+		mUnpauseEmulationButton.setVisible(false);
+		mPauseEmulationButton.setVisible(true);
+	}
+
+	private void showUnpauseEmulationButton()
+	{
+		mPauseEmulationButton.setVisible(false);
+		mUnpauseEmulationButton.setVisible(true);
+	}
+
+	public static boolean getHasUserPausedEmulation()
+	{
+		return sUserPausedEmulation;
+	}
+
+	public static void setHasUserPausedEmulation(boolean value)
+	{
+		sUserPausedEmulation = value;
+	}
 
   private void chooseController()
   {
