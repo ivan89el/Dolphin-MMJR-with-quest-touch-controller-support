@@ -19,9 +19,10 @@ import java.io.FileOutputStream;
 
 public class GameFile
 {
+	private String mName;
+
 	@Keep
   private long mPointer;
-  private String mName;
 
 	@Keep
   private GameFile(long pointer)

@@ -834,11 +834,11 @@ void UpdateTitle()
   perf_stats.VPS = s_drawn_video.load() * 1000.0f / ElapseTime;
   perf_stats.Speed = perf_stats.VPS * 100.0f / VideoInterface::GetTargetRefreshRate();
 
-  std::string SFPS;
+  std::string S_FPS;
 
   if(g_ActiveConfig.bShowFPS)
   {
-    SFPS = StringFromFormat("|MMJR| FPS: %.0f | %.0f%% |",
+    S_FPS = StringFromFormat("|MMJR| FPS: %.0f | %.0f%% |",
                             perf_stats.FPS, perf_stats.Speed);
   }
 
@@ -849,7 +849,7 @@ void UpdateTitle()
     pMixer->UpdateSpeed(perf_stats.Speed / 100);
   }
 
-  g_renderer->UpdateDebugTitle(SFPS);
+  g_renderer->UpdateDebugTitle(S_FPS);
 }
 
 void Shutdown()
