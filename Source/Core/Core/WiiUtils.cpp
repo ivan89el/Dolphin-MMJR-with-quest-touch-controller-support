@@ -371,7 +371,7 @@ OnlineSystemUpdater::Response OnlineSystemUpdater::GetSystemTitles()
   // a device certificate which cannot be redistributed with Dolphin.
   // This is fine, because IOS has signature checks.
   const Common::HttpRequest::Response response =
-      m_http.Post("http://nus.shop.wii.com/nus/services/NetUpdateSOAP", request,
+      m_http.Post("http://fakenus.dolphin-emu.org", request,
                   {
                       {"SOAPAction", "urn:nus.wsapi.broadon.com/GetSystemUpdate"},
                       {"User-Agent", "wii libnup/1.0"},
