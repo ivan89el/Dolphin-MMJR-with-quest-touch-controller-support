@@ -71,6 +71,9 @@
 #include "jni/ButtonManager.h"
 
 static constexpr char DOLPHIN_TAG[] = "DolphinEmuNative";
+static constexpr char PACKAGE[] = "org.mm.jr";
+static constexpr char PACKAGE_DEBUG[] = "org.mm.jr.debug";
+static constexpr char LABEL[] = "Dolphin |MMJR|";
 static ANativeWindow* s_surf;
 static IniFile s_game_ini;
 static std::unique_ptr<Core::TitleDatabase> s_title_database;
@@ -712,6 +715,21 @@ JNIEXPORT void JNICALL Java_org_dolphinemu_dolphinemu_NativeLibrary_ChangeDisc(J
 {
   const std::string path = GetJString(env, jFile);
   Core::RunAsCPUThread([&path] { DVDInterface::ChangeDisc(path); });
+}
+
+JNIEXPORT jboolean JNICALL Java_org_dolphinemu_dolphinemu_NativeLibrary_CheckIntegrity(
+        JNIEnv* env, jclass, jstring package, jstring label)
+{
+  const char* packageString = env->GetStringUTFChars(package, nullptr);
+  const char* labelString = env->GetStringUTFChars(label, nullptr);
+
+  bool r = (!strcmp(packageString, PACKAGE) || !strcmp(packageString, PACKAGE_DEBUG)) &&
+           !strcmp(labelString, LABEL);
+
+  env->ReleaseStringUTFChars(package, packageString);
+  env->ReleaseStringUTFChars(label, labelString);
+
+  return static_cast<jboolean>(r);
 }
 
 #ifdef __cplusplus

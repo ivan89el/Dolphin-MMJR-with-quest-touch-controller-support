@@ -51,9 +51,9 @@ public final class GameFileCacheService extends IntentService
 
   public static GameFile getGameFileByPath(String path)
   {
-    for(GameFile game : gameFiles.get())
+    for (GameFile game : gameFiles.get())
     {
-      if(path.equals(game.getPath()))
+      if (path.equals(game.getPath()))
       {
         return game;
       }

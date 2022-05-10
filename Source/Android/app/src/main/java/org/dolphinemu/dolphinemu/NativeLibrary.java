@@ -251,6 +251,8 @@ public final class NativeLibrary
     Rumble.checkRumble(padID, state);
   }
 
+  public static native boolean CheckIntegrity(String packageName, String label);
+
   /**
    * Sets a value to a key in the given ini config file.
    *

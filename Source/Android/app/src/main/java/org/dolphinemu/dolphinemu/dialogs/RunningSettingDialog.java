@@ -194,14 +194,14 @@ public class RunningSettingDialog extends DialogFragment
     {
       int checkIds[] = {R.id.radio0, R.id.radio1, R.id.radio2};
       int index = item.getValue();
-      if(index < 0 || index >= checkIds.length)
+      if (index < 0 || index >= checkIds.length)
         index = 0;
 
       mItem = item;
       mTextSettingName.setText(item.getName());
       mRadioGroup.check(checkIds[index]);
 
-      if(item.getSetting() == SettingsItem.SETTING_TOUCH_POINTER)
+      if (item.getSetting() == SettingsItem.SETTING_TOUCH_POINTER)
       {
         RadioButton radio0 = mRadioGroup.findViewById(R.id.radio0);
         radio0.setText(R.string.off);
@@ -217,7 +217,6 @@ public class RunningSettingDialog extends DialogFragment
     @Override
     public void onClick(View clicked)
     {
-
     }
 
     @Override
@@ -304,13 +303,11 @@ public class RunningSettingDialog extends DialogFragment
         @Override
         public void onStartTrackingTouch(SeekBar seekBar)
         {
-
         }
 
         @Override
         public void onStopTrackingTouch(SeekBar seekBar)
         {
-
         }
       });
       mSeekBar.setProgress(item.getValue());
@@ -319,7 +316,6 @@ public class RunningSettingDialog extends DialogFragment
     @Override
     public void onClick(View clicked)
     {
-
     }
   }
 
@@ -343,7 +339,7 @@ public class RunningSettingDialog extends DialogFragment
       mSettings.add(new SettingsItem(SettingsItem.SETTING_PHONE_RUMBLE, R.string.emulation_control_rumble,
         SettingsItem.TYPE_CHECKBOX, mRumble));
 
-      if(!EmulationActivity.get().isGameCubeGame())
+      if (!EmulationActivity.get().isGameCubeGame())
       {
         mTouchPointer = prefs.getInt(InputOverlay.POINTER_PREF_KEY, 0);
         mSettings.add(new SettingsItem(SettingsItem.SETTING_TOUCH_POINTER,
@@ -386,7 +382,7 @@ public class RunningSettingDialog extends DialogFragment
       mSettings.add(new SettingsItem(SettingsItem.SETTING_JIT_FOLLOW_BRANCH,
         R.string.jit_follow_branch, SettingsItem.TYPE_CHECKBOX, mRunningSettings[i++]));
 
-      if(!EmulationActivity.get().isGameCubeGame())
+      if (!EmulationActivity.get().isGameCubeGame())
       {
         mSettings.add(new SettingsItem(SettingsItem.SETTING_IR_PITCH,
           R.string.pitch, SettingsItem.TYPE_SEEK_BAR, mRunningSettings[i++]));
@@ -442,17 +438,17 @@ public class RunningSettingDialog extends DialogFragment
       SharedPreferences.Editor editor = PreferenceManager.getDefaultSharedPreferences(getContext()).edit();
 
       int rumble = mSettings.get(0).getValue();
-      if(mRumble != rumble)
+      if (mRumble != rumble)
       {
         editor.putBoolean(EmulationActivity.RUMBLE_PREF_KEY, rumble > 0);
         Rumble.setPhoneRumble(getActivity(), rumble > 0);
       }
       mSettings.remove(0);
 
-      if(!EmulationActivity.get().isGameCubeGame())
+      if (!EmulationActivity.get().isGameCubeGame())
       {
         int pointer = mSettings.get(0).getValue();
-        if(mTouchPointer != pointer)
+        if (mTouchPointer != pointer)
         {
           editor.putInt(InputOverlay.POINTER_PREF_KEY, pointer);
           EmulationActivity.get().setTouchPointer(pointer);
@@ -460,7 +456,7 @@ public class RunningSettingDialog extends DialogFragment
         mSettings.remove(0);
 
         int recenter = mSettings.get(0).getValue();
-        if(mIRRecenter != recenter)
+        if (mIRRecenter != recenter)
         {
           String gameId = EmulationActivity.get().getSelectedGameId();
           String prefId = gameId.length() > 3 ? gameId.substring(0, 3) : gameId;
@@ -471,7 +467,7 @@ public class RunningSettingDialog extends DialogFragment
       }
 
       int relative = mSettings.get(0).getValue();
-      if(mJoystickRelative != relative)
+      if (mJoystickRelative != relative)
       {
         editor.putBoolean(InputOverlay.RELATIVE_PREF_KEY, relative > 0);
         InputOverlay.sJoystickRelative = relative > 0;
@@ -532,5 +528,4 @@ public class RunningSettingDialog extends DialogFragment
     super.onDismiss(dialog);
     mAdapter.saveSettings();
   }
-
 }
