@@ -87,6 +87,7 @@ extern const ConfigInfo<std::string> GFX_ENHANCE_POST_SHADER;
 extern const ConfigInfo<bool> GFX_ENHANCE_FORCE_TRUE_COLOR;
 extern const ConfigInfo<bool> GFX_ENHANCE_DISABLE_COPY_FILTER;
 extern const ConfigInfo<bool> GFX_ENHANCE_ARBITRARY_MIPMAP_DETECTION;
+extern const ConfigInfo<bool> GFX_ENHANCE_APPROXIMATE_LOGIC_OP;
 extern const ConfigInfo<float> GFX_ENHANCE_ARBITRARY_MIPMAP_DETECTION_THRESHOLD;
 
 // Graphics.Hacks

@@ -444,17 +444,19 @@ public final class SettingsFragmentPresenter
     Setting disableCopyFilter = enhancementSection.getSetting(SettingsFile.KEY_DISABLE_COPY_FILTER);
     Setting arbitraryMipmapDetection =
             enhancementSection.getSetting(SettingsFile.KEY_ARBITRARY_MIPMAP_DETECTION);
+    Setting approximateLogicOp =
+            enhancementSection.getSetting(SettingsFile.KEY_APPROXIMATE_LOGIC_OP);
     Setting wideScreenHack = gfxSection.getSetting(SettingsFile.KEY_WIDE_SCREEN_HACK);
     Setting force24BitColor = enhancementSection.getSetting(SettingsFile.KEY_FORCE_24_BIT_COLOR);
 
     sl.add(new SingleChoiceSetting(SettingsFile.KEY_INTERNAL_RES, Settings.SECTION_GFX_SETTINGS,
       R.string.internal_resolution, R.string.internal_resolution_description,
       R.array.internalResolutionEntries, R.array.internalResolutionValues, 100, resolution));
-    sl.add(new HeaderSetting(null, null,R.string.hires_textures_submenu, 0));
+    sl.add(new HeaderSetting(null, null, R.string.hires_textures_submenu, 0));
     sl.add(new CheckBoxSetting(SettingsFile.KEY_HIRES_TEXTURES, Settings.SECTION_GFX_SETTINGS,
-            R.string.load_hires_textures, R.string.load_hires_textures_description, false, hiresTextures));
+      R.string.load_hires_textures, R.string.load_hires_textures_description, false, hiresTextures));
     sl.add(new CheckBoxSetting(SettingsFile.KEY_CACHE_HIRES_TEXTURES, Settings.SECTION_GFX_SETTINGS,
-            R.string.cache_hires_textures, R.string.cache_hires_textures_description, false, cacheHiresTextures));
+      R.string.cache_hires_textures, R.string.cache_hires_textures_description, false, cacheHiresTextures));
     sl.add(new HeaderSetting(null, null,R.string.more_enhancements_submenu, 0));
     sl.add(new SingleChoiceSetting(SettingsFile.KEY_FSAA, Settings.SECTION_GFX_SETTINGS,
       R.string.FSAA, R.string.FSAA_description, R.array.FSAAEntries, R.array.FSAAValues, 1,
@@ -489,9 +491,12 @@ public final class SettingsFragmentPresenter
     sl.add(new CheckBoxSetting(SettingsFile.KEY_ARBITRARY_MIPMAP_DETECTION,
       Settings.SECTION_GFX_ENHANCEMENTS, R.string.arbitrary_mipmap_detection,
       R.string.arbitrary_mipmap_detection_description, true, arbitraryMipmapDetection));
+    sl.add(new CheckBoxSetting(SettingsFile.KEY_APPROXIMATE_LOGIC_OP,
+      Settings.SECTION_GFX_ENHANCEMENTS, R.string.approximate_logic_op,
+      R.string.approximate_logic_op_description, true, approximateLogicOp));
     sl.add(new CheckBoxSetting(SettingsFile.KEY_WIDE_SCREEN_HACK, Settings.SECTION_GFX_SETTINGS,
-            R.string.wide_screen_hack, R.string.wide_screen_hack_description, false,
-            wideScreenHack));
+      R.string.wide_screen_hack, R.string.wide_screen_hack_description, false,
+      wideScreenHack));
   }
 
   private String capitalize(String text)
@@ -583,7 +588,6 @@ public final class SettingsFragmentPresenter
 		Setting skipDuplicateXfbs = hacksSection.getSetting(SettingsFile.KEY_SKIP_DUPLICATE_XFBS);
     Setting fastDepth = gfxSection.getSetting(SettingsFile.KEY_FAST_DEPTH);
     Setting tmemEmu = hacksSection.getSetting(SettingsFile.KEY_TMEM_CACHE_EMULATION);
-		Setting emulatedMemSizeOverride = hacksSection.getSetting(SettingsFile.KEY_EMULATED_MEM_SIZE_OVERRIDE);
 
     sl.add(new HeaderSetting(null, null, R.string.embedded_frame_buffer, 0));
 
@@ -595,9 +599,9 @@ public final class SettingsFragmentPresenter
     sl.add(new CheckBoxSetting(SettingsFile.KEY_EFB_TEXTURE, Settings.SECTION_GFX_HACKS,
       R.string.efb_copy_method, R.string.efb_copy_method_description, true, efbToTexture));
     sl.add(new CheckBoxSetting(SettingsFile.KEY_DEFER_EFB_COPIES, Settings.SECTION_GFX_HACKS,
-            R.string.defer_efb_copies, R.string.defer_efb_copies_description, true, deferEfbCopies));
+      R.string.defer_efb_copies, R.string.defer_efb_copies_description, true, deferEfbCopies));
     sl.add(new CheckBoxSetting(SettingsFile.KEY_EFB_DEFER_INVALIDATION, Settings.SECTION_GFX_HACKS,
-            R.string.efb_defer_invalidation, R.string.efb_defer_invalidation_description, false, deferEfbInvalid));
+      R.string.efb_defer_invalidation, R.string.efb_defer_invalidation_description, false, deferEfbInvalid));
 
     sl.add(new HeaderSetting(null, null, R.string.texture_cache, 0));
     sl.add(new SingleChoiceSetting(SettingsFile.KEY_TEXCACHE_ACCURACY,

@@ -69,6 +69,7 @@ struct VideoConfig final
   bool bForceTrueColor;
   bool bDisableCopyFilter;
   bool bArbitraryMipmapDetection;
+  bool bApproximateLogicOp;
   float fArbitraryMipmapDetectionThreshold;
 
   // Information

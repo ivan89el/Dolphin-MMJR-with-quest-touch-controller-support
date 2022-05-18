@@ -218,15 +218,14 @@ void OpenFStream(T& fstream, const std::string& filename, std::ios_base::openmod
 #ifdef _WIN32
   fstream.open(UTF8ToTStr(filename).c_str(), openmode);
 #else
-#ifdef ANDROID
+  // for some reason this code is causing issues on compile-time, so use the old one for now.
+  // ERROR: no member named '__open' in 'std::basic_fstream<char>'
+/*#ifdef ANDROID
   // Unfortunately it seems like the non-standard __open is the only way to use a file descriptor
   if (IsPathAndroidContent(filename))
-    // for some reason this code is causing issues on compile-time, so use the old one for now.
-    // ERROR: no member named '__open' in 'std::basic_fstream<char>'
-    // fstream.__open(OpenAndroidContent(filename, OpenModeToAndroid(openmode)), openmode);
-    fstream.open(filename.c_str(), openmode);
+    fstream.__open(OpenAndroidContent(filename, OpenModeToAndroid(openmode)), openmode);
   else
-#endif
+#endif*/
     fstream.open(filename.c_str(), openmode);
 #endif
 }
